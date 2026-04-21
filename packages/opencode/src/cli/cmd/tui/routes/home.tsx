@@ -1,5 +1,5 @@
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import { createEffect, createSignal } from "solid-js"
+import { createEffect, createSignal, on, Show } from "solid-js"
 import { Logo } from "../component/logo"
 import { useProject } from "../context/project"
 import { useSync } from "../context/sync"
@@ -9,6 +9,7 @@ import { useRouteData } from "@tui/context/route"
 import { usePromptRef } from "../context/prompt"
 import { useLocal } from "../context/local"
 import { TuiPluginRuntime } from "../plugin"
+import { CodeGenieOnboarding } from "../component/codegenie-onboarding"
 
 let once = false
 const placeholder = {
@@ -25,6 +26,27 @@ export function Home() {
   const args = useArgs()
   const local = useLocal()
   let sent = false
+
+  const [showOnboarding, setShowOnboarding] = createSignal(false)
+  let authChecked = false
+
+  createEffect(
+    on(
+      () => sync.status,
+      (status) => {
+        if (status !== "complete") return
+        if (authChecked) return
+        authChecked = true
+        // Check if user has any credentials via sync provider data
+        const hasCredentials = sync.data.provider.some(
+          (x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0),
+        )
+        if (!hasCredentials) {
+          setShowOnboarding(true)
+        }
+      },
+    ),
+  )
 
   const bind = (r: PromptRef | undefined) => {
     setRef(r)
@@ -54,34 +76,48 @@ export function Home() {
 
   return (
     <>
-      <box flexGrow={1} alignItems="center" paddingLeft={2} paddingRight={2}>
-        <box flexGrow={1} minHeight={0} />
-        <box height={4} minHeight={0} flexShrink={1} />
-        <box flexShrink={0}>
-          <TuiPluginRuntime.Slot name="home_logo" mode="replace">
-            <Logo />
-          </TuiPluginRuntime.Slot>
-        </box>
-        <box height={1} minHeight={0} flexShrink={1} />
-        <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1} flexShrink={0}>
-          <TuiPluginRuntime.Slot
-            name="home_prompt"
-            mode="replace"
-            workspace_id={project.workspace.current()}
-            ref={bind}
-          >
-            <Prompt
+      <Show when={!showOnboarding()}>
+        <box flexGrow={1} alignItems="center" paddingLeft={2} paddingRight={2}>
+          <box flexGrow={1} minHeight={0} />
+          <box height={4} minHeight={0} flexShrink={1} />
+          <box flexShrink={0}>
+            <TuiPluginRuntime.Slot name="home_logo" mode="replace">
+              <Logo />
+            </TuiPluginRuntime.Slot>
+          </box>
+          <box height={1} minHeight={0} flexShrink={1} />
+          <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1} flexShrink={0}>
+            <TuiPluginRuntime.Slot
+              name="home_prompt"
+              mode="replace"
+              workspace_id={project.workspace.current()}
               ref={bind}
-              workspaceID={project.workspace.current()}
-              right={<TuiPluginRuntime.Slot name="home_prompt_right" workspace_id={project.workspace.current()} />}
-              placeholders={placeholder}
-            />
-          </TuiPluginRuntime.Slot>
+            >
+              <Prompt
+                ref={bind}
+                workspaceID={project.workspace.current()}
+                right={<TuiPluginRuntime.Slot name="home_prompt_right" workspace_id={project.workspace.current()} />}
+                placeholders={placeholder}
+              />
+            </TuiPluginRuntime.Slot>
+          </box>
+          <TuiPluginRuntime.Slot name="home_bottom" />
+          <box flexGrow={1} minHeight={0} />
+          <Toast />
         </box>
-        <TuiPluginRuntime.Slot name="home_bottom" />
-        <box flexGrow={1} minHeight={0} />
-        <Toast />
-      </box>
+      </Show>
+      <Show when={showOnboarding()}>
+        <box flexGrow={1} paddingLeft={2} paddingRight={2} flexDirection="column" alignItems="center">
+          <box flexGrow={1} minHeight={0} flexShrink={1} />
+          <CodeGenieOnboarding
+            onComplete={() => {
+              setShowOnboarding(false)
+            }}
+          />
+          <box flexGrow={1} minHeight={0} flexShrink={1} />
+          <Toast />
+        </box>
+      </Show>
       <box width="100%" flexShrink={0}>
         <TuiPluginRuntime.Slot name="home_footer" mode="single_winner" />
       </box>

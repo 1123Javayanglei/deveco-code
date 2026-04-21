@@ -814,6 +814,38 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           },
         },
       }),
+    codegenie: Effect.fnUntraced(function* () {
+      const auth = yield* dep.auth("codegenie")
+      if (!auth) return { autoload: false }
+
+      if (auth.type === "oauth") {
+        if (auth.expires && Date.now() >= auth.expires) {
+          log.info("codegenie token expired, attempting refresh")
+          const { codegenieAuth, ACCESS_TOKEN_EXPIRES_MS } = yield* Effect.promise(() => import("@/plugin/codegenie"))
+          const newTokens = yield* Effect.promise(() => codegenieAuth.refreshToken())
+          if (newTokens) {
+            log.info("codegenie token refresh successful")
+            return {
+              autoload: true,
+              options: {
+                apiKey: newTokens.accessToken,
+              },
+            }
+          }
+          log.warn("codegenie token refresh failed, user needs to re-login")
+          return { autoload: false }
+        }
+
+        return {
+          autoload: true,
+          options: {
+            apiKey: auth.access,
+          },
+        }
+      }
+
+      return { autoload: false }
+    }),
   }
 }
 
@@ -1113,6 +1145,14 @@ const layer: Layer.Layer<
 
         // now read config providers - includes any modifications from plugin config() hook
         const configProviders = Object.entries(cfg.provider ?? {})
+
+        // === CodeGenie: inject provider config if authenticated ===
+        const codegenieAuth = yield* auth.get("codegenie").pipe(Effect.orElseSucceed(() => undefined))
+        if (codegenieAuth) {
+          const { CODEGENIE_PROVIDER_CONFIG } = yield* Effect.promise(() => import("@/plugin/codegenie-models"))
+          configProviders.push(["codegenie", CODEGENIE_PROVIDER_CONFIG])
+        }
+
         const disabled = new Set(cfg.disabled_providers ?? [])
         const enabled = cfg.enabled_providers ? new Set(cfg.enabled_providers) : null
 

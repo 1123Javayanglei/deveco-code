@@ -14,7 +14,6 @@ import {
   onMount,
   batch,
   Show,
-  on,
 } from "solid-js"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { Flag } from "@/flag/flag"
@@ -389,17 +388,6 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       }
     })
   })
-
-  createEffect(
-    on(
-      () => sync.status === "complete" && sync.data.provider.length === 0,
-      (isEmpty, wasEmpty) => {
-        // only trigger when we transition into an empty-provider state
-        if (!isEmpty || wasEmpty) return
-        dialog.replace(() => <DialogProviderList />)
-      },
-    ),
-  )
 
   const connected = useConnected()
   command.register(() => [

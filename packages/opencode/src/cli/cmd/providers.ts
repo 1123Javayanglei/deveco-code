@@ -190,6 +190,10 @@ export function resolvePluginProviders(input: {
   enabled?: Set<string>
   providerNames: Record<string, string | undefined>
 }): Array<{ id: string; name: string }> {
+  const PLUGIN_PROVIDER_CONFIG: Record<string, { name: string; type?: string }> = {
+    codegenie: { name: "CodeGenie OAuth", type: "OAuth" },
+  }
+
   const seen = new Set<string>()
   const result: Array<{ id: string; name: string }> = []
 
@@ -203,7 +207,7 @@ export function resolvePluginProviders(input: {
     if (input.enabled && !input.enabled.has(id)) continue
     result.push({
       id,
-      name: input.providerNames[id] ?? id,
+      name: PLUGIN_PROVIDER_CONFIG[id]?.name ?? input.providerNames[id] ?? id,
     })
   }
 
@@ -348,6 +352,7 @@ export const ProvidersLoginCommand = cmd({
         )
 
         const priority: Record<string, number> = {
+          codegenie: -1,
           opencode: 0,
           openai: 1,
           "github-copilot": 2,
@@ -375,9 +380,10 @@ export const ProvidersLoginCommand = cmd({
               label: x.name,
               value: x.id,
               hint: {
-                opencode: "recommended",
-                openai: "ChatGPT Plus/Pro or API key",
-              }[x.id],
+                  opencode: "recommended",
+                  openai: "ChatGPT Plus/Pro or API key",
+                  codegenie: "recommended",
+                }[x.id],
             })),
           ),
           ...pluginProviders.map((x) => ({

@@ -1,5 +1,5 @@
 import { BoxRenderable, MouseButton, MouseEvent, RGBA, TextAttributes } from "@opentui/core"
-import { For, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js"
+import { For, Show, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import { useTheme, tint } from "@tui/context/theme"
 import * as Sound from "@tui/util/sound"
 import { go, logo } from "@/cli/logo"
@@ -303,7 +303,6 @@ function build(shape: LogoShape): LogoContext {
 }
 
 const DEFAULT = build(logo)
-const GO = build(go)
 
 function shimmer(x: number, y: number, frame: Frame, ctx: LogoContext) {
   return frame.list.reduce((best, item) => {
@@ -551,7 +550,7 @@ function buildIdleState(t: number, ctx: LogoContext): IdleState {
   return { cfg, reach, rings, active }
 }
 
-export function Logo(props: { shape?: LogoShape; ink?: RGBA; idle?: boolean } = {}) {
+export function Logo(props: { shape?: LogoShape; ink?: RGBA; idle?: boolean; column?: "left" | "right" } = {}) {
   const ctx = props.shape ? build(props.shape) : DEFAULT
   const { theme } = useTheme()
   const [rings, setRings] = createSignal<Ring[]>([])
@@ -861,27 +860,47 @@ export function Logo(props: { shape?: LogoShape; ink?: RGBA; idle?: boolean } = 
         zIndex={1}
         onMouse={mouse}
       />
-      <For each={ctx.shape.left}>
-        {(line, index) => (
-          <box flexDirection="row" gap={1}>
+      <Show when={!props.column}>
+        <For each={ctx.shape.left}>
+          {(line, index) => (
+            <box flexDirection="row" gap={1}>
+              <box flexDirection="row">
+                {renderLine(line, index(), props.ink ?? theme.textMuted, !!props.ink, 0, frame(), dusk(), idleState())}
+              </box>
+              <box flexDirection="row">
+                {renderLine(
+                  ctx.shape.right[index()],
+                  index(),
+                  props.ink ?? theme.text,
+                  true,
+                  ctx.LEFT + GAP,
+                  frame(),
+                  dusk(),
+                  idleState(),
+                )}
+              </box>
+            </box>
+          )}
+        </For>
+      </Show>
+      <Show when={props.column === "left"}>
+        <For each={ctx.shape.left}>
+          {(line, index) => (
             <box flexDirection="row">
               {renderLine(line, index(), props.ink ?? theme.textMuted, !!props.ink, 0, frame(), dusk(), idleState())}
             </box>
+          )}
+        </For>
+      </Show>
+      <Show when={props.column === "right"}>
+        <For each={ctx.shape.right}>
+          {(line, index) => (
             <box flexDirection="row">
-              {renderLine(
-                ctx.shape.right[index()],
-                index(),
-                props.ink ?? theme.text,
-                true,
-                ctx.LEFT + GAP,
-                frame(),
-                dusk(),
-                idleState(),
-              )}
+              {renderLine(line, index(), props.ink ?? theme.text, true, 0, frame(), dusk(), idleState())}
             </box>
-          </box>
-        )}
-      </For>
+          )}
+        </For>
+      </Show>
     </box>
   )
 }
