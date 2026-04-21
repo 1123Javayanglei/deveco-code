@@ -725,6 +725,36 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         dialog.clear()
       },
     },
+    {
+      title: "Feedback",
+      description: "Submit complaints, suggestions or feedback",
+      value: "feedback.open",
+      slash: {
+        name: "feedback",
+      },
+      onSelect: () => {
+        open("https://developer.huawei.com/consumer/cn/support/feedback/#/").catch(() => {})
+        dialog.clear()
+      },
+      category: "System",
+    },
+    ...(sync.data.provider_next.connected.includes("codegenie")
+      ? [
+          {
+            title: "Privacy",
+            description: "Show privacy policy",
+            value: "privacy.open",
+            slash: {
+              name: "privacy",
+            },
+            onSelect: () => {
+              open("https://consumer.huawei.com/cn/privacy/privacy-statement-huawei/#/").catch(() => {})
+              dialog.clear()
+            },
+            category: "System",
+          },
+        ]
+      : []),
   ])
 
   event.on(TuiEvent.CommandExecute.type, (evt) => {
