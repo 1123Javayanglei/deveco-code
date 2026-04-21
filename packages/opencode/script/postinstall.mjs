@@ -88,6 +88,28 @@ async function main() {
       fs.copyFileSync(binaryPath, target)
     }
     fs.chmodSync(target, 0o755)
+
+    // Copy vendor directory from platform package to main package
+    // so runtime can find vendor/ripgrep/rg
+    const platformPkgDir = path.dirname(binDir)
+    const vendorSrc = path.join(platformPkgDir, "vendor")
+    const vendorDst = path.join(__dirname, "vendor")
+    if (fs.existsSync(vendorSrc)) {
+      function copyDir(src, dst) {
+        if (!fs.existsSync(dst)) fs.mkdirSync(dst, { recursive: true })
+        for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+          const srcPath = path.join(src, entry.name)
+          const dstPath = path.join(dst, entry.name)
+          if (entry.isDirectory()) {
+            copyDir(srcPath, dstPath)
+          } else {
+            fs.copyFileSync(srcPath, dstPath)
+          }
+        }
+      }
+      copyDir(vendorSrc, vendorDst)
+      console.log(`vendor directory copied: ${vendorDst}`)
+    }
   } catch (error) {
     console.error("Failed to setup opencode binary:", error.message)
     process.exit(1)

@@ -164,6 +164,18 @@ const targets = singleFlag
 
 await $`rm -rf dist`
 
+// Vendored binaries cache (downloaded by postinstall.ts during bun install)
+const cacheDir = path.join(dir, ".build-cache")
+const rgCacheDir = path.join(cacheDir, "ripgrep")
+const mcpCacheDir = path.join(cacheDir, "mcp-bridge")
+
+const RG_VERSION = "15.1.0"
+const rgArchiveMap: Record<string, { archive: string; binary: string }> = {
+  "darwin-arm64": { archive: `ripgrep-${RG_VERSION}-aarch64-apple-darwin.tar.gz`, binary: "rg" },
+  "darwin-x64":   { archive: `ripgrep-${RG_VERSION}-x86_64-apple-darwin.tar.gz`, binary: "rg" },
+  "win32-x64":    { archive: `ripgrep-${RG_VERSION}-x86_64-pc-windows-msvc.zip`, binary: "rg.exe" },
+}
+
 const binaries: Record<string, string> = {}
 if (!skipInstall) {
   await $`bun install --os="*" --cpu="*" @opentui/core@${pkg.dependencies["@opentui/core"]}`
@@ -235,6 +247,36 @@ for (const item of targets) {
     }
   }
 
+  // Copy mcp-bridge-native from cache
+  const mcpKey = `${item.os}-${item.arch}`
+  const mcpCache = path.join(mcpCacheDir, mcpKey)
+  const cachedNode = path.join(mcpCache, "napi_bridge.node")
+  if (fs.existsSync(cachedNode)) {
+    const vendorDir = path.join(dir, "dist", name, "vendor", "mcp-bridge-native")
+    await fs.promises.mkdir(vendorDir, { recursive: true })
+    await fs.promises.copyFile(path.join(mcpCache, "package.json"), path.join(vendorDir, "package.json"))
+    await fs.promises.copyFile(cachedNode, path.join(vendorDir, "napi_bridge.node"))
+    console.log(`  Bundled mcp-bridge for ${mcpKey}`)
+  }
+
+  // Copy ripgrep from cache
+  const rgKey = `${item.os}-${item.arch}`
+  const rgInfo = rgArchiveMap[rgKey]
+  if (rgInfo) {
+    const cachePath = path.join(rgCacheDir, rgKey, rgInfo.binary)
+    if (fs.existsSync(cachePath)) {
+      const vendorDir = path.join(dir, "dist", name, "vendor", "ripgrep")
+      await fs.promises.mkdir(vendorDir, { recursive: true })
+      const rgBinaryName = item.os === "win32" ? "rg.exe" : "rg"
+      const rgDest = path.join(vendorDir, rgBinaryName)
+      await fs.promises.copyFile(cachePath, rgDest)
+      if (item.os !== "win32") {
+        await fs.promises.chmod(rgDest, 0o755)
+      }
+      console.log(`  Bundled ripgrep for ${rgKey}`)
+    }
+  }
+
   await $`rm -rf ./dist/${name}/bin/tui`
   await Bun.file(`dist/${name}/package.json`).write(
     JSON.stringify(
@@ -243,6 +285,13 @@ for (const item of targets) {
         version: Script.version,
         os: [item.os],
         cpu: [item.arch],
+        bin: {
+          opencode: "./bin/opencode",
+        },
+        files: [
+          "bin/**/*",
+          "vendor/**/*",
+        ],
       },
       null,
       2,
@@ -254,9 +303,9 @@ for (const item of targets) {
 if (Script.release) {
   for (const key of Object.keys(binaries)) {
     if (key.includes("linux")) {
-      await $`tar -czf ../../${key}.tar.gz *`.cwd(`dist/${key}/bin`)
+      await $`tar -czf ../../${key}.tar.gz *`.cwd(`dist/${key}`)
     } else {
-      await $`zip -r ../../${key}.zip *`.cwd(`dist/${key}/bin`)
+      await $`zip -r ../../${key}.zip *`.cwd(`dist/${key}`)
     }
   }
   await $`gh release upload v${Script.version} ./dist/*.zip ./dist/*.tar.gz --clobber --repo ${process.env.GH_REPO}`

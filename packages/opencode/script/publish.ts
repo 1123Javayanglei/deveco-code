@@ -23,9 +23,20 @@ async function publish(dir: string, name: string, version: string) {
   await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(dir)
 }
 
+const ALLOWED_PLATFORMS = new Set(["darwin-arm64", "darwin-x64", "win32-x64"])
+
 const binaries: Record<string, string> = {}
 for (const filepath of new Bun.Glob("*/package.json").scanSync({ cwd: "./dist" })) {
   const pkg = await Bun.file(`./dist/${filepath}`).json()
+  const platform = `${pkg.os?.[0]}-${pkg.cpu?.[0]}`
+  if (!ALLOWED_PLATFORMS.has(platform)) {
+    console.log(`Skipping ${pkg.name} (${platform})`)
+    continue
+  }
+  if (pkg.name.includes("-baseline")) {
+    console.log(`Skipping ${pkg.name} (baseline)`)
+    continue
+  }
   binaries[pkg.name] = pkg.version
 }
 console.log("binaries", binaries)
