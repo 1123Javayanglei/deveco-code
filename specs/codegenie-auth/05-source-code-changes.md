@@ -1,5 +1,10 @@
 # CodeGenie OAuth 认证 - 源码修改清单
 
+**功能分支**: `codegenie-auth`
+**创建日期**: 2026-03-25
+**状态**: 已实现（阶段 1-3）
+**Commit ID**: 参见 git log
+
 > **设计原则**: 最小侵入式修改，只在必要的位置添加代码，新增功能通过独立文件实现。
 > **关键约束**: 插件和 TUI 组件文件不导入 `AppRuntime`/`Effect`，避免循环依赖导致黑屏。
 
@@ -15,13 +20,13 @@
 | `packages/opencode/src/cli/cmd/providers.ts` | 修改 | ~20 | 添加 codegenie 配置、优先级、排序 |
 | `packages/opencode/src/provider/provider.ts` | 修改 | ~50 | 注入 CodeGenie 配置 + custom loader |
 | `packages/opencode/src/cli/cmd/tui/routes/home.tsx` | 修改 | ~40 | 添加认证检测 + CodeGenieOnboarding 条件渲染 |
-| `packages/opencode/src/cli/cmd/tui/app.tsx` | 修改 | -10 | 移除自动弹出 DialogProviderList 的逻辑 |
+| `packages/opencode/src/cli/cmd/tui/app.tsx` | 未修改 | 0 | 首次引导由 home.tsx 独立处理，app.tsx 保持不变 |
 | `packages/opencode/src/cli/cmd/tui/component/codegenie-onboarding.tsx` | 新增 | ~420 | CodeGenie 首次使用引导组件 |
 | `packages/opencode/src/cli/logo.ts` | 修改 | ~45 | 替换为 CodeGenie ASCII Logo 数据 |
 | `packages/opencode/src/cli/cmd/tui/component/logo.tsx` | 修改 | ~30 | 添加 column 属性、Show 导入 |
 | `packages/opencode/src/cli/cmd/tui/component/dialog-model.tsx` | 修改 | ~5 | 排序 codegenie 最前 + Free 标签 |
 
-**总计**: 修改 8 个文件，新增 3 个文件。
+**总计**: 修改 7 个文件，新增 3 个文件，1 个文件未修改。
 
 ---
 
@@ -35,13 +40,13 @@
 
 | 模块 | 职责 |
 |------|------|
-| 类型定义 | 定义 UserInfo, LoginResult, JwtPayload 等类型 |
-| 常量定义 | DEFAULT_CONFIG, CountryCode, SiteId 多区域配置 |
+| 类型定义 | 定义 UserInfo, LoginResult, JwtPayload, CallbackData, LoginConfig 等类型 |
+| 常量定义 | DEFAULT_CONFIG, CountryCode, LanguageCode, SiteId 多区域配置 |
 | HttpClient | HTTP 请求封装，支持 GET/POST |
 | TokenStorage | AES-128-GCM 加密存储 JWT Token |
-| LocalAuthServer | 本地 OAuth 回调服务器，多端口支持 |
-| LoginService | 华为 OAuth 登录核心逻辑 |
-| CodeGenieAuth | 公共 API: login(), logout(), isLoggedIn(), refreshToken() |
+| LocalAuthServer | 本地 OAuth 回调服务器，多端口支持（10101, 34567-34570） |
+| LoginService | 华为 OAuth 登录核心逻辑，含区域化 URL 生成 |
+| CodeGenieAuth | 公共 API: login(), logout(), isLoggedIn(), refreshToken(), isTokenExpired(), getSession() |
 | saveAuthToDisk | 直接写 auth.json 的工具函数（避免循环依赖） |
 | CodegenieAuthPlugin | Plugin 入口，导出 AuthHook |
 
@@ -51,10 +56,14 @@
 const DEFAULT_CONFIG: LoginConfig = {
   baseUrl: "https://devecostudio.huawei.com",
   appId: "1008",
+  authUrl: "console/DevEcoIDE/apply",
   successRedirectUrl: "console/DevEcoCodeGenie/loginSuccess",
   failedRedirectUrl: "console/DevEcoCodeGenie/loginFailed",
+  tempTokenCheckUrl: "authrouter/auth/api/temptoken/check",
+  jwtTokenCheckUrl: "authrouter/auth/api/jwToken/check",
   defaultPort: 10101,
   timeout: 600000,
+  countryCode: "CN",
 }
 ```
 
@@ -144,11 +153,9 @@ const INTERNAL_PLUGINS: PluginInstance[] = [
 
 **文件**: `packages/opencode/src/cli/cmd/tui/app.tsx`
 
-**修改类型**: 移除代码
+**修改类型**: 未修改
 
-**修改内容**: 移除自动弹出 `DialogProviderList` 的 `createEffect`，改由 `home.tsx` 中的 `CodeGenieOnboarding` 处理首次引导。
-
-同时移除未使用的 `on` 导入。
+**说明**: 原计划移除自动弹出 `DialogProviderList` 的 `createEffect`，但实际实现中 `app.tsx` 保持不变。首次引导逻辑由 `home.tsx` 中的 `CodeGenieOnboarding` 组件独立处理，`app.tsx` 中的 `DialogProviderList` 仍保留用于 `/connect` 命令等场景。
 
 ---
 
@@ -291,3 +298,4 @@ footer: model.cost?.input === 0 && (provider.id === "opencode" || provider.id ==
 |------|------|----------|
 | 1.0 | 2026-03-25 | 初始版本（copy 项目） |
 | 2.0 | 2026-04-21 | 适配新工程 Effect 框架：saveAuthToDisk 替代 Auth.set、sync.data.provider 替代 Auth.all |
+| 2.1 | 2026-04-21 | 按 SDD 格式更新：修正 app.tsx 为未修改、补充 DEFAULT_CONFIG 完整字段、补充 CodeGenieAuth API、修正核心模块描述 |

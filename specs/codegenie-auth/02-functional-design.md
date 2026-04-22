@@ -1,22 +1,61 @@
-# OpenCode 登录鉴权与模型调用机制 - 功能设计说明书
+# 功能设计说明书: CodeGenie 华为账号登录集成
 
-## 1. 文档概述
-
-### 1.1 文档目的
-基于需求分析说明书，本文档详细描述 OpenCode 登录鉴权与模型调用各模块的功能设计、接口定义和数据流，为开发者理解和扩展系统提供参考。
-
-### 1.2 设计原则
-- **可扩展性**: 通过 Plugin/Hook 机制支持自定义扩展
-- **安全性**: 敏感数据加密存储，最小权限原则
-- **解耦**: 模块间通过接口通信，降低耦合度
-- **一致性**: 统一的认证流程，统一的 API 风格
-- **最小侵入**: 对原始代码的修改尽可能少
+**功能分支**: `codegenie-auth`
+**创建日期**: 2026-03-25
+**状态**: 已实现（阶段 1-3）
+**关联需求文档**: [01-requirements-analysis.md](./01-requirements-analysis.md)
 
 ---
 
-## 2. 模块设计
+## 目录
 
-### 2.1 模块总览
+1. [功能概述](#1-功能概述)
+2. [实现思路](#2-实现思路)
+3. [实现设计](#3-实现设计)
+4. [接口设计](#4-接口设计)
+5. [周边依赖关系](#5-周边依赖关系)
+6. [安全隐私设计](#6-安全隐私设计)
+7. [性能功耗设计](#7-性能功耗设计)
+8. [本地数据库设计](#8-本地数据库设计)
+9. [DFX分析](#9-dfx分析)
+10. [其它功能性设计](#10-其它功能性设计)
+- [附录](#附录)
+
+---
+
+## 1. 功能概述
+
+### 1.1 功能简介
+
+基于需求分析说明书，本文档详细描述 CodeGenie 华为账号登录、TUI 引导、模型列表集成各模块的功能设计、接口定义和数据流。
+
+### 1.2 设计目标
+
+| 目标类型 | 目标描述 | 衡量标准 |
+|----------|----------|----------|
+| 功能目标 | 支持华为 OAuth 登录 + 模型列表集成 + TUI 引导 | 用户可在 30 秒内完成首次配置 |
+| 性能目标 | 不影响已有用户的启动速度 | 已认证用户无额外延迟 |
+| 质量目标 | 最大化复用现有机制，最小侵入 | 核心修改点 < 5 处 |
+
+### 1.3 设计原则
+
+| 原则 | 描述 | 应用场景 |
+|------|------|----------|
+| **Plugin/Hook 优先** | 通过 Plugin/Hook 机制支持自定义扩展 | 复用 `CodegenieAuthPlugin` 的 auth hook |
+| **安全性** | 敏感数据加密存储，最小权限原则 | Token 使用 AES-128-GCM 加密 |
+| **解耦** | 模块间通过接口通信，降低耦合度 | 模型定义独立于认证插件 |
+| **最小侵入** | 对原始代码的修改尽可能少 | 仅修改必要文件 |
+| **避免循环依赖** | 插件文件不导入 `AppRuntime`/`Effect` | 使用 `saveAuthToDisk` 直接写 auth.json |
+
+---
+
+## 2. 实现思路
+
+### 2.1 整体方案
+
+通过 OpenCode 的 Plugin/Hook 机制扩展认证能力，新增 CodegenieAuthPlugin 注册到 INTERNAL_PLUGINS。认证流程复用 ProviderAuth Service 的 OAuth 机制，模型列表通过 Provider Manager 的 custom loader 注入。TUI 引导界面在 home.tsx 中通过 sync.data.provider 检测认证状态。
+
+### 2.2 技术架构
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -40,87 +79,515 @@
 │    │   Service   │────▶│   Discovery │────▶│   Factory   │            │
 │    └─────────────┘     └─────────────┘     └─────────────┘            │
 │                                                                         │
+│    ┌─────────────┐     ┌─────────────┐                                  │
+│    │  TUI Home   │     │ CodeGenie   │                                  │
+│    │  (检测+引导) │     │ Onboarding  │                                  │
+│    └─────────────┘     └─────────────┘                                  │
+│                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 模块职责
+### 2.3 核心流程
 
-| 模块 | 职责 | 依赖 |
-|------|------|------|
-| Plugin Manager | 加载和管理插件，分发 Hook 调用 | - |
-| Auth Service | 认证数据的 CRUD 操作 | Auth Storage |
-| Provider Manager | Provider 信息管理，模型加载 | Auth Service, Provider Database |
-| ProviderAuth Service | OAuth/API 认证流程管理 | Auth Service, Hooks Registry |
-| Models Discovery | 从 models.dev 获取模型信息 | - |
-| AI SDK Factory | 创建和管理 AI SDK 实例 | Provider Manager |
+```
+用户触发认证
+    │
+    ├── CLI: opencode auth login ──▶ ProviderAuth.authorize()
+    │
+    └── TUI: 首次引导 ──▶ CodeGenieOnboarding ──▶ LoginService.login()
+                                                              │
+                                                              ▼
+                                                    启动 LocalAuthServer
+                                                              │
+                                                              ▼
+                                                    打开浏览器 OAuth 授权
+                                                              │
+                                                              ▼
+                                                    回调获取 tempToken
+                                                              │
+                                                              ▼
+                                                    tempToken → jwtToken
+                                                              │
+                                                              ▼
+                                                    saveAuthToDisk() 写入 auth.json
+                                                              │
+                                                              ▼
+                                                    TokenStorage.saveToken() 加密存储
+```
+
+### 2.4 关键技术点
+
+| 技术点 | 描述 | 解决方案 |
+|--------|------|----------|
+| 循环依赖 | 插件文件导入 AppRuntime/Effect 导致黑屏 | 使用 saveAuthToDisk() 直接写 auth.json |
+| 条件渲染 | Privacy/模型列表需根据状态动态显示 | 使用 sync.data.provider 检测认证状态 |
+| Token 安全 | JWT Token 需加密存储 | AES-128-GCM 加密，文件权限 0600 |
+| 多端口支持 | 默认端口可能被占用 | 依次尝试 10101, 34567-34570 |
+| Token 刷新 | OAuth Token 过期后自动续期 | custom loader 中检测过期并刷新 |
+
+### 2.5 技术选型
+
+| 技术领域 | 选型方案 | 选型理由 | 备选方案 |
+|----------|----------|----------|----------|
+| 加密算法 | AES-128-GCM | 对称加密+认证标签，性能好 | AES-256-GCM |
+| OAuth 回调 | 本地 HTTP 服务器 | 标准OAuth回调机制 | 手动复制 Token |
+| 状态检测 | sync.data.provider | 避免循环依赖 | Auth.all()（有循环依赖风险） |
 
 ---
 
-## 3. Auth Service 设计
+## 3. 实现设计
 
-### 3.1 服务接口
+### 3.1 模块设计
+
+#### 3.1.1 模块划分
+
+| 模块名称 | 职责描述 | 关键类/组件 | 依赖模块 |
+|----------|----------|-------------|----------|
+| CodeGenie Auth Plugin | 华为 OAuth 认证插件 | CodegenieAuthPlugin, LoginService, TokenStorage, LocalAuthServer | Auth Storage |
+| CodeGenie Models | 模型资源定义 | CODEGENIE_PROVIDER_CONFIG | Config schema |
+| Provider 注入 | 动态注入 CodeGenie Provider | custom loader | Auth, Provider Manager |
+| TUI 引导 | 首次使用引导界面 | CodeGenieOnboarding | sync, saveAuthToDisk |
+| CLI 入口 | Provider 列表配置 | providers.ts | Plugin Manager |
+
+#### 3.1.2 模块职责
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                     CodeGenie Auth Plugin                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ TokenStorage │  │LocalAuthServer│  │    LoginService      │  │
+│  │ AES-128-GCM  │  │ 多端口回调    │  │ OAuth + Token 交换   │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ CodeGenieAuth│  │HttpClient    │  │  saveAuthToDisk      │  │
+│  │ 公共 API     │  │ HTTP 封装    │  │  直接写 auth.json    │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 类设计
+
+#### 3.2.1 TokenStorage
+
+| 项目 | 描述 |
+|------|------|
+| 所属模块 | CodeGenie Auth Plugin |
+| 类描述 | AES-128-GCM 加密的 Token 存储 |
+| 设计模式 | 单例 |
+
+| 属性名 | 类型 | 访问权限 | 描述 |
+|--------|------|----------|------|
+| keyFilePath | string | private | `~/.config/codegenie/.token_key` |
+| algorithm | string | private | `"aes-128-gcm"` |
+| keyLength | number | private | 16 |
+| ivLength | number | private | 12 |
+
+| 方法名 | 参数 | 返回值 | 描述 |
+|--------|------|--------|------|
+| saveToken | token: string | Promise\<void\> | 加密存储 Token |
+| loadToken | - | Promise\<string \| null\> | 解密读取 Token |
+| clearToken | - | Promise\<void\> | 清除 Token 文件 |
+
+#### 3.2.2 LocalAuthServer
+
+| 项目 | 描述 |
+|------|------|
+| 所属模块 | CodeGenie Auth Plugin |
+| 类描述 | 本地 OAuth 回调服务器 |
+| 设计模式 | 单例 |
+
+| 方法名 | 参数 | 返回值 | 描述 |
+|--------|------|--------|------|
+| start | - | Promise\<number\> | 启动服务器，返回实际端口 |
+| waitForCallback | timeout?: number | Promise\<CallbackData\> | 等待 OAuth 回调 |
+| stop | - | void | 停止服务器 |
+
+#### 3.2.3 LoginService
+
+| 项目 | 描述 |
+|------|------|
+| 所属模块 | CodeGenie Auth Plugin |
+| 类描述 | 华为 OAuth 登录核心逻辑 |
+| 设计模式 | 单例 |
+
+| 方法名 | 参数 | 返回值 | 描述 |
+|--------|------|--------|------|
+| login | - | Promise\<LoginResult\> | 执行完整登录流程 |
+| getJwtToken | tempToken, siteId | Promise\<string\> | 用 tempToken 换取 jwtToken |
+| getUserInfoFromJwt | jwt | UserInfo | 解析 JWT 获取用户信息 |
+| generateClientSecret | - | string | 生成 client secret |
+
+#### 3.2.4 CodeGenieAuth (公共 API)
+
+| 项目 | 描述 |
+|------|------|
+| 所属模块 | CodeGenie Auth Plugin |
+| 类描述 | CodeGenie 认证公共 API |
+| 设计模式 | 单例 |
+
+| 方法名 | 参数 | 返回值 | 描述 |
+|--------|------|--------|------|
+| isLoggedIn | - | Promise\<boolean\> | 检查是否已登录 |
+| getSession | - | Promise\<CodeGenieSession \| null\> | 获取当前会话信息 |
+| login | - | Promise\<LoginResult\> | 执行登录 |
+| logout | - | Promise\<void\> | 执行登出 |
+| isTokenExpired | expires: number | boolean | 检查 Token 是否过期 |
+| refreshToken | - | Promise\<{accessToken, refreshToken} \| null\> | 刷新 Token |
+
+### 3.3 流程设计
+
+#### 3.3.1 主流程: OAuth 登录
+
+```
+LoginService.login()
+    │
+    ├── 1. generateClientSecret()
+    │
+    ├── 2. LocalAuthServer.start() → 尝试端口 10101, 34567-34570
+    │
+    ├── 3. openLoginPage(port, clientSecret) → 打开浏览器
+    │
+    ├── 4. LocalAuthServer.waitForCallback() → 等待回调
+    │       │
+    │       ├── 成功: 获取 { tempToken, siteId }
+    │       └── 超时: 抛出 TimeoutError
+    │
+    ├── 5. getJwtToken(tempToken, siteId) → 换取 JWT
+    │
+    ├── 6. getUserInfoFromJwt(jwt) → 解析用户信息
+    │
+    ├── 7. saveAuthToDisk("codegenie", { type: "api", key: jwt })
+    │
+    └── 8. TokenStorage.saveToken(jwt) → 加密存储
+```
+
+#### 3.3.2 主流程: TUI 首次引导
+
+```
+TUI 启动
+    │
+    ▼
+sync.bootstrap() 完成 (sync.status === "complete")
+    │
+    ▼
+检测: sync.data.provider 是否有非 opencode 的 provider
+    │
+    ├── 有凭证 → 显示主界面 (Logo + Prompt)
+    │
+    └── 无凭证 → 显示 CodeGenieOnboarding
+                    │
+                    ├── entry: 选择 CodeGenie OAuth 或 Other providers
+                    │
+                    ├── auth: 浏览器 OAuth 登录等待界面
+                    │
+                    └── providers: 其他 Provider 列表
+                    │
+                    ▼
+              引导完成 → setShowOnboarding(false) → 显示主界面
+```
+
+#### 3.3.3 主流程: 模型列表注入
+
+```
+Provider Manager 初始化
+    │
+    ├── 1. 加载 models.dev 数据库
+    │
+    ├── 2. 合并配置文件中的 Provider
+    │
+    ├── 3. 检查环境变量
+    │
+    ├── 4. 检查 Auth 存储
+    │       └── 若 codegenie 已认证 → 注入 CODEGENIE_PROVIDER_CONFIG
+    │
+    └── 5. 调用 custom loader
+            └── codegenie loader: 检查 Auth 状态
+                ├── 已认证 + 未过期 → { autoload: true, options: { apiKey } }
+                ├── 已认证 + 已过期 → 尝试刷新
+                │   ├── 刷新成功 → { autoload: true, options: { apiKey } }
+                │   └── 刷新失败 → { autoload: false }
+                └── 未认证 → { autoload: false }
+```
+
+#### 3.3.4 异常流程
+
+| 异常场景 | 处理流程 | 错误码 | 错误信息 |
+|----------|----------|--------|----------|
+| 所有端口占用 | 依次尝试 5 个端口，全部失败抛出错误 | PORT_IN_USE | "All ports are in use" |
+| OAuth 授权超时 | 10 分钟超时，显示错误提示 | AUTH_TIMEOUT | "Login timeout" |
+| Token 刷新失败 | CodeGenie 模型不可用，提示重新登录 | REFRESH_FAILED | 静默降级 |
+| Token 文件损坏 | 清除损坏文件，显示引导界面 | TOKEN_CORRUPT | 静默清除 |
+| 浏览器不可用 | open() 失败静默处理 | BROWSER_UNAVAILABLE | 静默忽略 |
+
+### 3.4 状态设计
+
+#### 3.4.1 TUI 引导状态机
+
+```
+                    ┌──────────┐
+                    │  entry   │ ← 初始状态
+                    └────┬─────┘
+                         │
+              ┌──────────┼──────────┐
+              │                     │
+         选择 CodeGenie       选择 Other
+              │                     │
+              ▼                     ▼
+        ┌──────────┐         ┌──────────┐
+        │   auth   │         │ providers│
+        └────┬─────┘         └────┬─────┘
+             │                     │
+        登录成功/失败          配置完成
+             │                     │
+             ▼                     ▼
+        ┌──────────┐         ┌──────────┐
+        │  主界面   │         │  主界面   │
+        └──────────┘         └──────────┘
+```
+
+| 状态名称 | 状态描述 | 进入条件 | 退出条件 | 允许转换 |
+|----------|----------|----------|----------|----------|
+| entry | 显示两个选项 | TUI 启动且无凭证 | 用户选择选项 | auth, providers |
+| auth | OAuth 登录等待 | 用户选择 CodeGenie OAuth | 登录成功/失败 | 主界面 |
+| providers | 其他 Provider 列表 | 用户选择 Other providers | 配置完成 | 主界面 |
+
+---
+
+## 4. 接口设计
+
+### 4.1 调用接口
+
+#### 4.1.1 外部依赖接口
+
+| 接口名称 | 提供方 | 接口描述 | 调用场景 |
+|----------|--------|----------|----------|
+| Auth.get() | Auth Service | 获取指定 Provider 的认证信息 | Provider Manager 初始化时 |
+| Auth.all() | Auth Service | 获取所有认证信息 | CLI auth list 命令 |
+| Plugin.list() | Plugin Manager | 获取所有已注册插件 | CLI auth login 命令 |
+| sync.data.provider | Sync Context | 获取 Provider 连接状态 | TUI 认证检测 |
+| open() | open 包 | 在默认浏览器中打开 URL | OAuth 登录打开浏览器 |
+
+#### 4.1.2 华为认证服务接口
+
+**接口: tempToken 检查**
+
+| 项目 | 描述 |
+|------|------|
+| 接口地址 | `{baseUrl}/{tempTokenCheckUrl}` |
+| 请求方式 | POST |
+| 接口描述 | 用 tempToken 换取访问令牌 |
+
+**请求参数:**
+
+| 参数名 | 类型 | 必填 | 描述 | 示例值 |
+|--------|------|------|------|--------|
+| tempToken | string | 是 | OAuth 回调获取的临时令牌 | - |
+| clientSecret | string | 是 | 客户端密钥 | - |
+| siteId | string | 是 | 站点 ID | "1" |
+
+**接口: jwtToken 检查**
+
+| 项目 | 描述 |
+|------|------|
+| 接口地址 | `{baseUrl}/{jwtTokenCheckUrl}` |
+| 请求方式 | POST |
+| 接口描述 | 用访问令牌换取 JWT Token |
+
+### 4.2 提供接口
+
+#### 4.2.1 对外提供接口列表
+
+| 接口编号 | 接口名称 | 接口类型 | 接口描述 |
+|----------|----------|----------|----------|
+| PI-001 | AuthHook | Plugin Hook | CodeGenie OAuth 认证钩子 |
+| PI-002 | custom loader | Provider Hook | CodeGenie Provider 动态加载器 |
+| PI-003 | saveAuthToDisk | 工具函数 | 直接写入 auth.json（避免循环依赖） |
+| PI-004 | codegenieAuth | 公共 API | 登录/登出/刷新/状态查询 |
+
+#### 4.2.2 AuthHook 接口详细定义
+
+**接口: PI-001**
+
+| 项目 | 描述 |
+|------|------|
+| 接口名称 | CodegenieAuthPlugin.auth |
+| 接口类型 | Plugin Hook |
+| 接口描述 | 注册 CodeGenie OAuth 认证方法到 ProviderAuth Service |
 
 ```typescript
-// packages/opencode/src/auth/index.ts
-export namespace Auth {
-  // 认证信息类型
-  export type Info = Oauth | Api | WellKnown
-
-  // 服务接口
-  export interface Interface {
-    readonly get: (providerID: string) => Effect.Effect<Info | undefined, AuthError>
-    readonly all: () => Effect.Effect<Record<string, Info>, AuthError>
-    readonly set: (key: string, info: Info) => Effect.Effect<void, AuthError>
-    readonly remove: (key: string) => Effect.Effect<void, AuthError>
-  }
+const authHook: AuthHook = {
+  provider: "codegenie",
+  methods: [
+    {
+      type: "oauth",
+      label: "CodeGenie OAuth",
+      authorize: async () => {
+        const result = await codegenieAuth.login()
+        if (result.success) {
+          await saveAuthToDisk("codegenie", { type: "api", key: result.jwtToken })
+          return { type: "success", key: result.jwtToken, provider: "codegenie" }
+        }
+        return { type: "failed" }
+      },
+    },
+  ],
 }
 ```
 
-### 3.2 数据模型
+#### 4.2.3 custom loader 接口详细定义
+
+**接口: PI-002**
+
+| 项目 | 描述 |
+|------|------|
+| 接口名称 | codegenie custom loader |
+| 接口类型 | Provider Hook |
+| 接口描述 | 根据 Auth 状态决定是否自动加载 CodeGenie Provider |
 
 ```typescript
-// OAuth 类型 - 用于 OAuth 认证的 Provider
-export class Oauth extends Schema.Class<Oauth>("OAuth")({
-  type: Schema.Literal("oauth"),
-  refresh: Schema.String,        // 刷新令牌
-  access: Schema.String,         // 访问令牌
-  expires: Schema.Number,        // 过期时间戳 (ms)
-  accountId: Schema.optional(Schema.String),      // 账户 ID
-  enterpriseUrl: Schema.optional(Schema.String),  // 企业版 URL
-}) {}
-
-// API 类型 - 用于 API Key 认证的 Provider
-export class Api extends Schema.Class<Api>("ApiAuth")({
-  type: Schema.Literal("api"),
-  key: Schema.String,            // API Key
-}) {}
-
-// WellKnown 类型 - 特殊认证方式
-export class WellKnown extends Schema.Class<WellKnown>("WellKnownAuth")({
-  type: Schema.Literal("wellknown"),
-  key: Schema.String,
-  token: Schema.String,
-}) {}
+codegenie: Effect.fnUntraced(function* () {
+  const auth = yield* dep.auth("codegenie")
+  if (!auth) return { autoload: false }
+  if (auth.type === "oauth") {
+    if (auth.expires && Date.now() >= auth.expires) {
+      const { codegenieAuth } = yield* Effect.promise(() => import("@/plugin/codegenie"))
+      const newTokens = yield* Effect.promise(() => codegenieAuth.refreshToken())
+      if (newTokens) {
+        return { autoload: true, options: { apiKey: newTokens.accessToken } }
+      }
+      return { autoload: false }
+    }
+    return { autoload: true, options: { apiKey: auth.access } }
+  }
+  return { autoload: false }
+}),
 ```
 
-### 3.3 存储设计
+### 4.3 子系统/模块间接口基线
+
+#### 4.3.1 模块间接口关系图
 
 ```
-存储位置: ~/.local/share/opencode/auth.json
-文件权限: 0600 (仅用户可读写)
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   CLI auth      │────▶│  Plugin Manager │────▶│   AuthHook      │
+│   commands      │     │  .list()        │     │   .authorize()  │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                                                        │
+                                                        ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   TUI Home      │────▶│  sync.data      │     │  LoginService   │
+│   .provider     │     │  .provider      │     │  .login()       │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                                                        │
+                                                        ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Provider      │────▶│  custom loader  │────▶│  saveAuthToDisk │
+│   Manager       │     │  (codegenie)    │     │  ()             │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
 
-格式示例:
+#### 4.3.2 模块间接口定义
+
+| 接口ID | 调用方 | 被调用方 | 接口名称 | 数据格式 | 通信方式 |
+|--------|--------|----------|----------|----------|----------|
+| MI-001 | CLI providers.ts | Plugin Manager | Plugin.list() | Plugin[] | 同步 |
+| MI-002 | CLI providers.ts | AuthHook | authorize() | AuthResult | 异步 |
+| MI-003 | TUI home.tsx | sync context | sync.data.provider | Provider[] | 响应式 |
+| MI-004 | Provider Manager | custom loader | codegenie() | LoaderResult | 异步 |
+| MI-005 | LoginService | saveAuthToDisk | saveAuthToDisk() | void | 异步 |
+
+---
+
+## 5. 周边依赖关系
+
+### 5.1 网络依赖
+
+#### 5.1.1 网络依赖列表
+
+| 依赖项 | 依赖类型 | 网络要求 | 带宽要求 | 延迟要求 |
+|--------|----------|----------|----------|----------|
+| 华为认证服务 | 强依赖 | HTTPS | 低 | < 5s |
+| CodeGenie API | 强依赖 | HTTPS/SSE | 中 | < 30s (流式) |
+| models.dev | 弱依赖 | HTTPS | 低 | < 3s |
+
+#### 5.1.2 网络异常处理
+
+| 异常场景 | 处理策略 | 重试机制 | 降级方案 |
+|----------|----------|----------|----------|
+| 认证服务超时 | 显示错误提示 | 无重试 | 提供其他 Provider 选项 |
+| Token 刷新失败 | 静默降级 | 无重试 | CodeGenie 模型不可用 |
+| API 调用失败 | 显示错误 | SDK 内置重试 | 不影响其他 Provider |
+
+### 5.2 UX 设计稿依赖
+
+| 设计稿ID | 页面/组件名称 | 状态 | 更新日期 |
+|----------|---------------|------|----------|
+| UX-001 | CodeGenieOnboarding 引导界面 | 已实现 | 2026-04-21 |
+| UX-002 | CodeGenie Logo 渐变设计 | 已实现 | 2026-04-21 |
+
+---
+
+## 6. 安全隐私设计
+
+### 6.1 数据安全
+
+| 安全类型 | 设计方案 | 实现位置 |
+|----------|----------|----------|
+| Token 加密存储 | AES-128-GCM，密钥长度 16 字节，IV 12 字节 | TokenStorage |
+| 文件权限 | Token 和密钥文件权限 0600 | saveToken(), key 生成 |
+| 传输安全 | OAuth 回调使用 localhost | LocalAuthServer |
+| 数据最小化 | 仅存储 JWT Token，不存储用户密码 | LoginService |
+
+### 6.2 隐私保护
+
+| 隐私类型 | 设计方案 | 说明 |
+|----------|----------|------|
+| 数据收集 | 仅收集认证必需的 Token | 不收集用户行为数据 |
+| 数据存储 | 全部本地存储，不上传服务器 | auth.json + token.enc |
+| 数据使用 | 仅用于 AI 模型 API 调用认证 | custom loader 设置 apiKey |
+
+### 6.3 敏感接口保护
+
+| 接口ID | 敏感级别 | 保护措施 | 审计要求 |
+|--------|----------|----------|----------|
+| PI-001 (AuthHook) | 高 | OAuth 流程，不暴露密钥 | 无 |
+| PI-003 (saveAuthToDisk) | 高 | 文件权限 0600 | 无 |
+| PI-004 (codegenieAuth) | 中 | Token 加密存储 | 无 |
+
+---
+
+## 7. 性能功耗设计
+
+### 7.1 性能目标
+
+| 指标 | 目标值 | 测量方法 |
+|------|--------|----------|
+| TUI 启动延迟 | 已认证用户 < 100ms 额外延迟 | 对比有无 CodeGenie 插件的启动时间 |
+| OAuth 登录耗时 | < 30s（不含用户操作时间） | 从点击到 Token 存储完成 |
+| Token 刷新耗时 | < 3s | 从检测过期到刷新完成 |
+| 模型列表渲染 | < 50ms 额外延迟 | 对比有无 CodeGenie 模型的渲染时间 |
+
+### 7.2 性能优化策略
+
+| 优化点 | 策略 | 说明 |
+|--------|------|------|
+| 插件加载 | 懒加载 codegenie-models | 使用 `Effect.promise(() => import(...))` |
+| 认证检测 | 使用 sync.data.provider | 避免导入 Auth/AppRuntime/Effect |
+| Token 刷新 | 仅在过期时刷新 | custom loader 中检查 expires |
+
+---
+
+## 8. 本地数据库设计
+
+### 8.1 存储结构
+
+#### 8.1.1 auth.json
+
+**存储位置**: `~/.local/share/opencode/auth.json`
+**文件权限**: 0600
+
+```json
 {
-  "anthropic": {
-    "type": "api",
-    "key": "sk-ant-api03-..."
-  },
-  "github-copilot": {
-    "type": "oauth",
-    "refresh": "gho_...",
-    "access": "ghu_...",
-    "expires": 1700000000000
-  },
   "codegenie": {
     "type": "api",
     "key": "eyJhbG..."
@@ -128,907 +595,179 @@ export class WellKnown extends Schema.Class<WellKnown>("WellKnownAuth")({
 }
 ```
 
----
+#### 8.1.2 token.enc
 
-## 4. Plugin System 设计
+**存储位置**: `~/.config/codegenie/token.enc`
+**文件权限**: 0600
 
-### 4.1 Plugin 接口
-
-```typescript
-// packages/plugin/src/index.ts
-
-// Plugin 输入上下文
-export type PluginInput = {
-  client: ReturnType<typeof createOpencodeClient>
-  project: Project
-  directory: string
-  worktree: string
-  serverUrl: URL
-  $: BunShell
-}
-
-// Plugin 定义
-export type Plugin = (input: PluginInput) => Promise<Hooks>
-```
-
-### 4.2 Hooks 接口
-
-```typescript
-export interface Hooks {
-  // 事件订阅
-  event?: (input: { event: Event }) => Promise<void>
-
-  // 配置通知
-  config?: (input: Config) => Promise<void>
-
-  // 自定义工具
-  tool?: { [key: string]: ToolDefinition }
-
-  // 认证钩子 ★
-  auth?: AuthHook
-
-  // 聊天钩子
-  "chat.message"?: (...) => Promise<void>
-  "chat.params"?: (...) => Promise<void>
-  "chat.headers"?: (...) => Promise<void>
-
-  // 工具钩子
-  "tool.execute.before"?: (...) => Promise<void>
-  "tool.execute.after"?: (...) => Promise<void>
-  "tool.definition"?: (...) => Promise<void>
-
-  // Shell 钩子
-  "shell.env"?: (...) => Promise<void>
-
-  // 实验性钩子
-  "experimental.chat.messages.transform"?: (...) => Promise<void>
-  "experimental.chat.system.transform"?: (...) => Promise<void>
-  "experimental.session.compacting"?: (...) => Promise<void>
+```json
+{
+  "encrypted": "base64-encoded-ciphertext",
+  "iv": "base64-encoded-iv",
+  "authTag": "base64-encoded-auth-tag",
+  "timeStamp": 1700000000000
 }
 ```
 
-### 4.3 AuthHook 详细设计
+#### 8.1.3 .token_key
 
-```typescript
-export type AuthHook = {
-  // Provider 标识符 (必须匹配 models.dev 中的 ID 或配置文件定义)
-  provider: string
-
-  // 配置加载器 - 在 Provider 初始化时被调用
-  // 返回值将合并到 Provider 的 options 中
-  loader?: (
-    getAuth: () => Promise<Auth>,
-    provider: Provider
-  ) => Promise<Record<string, any>>
-
-  // 认证方法列表 - 显示在登录对话框中
-  methods: AuthMethod[]
-}
-```
-
-### 4.4 AuthMethod 设计
-
-```typescript
-type AuthMethod =
-  // OAuth 类型
-  | {
-      type: "oauth"
-      label: string                    // 显示标签
-      prompts?: AuthPrompt[]           // 可选的交互式提示
-      authorize(inputs?): Promise<AuthOuathResult>
-    }
-  // API Key 类型
-  | {
-      type: "api"
-      label: string
-      prompts?: AuthPrompt[]
-      authorize?(inputs?): Promise<{
-        type: "success"
-        key: string
-        provider?: string
-      } | { type: "failed" }>
-    }
-```
+**存储位置**: `~/.config/codegenie/.token_key`
+**文件权限**: 0600
+**格式**: 16 字节二进制密钥
 
 ---
 
-## 5. ProviderAuth Service 设计
+## 9. DFX分析
 
-### 5.1 服务接口
+### 9.1 可维护性
 
-```typescript
-// packages/opencode/src/provider/auth.ts
-export namespace ProviderAuth {
-  export interface Interface {
-    // 获取所有 Provider 的认证方法
-    readonly methods: () => Effect.Effect<Record<ProviderID, Method[]>>
+| 维护场景 | 设计方案 | 维护成本 |
+|----------|----------|----------|
+| 新增模型 | 修改 codegenie-models.ts | 低（1 个文件） |
+| 新增区域 | 修改 CountryCode/LanguageCode/SiteId 常量 | 低（1 个文件） |
+| URL 变更 | 修改 DEFAULT_CONFIG 常量 | 低（1 个文件） |
+| 认证协议变更 | 修改 LoginService | 中（核心逻辑） |
 
-    // 发起 OAuth 授权
-    readonly authorize: (input: {
-      providerID: ProviderID
-      method: number
-      inputs?: Record<string, string>
-    }) => Effect.Effect<Authorization | undefined, Error>
+### 9.2 可扩展性
 
-    // OAuth 回调处理
-    readonly callback: (input: {
-      providerID: ProviderID
-      method: number
-      code?: string
-    }) => Effect.Effect<void, Error>
-  }
-}
-```
+| 扩展场景 | 设计方案 | 扩展点 |
+|----------|----------|--------|
+| 新增认证方式 | AuthHook.methods 数组新增条目 | AuthHook 接口 |
+| 动态模型列表 | 替换 codegenie-models.ts 为 API 调用 | CODEGENIE_PROVIDER_CONFIG |
+| 新增 Provider | 新增 Plugin 到 INTERNAL_PLUGINS | Plugin 体系 |
 
----
+### 9.3 可靠性
 
-## 6. Provider Manager 设计
+| 故障场景 | 恢复策略 | 恢复时间 |
+|----------|----------|----------|
+| Token 文件损坏 | 自动清除，显示引导界面 | < 1s |
+| OAuth 服务不可用 | 提供其他 Provider 选项 | 即时 |
+| Token 过期 | 自动刷新，失败时降级 | < 3s |
+| 端口占用 | 多端口尝试 | < 1s |
 
-### 6.1 数据结构
+### 9.4 可测试性
 
-```typescript
-// Provider 信息
-export type Info = {
-  id: ProviderID
-  name: string
-  source: "env" | "config" | "custom" | "api"
-  env: string[]                    // 环境变量名列表
-  key?: string                     // API Key
-  options: Record<string, any>     // SDK 配置
-  models: Record<string, Model>    // 模型列表
-}
-```
-
-### 6.2 加载流程
-
-```typescript
-const state = Instance.state(async () => {
-  // 1. 加载 models.dev 数据库
-  const modelsDev = await ModelsDev.get()
-  const database = mapValues(modelsDev, fromModelsDevProvider)
-
-  // 2. 合并配置文件中的 Provider
-  for (const [providerID, provider] of configProviders) {
-    const existing = database[providerID]
-    const parsed = { ...existing, ...provider, source: "config" }
-    database[providerID] = parsed
-  }
-
-  // 3. 检查环境变量
-  const env = Env.all()
-  for (const [id, provider] of Object.entries(database)) {
-    const apiKey = provider.env.map((item) => env[item]).find(Boolean)
-    if (apiKey) {
-      mergeProvider(id, { source: "env", key: provider.env.length === 1 ? apiKey : undefined })
-    }
-  }
-
-  // 4. 检查 Auth 存储
-  for (const [id, auth] of Object.entries(await Auth.all())) {
-    if (auth.type === "api") {
-      mergeProvider(id, { source: "api", key: auth.key })
-    }
-  }
-
-  // 5. 调用 Plugin auth.loader
-  for (const plugin of await Plugin.list()) {
-    if (!plugin.auth) continue
-    const auth = await Auth.get(plugin.auth.provider)
-    if (auth && plugin.auth.loader) {
-      const options = await plugin.auth.loader(() => Auth.get(...), provider)
-      mergeProvider(plugin.auth.provider, { options })
-    }
-  }
-
-  return { providers, models, sdk, modelLoaders }
-})
-```
+| 测试类型 | 测试方案 | 覆盖范围 |
+|----------|----------|----------|
+| 手动测试 | 按 test-cases.md 验证 | 关键路径 100% |
+| 回归测试 | 验证已有功能不受影响 | Provider 列表、Auth 存储、模型选择 |
 
 ---
 
-## 7. CodeGenie 认证插件设计
+## 10. 其它功能性设计
 
-### 7.1 模块结构
+### 10.1 多区域支持
 
 ```typescript
-// packages/opencode/src/plugin/codegenie.ts
-
-// ==================== 核心类 ====================
-// - TokenStorage: AES-128-GCM 加密的 Token 存储
-// - LocalAuthServer: 本地 OAuth 回调服务器
-// - LoginService: 华为 OAuth 登录服务
-// - HttpClient: HTTP 请求封装
-
-// ==================== 配置常量 ====================
-const PROVIDER_ID = "codegenie"
-
-const DEFAULT_CONFIG = {
-  baseUrl: "https://devecostudio.huawei.com",
-  authUrl: "console/DevEcoIDE/apply",
-  tempTokenCheckUrl: "authrouter/auth/api/temptoken/check",
-  jwtTokenCheckUrl: "authrouter/auth/api/jwToken/check",
-  appId: "1007",
-  defaultPort: 10101,
-  timeout: 20000,
-}
-
-// ==================== 多区域支持 ====================
 const CountryCode = { CHINA: "CN", RUSSIA: "RU", SINGAPORE: "SG", EUROPE: "EU" }
+const LanguageCode = { CHINA: "zh_CN", RUSSIA: "ru_RU", EUROPE: "de_DE" }
 const SiteId = { CHINA: "1", SINGAPORE: "5", EUROPE: "7", RUSSIA: "8" }
 ```
 
-### 7.2 TokenStorage 设计
+| 区域 | 域名 | siteId |
+|------|------|--------|
+| 中国 | cn.devecostudio.huawei.com | 1 |
+| 新加坡 | sg.devecostudio.huawei.com | 5 |
+| 欧洲 | eu.devecostudio.huawei.com | 7 |
+| 俄罗斯 | ru.devecostudio.huawei.com | 8 |
 
-```typescript
-class TokenStorage {
-  private keyFilePath: string    // ~/.config/codegenie/.token_key
-  private algorithm = "aes-128-gcm"
-  private keyLength = 16
-  private ivLength = 12
+### 10.2 CodeGenieOnboarding 组件设计
 
-  // 加密存储 Token
-  async saveToken(token: string): Promise<void> {
-    const { encrypted, iv, authTag } = this.encrypt(token)
-    const tokenData = { encrypted, iv, authTag, timeStamp: Date.now() }
-    fs.writeFileSync(tokenFilePath, JSON.stringify(tokenData), { mode: 0o600 })
-  }
+| 步骤 | 说明 | 关键交互 |
+|------|------|----------|
+| `entry` | 显示两个选项：CodeGenie OAuth、Other providers | 键盘上下选择，Enter 确认 |
+| `auth` | CodeGenie 浏览器 OAuth 登录等待界面 | 自动打开浏览器，等待回调 |
+| `providers` | 其他 Provider 列表（排除 codegenie，按优先级排序） | 键盘选择，Enter 确认 |
 
-  // 解密读取 Token
-  async loadToken(): Promise<string | null> {
-    const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, "utf8"))
-    return this.decrypt(tokenData.encrypted, tokenData.iv, tokenData.authTag)
-  }
+**关键设计**:
+- 使用 `saveAuthToDisk()` 写入认证数据（不导入 AppRuntime/Effect）
+- 键盘事件在 dialog 打开时自动禁用
+- 引导完成后调用 `props.onComplete()` 通知父组件
+- 水平布局：左 Logo + 右内容
 
-  // 清除 Token
-  async clearToken(): Promise<void> {
-    fs.unlinkSync(tokenFilePath)
-  }
-}
-```
+### 10.3 home.tsx 认证检测设计
 
-### 7.3 LocalAuthServer 设计
+```tsx
+const [showOnboarding, setShowOnboarding] = createSignal(false)
+let authChecked = false
 
-```typescript
-class LocalAuthServer {
-  private server: http.Server | null = null
-  private callbackPath = "/callback"
-
-  // 启动服务器，尝试多个端口
-  async start(): Promise<number> {
-    const portsToTry = [10101, 34567, 34568, 34569, 34570]
-    for (const port of portsToTry) {
-      try {
-        return await this.tryPort(port)
-      } catch {}
-    }
-    throw new Error("All ports are in use")
-  }
-
-  // 等待 OAuth 回调
-  async waitForCallback(timeout = 30000): Promise<CallbackData> {
-    return new Promise((resolve, reject) => {
-      this.resolveCallback = resolve
-      this.rejectCallback = reject
-      setTimeout(() => reject(new Error("Timeout")), timeout)
-    })
-  }
-}
-```
-
-### 7.4 LoginService 设计
-
-```typescript
-class LoginService {
-  async login(): Promise<LoginResult> {
-    // 1. 生成 client secret
-    const clientSecret = this.generateClientSecret()
-
-    // 2. 启动本地服务器
-    await this.server.start()
-
-    // 3. 打开登录页面
-    await this.openLoginPage(this.server.getPort(), clientSecret)
-
-    // 4. 等待回调获取 tempToken
-    const callbackData = await this.server.waitForCallback()
-
-    // 5. 用 tempToken 换取 jwtToken
-    const jwtToken = await this.getJwtToken(callbackData.tempToken, callbackData.siteId)
-
-    // 6. 获取用户信息
-    const userInfo = await this.getUserInfoFromJwt(jwtToken)
-
-    // 7. 存储 Token
-    await tokenStorage.saveToken(jwtToken)
-
-    return { success: true, userInfo }
-  }
-}
-```
-
-### 7.5 Plugin 入口
-
-```typescript
-export async function CodegenieAuthPlugin(_input: PluginInput): Promise<Hooks> {
-  return {
-    auth: {
-      provider: PROVIDER_ID,
-
-      async loader(getAuth, _provider) {
-        const info = await getAuth()
-        if (!info) return {}
-
-        return {
-          apiKey: info.type === "api" ? info.key : info.type === "wellknown" ? info.key : undefined,
-        }
-      },
-
-      methods: [
-        {
-          type: "api",
-          label: "Login with Huawei DevEco Account",
-          async authorize() {
-            const result = await codegenieAuth.login()
-
-            if (!result.success) {
-              return { type: "failed" }
-            }
-
-            return {
-              type: "success",
-              key: result.userInfo?.jwtToken || "",
-              provider: PROVIDER_ID,
-            }
-          },
-        },
-      ],
+createEffect(
+  on(
+    () => sync.status,
+    (status) => {
+      if (status !== "complete") return
+      if (authChecked) return
+      authChecked = true
+      const hasCredentials = sync.data.provider.some(
+        (x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0),
+      )
+      if (!hasCredentials) {
+        setShowOnboarding(true)
+      }
     },
-  }
+  ),
+)
+```
+
+**设计决策**:
+- 使用 `sync.data.provider` 而非 `Auth.all()`，避免导入 Auth/AppRuntime/Effect
+- 检测逻辑与 `useConnected()` 一致
+- `showOnboarding` 默认为 `false`，确保已登录用户先看到主界面
+- `authChecked` 标志确保只检测一次
+
+### 10.4 Provider 列表排序设计
+
+```typescript
+const priority = {
+  codegenie: -1,
+  opencode: 0,
+  openai: 1,
+  // ...
 }
 ```
 
----
-
-## 8. 安全设计
-
-### 8.1 认证数据安全
-
-| 数据 | 存储位置 | 权限 | 加密 |
-|------|----------|------|------|
-| API Key (OpenCode) | auth.json | 0600 | 无 |
-| JWT Token (CodeGenie) | token.enc | 0600 | AES-128-GCM |
-| 加密密钥 | .token_key | 0600 | - |
-
-### 8.2 OAuth 安全
-
-- **本地服务器**: 只监听回调，不暴露敏感信息
-- **超时机制**: 默认 10 分钟超时（600000ms）
-- **端口复用**: 支持多端口尝试（10101, 34567-34570），避免端口冲突
-
----
-
-## 9. 源码修改清单
-
-> 详细的源码修改清单请参见：[source-code-changes.md](./source-code-changes.md)
-
-**修改概览**:
-- 修改 2 个文件：`plugin/index.ts`, `cli/cmd/providers.ts`
-- 新增 1 个文件：`plugin/codegenie.ts` (~860 行)
-
----
-
-## 13. CodeGenie 模型列表集成设计
-
-### 13.1 功能概述
-
-在用户通过 CodeGenie OAuth 登录后，在 TUI 模型选择对话框（`/models`）中显示 CodeGenie 提供的免费模型。CodeGenie 模型分组位于所有其他 provider 分组之前，作为推荐选项。
-
-### 13.2 模型数据
-
-硬编码在独立资源文件 `codegenie-models.ts` 中，不通过 API 动态获取：
-
-| 模型 ID | 显示名称 | 标签 | 说明 |
-|---------|----------|------|------|
-| `glm-5` | GLM-5 | Free | 智谱 GLM-5 模型 |
-| `deepseek-v3.2` | deepseek-v3.2 | Free | DeepSeek V3.2 模型 |
-
-### 13.3 实现设计
-
-采用**配置注入 + 最小修改**策略，利用 opencode 已有的 config-based provider 注入机制：
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    CodeGenie 模型注入流程                             │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  1. Provider.state() 初始化                                         │
-│     │                                                               │
-│     ├─ 检查 Auth.get("codegenie") 是否存在                          │
-│     │  └─ 若存在：将 CODEGENIE_PROVIDER_CONFIG 注入 configProviders │
-│     │                                                               │
-│     ├─ 现有 config-based provider 解析流程 (lines 962-1043)         │
-│     │  └─ 自动构建 database["codegenie"] = Info { models, ... }    │
-│     │                                                               │
-│     ├─ Auth 加载 (lines 1058-1068)                                  │
-│     │  └─ mergeProvider("codegenie", { source: "api", key })       │
-│     │                                                               │
-│     ├─ Plugin auth loader (lines 1070-1085)                         │
-│     │  └─ 设置 options.apiKey = jwtToken                           │
-│     │                                                               │
-│     └─ CUSTOM_LOADERS (lines 1087-1104)                             │
-│        └─ codegenie loader: autoload=true, 设置 baseURL             │
-│                                                                     │
-│  2. Provider.list() → /config/providers → sync.tsx → DialogModel   │
-│     └─ DialogModel 中 codegenie 排序在最前面                         │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 13.4 注入点设计
-
-#### 13.4.1 模型定义（codegenie-models.ts）
-
-在独立资源文件中导出 `CODEGENIE_PROVIDER_CONFIG`，符合 `Config.Provider` schema：
-
 ```typescript
-export const CODEGENIE_PROVIDER_CONFIG: Config.Provider = {
-  name: "CodeGenie",
-  npm: "@ai-sdk/openai-compatible",
-  api: "<CodeGenie API Gateway URL>",
-  env: [],
-  models: {
-    "glm-5": {
-      name: "GLM-5",
-      attachment: true,
-      reasoning: true,
-      temperature: true,
-      tool_call: true,
-      limit: { context: 128000, output: 8192 },
-      cost: { input: 0, output: 0 },
-    },
-    "deepseek-v3.2": {
-      name: "deepseek-v3.2",
-      attachment: true,
-      reasoning: true,
-      temperature: true,
-      tool_call: true,
-      limit: { context: 128000, output: 8192 },
-      cost: { input: 0, output: 0 },
-    },
-  },
-}
-```
-
-#### 13.4.2 Provider 注入（provider.ts）
-
-在 `configProviders` 解析之后（line 947），注入 CodeGenie 配置：
-
-```typescript
-// line 947: const configProviders = Object.entries(config.provider ?? {})
-
-// === CodeGenie: inject provider config if authenticated ===
-const codegenieAuth = await Auth.get("codegenie")
-if (codegenieAuth) {
-  const { CODEGENIE_PROVIDER_CONFIG } = await import("@/plugin/codegenie-models")
-  configProviders.push(["codegenie", CODEGENIE_PROVIDER_CONFIG])
-}
-```
-
-#### 13.4.3 Custom Loader（provider.ts CUSTOM_LOADERS）
-
-添加 codegenie custom loader，设置 SDK 初始化参数：
-
-```typescript
-codegenie: async (provider) => {
-  const auth = await Auth.get("codegenie")
-  if (!auth) return { autoload: false }
-
-  return {
-    autoload: true,
-    options: {
-      apiKey: auth.type === "api" ? auth.key : undefined,
-    },
-  }
-},
-```
-
-#### 13.4.4 DialogModel 排序调整（dialog-model.tsx）
-
-修改 provider 排序逻辑，使 codegenie 排在 opencode 之前：
-
-```typescript
-// 修改前
-sortBy(
-  (provider) => provider.id !== "opencode",
-  (provider) => provider.name,
-),
-
-// 修改后
 sortBy(
   (provider) => provider.id !== "codegenie" && provider.id !== "opencode",
   (provider) => provider.id === "opencode",
   (provider) => provider.name,
-),
+)
 ```
 
-修改 "Free" 标签显示条件，支持 codegenie：
+### 10.5 Free 标签设计
 
 ```typescript
-// 修改前
-footer: model.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
-
-// 修改后
-footer: model.cost?.input === 0 && (provider.id === "opencode" || provider.id === "codegenie")
-  ? "Free" : undefined,
-```
-
-同样修改 `toOptions` 函数中的 footer 和 disabled 逻辑。
-
-### 13.5 条件显示逻辑
-
-| 条件 | 行为 |
-|------|------|
-| 已登录 CodeGenie OAuth | 模型列表最前面显示 CodeGenie 分组，包含 2 个 Free 模型 |
-| 未登录 CodeGenie OAuth | 不注入配置，模型列表不显示 CodeGenie |
-| 登出 CodeGenie | Provider.state 重新初始化时不再注入，模型自动消失 |
-
-### 13.6 对话调用链路
-
-选择 CodeGenie 模型后的调用链路：
-
-```
-用户选择 GLM-5
-  → local.model.set({ providerID: "codegenie", modelID: "glm-5" })
-  → Provider.getLanguage(model)
-  → getSDK(model)
-  → createOpenAICompatible({ baseURL, apiKey })
-  → sdk.languageModel("glm-5")
-  → API 请求发送到 CodeGenie Gateway
-```
-
-### 13.7 修改文件汇总
-
-| 文件 | 修改类型 | 修改量 | 说明 |
-|------|----------|--------|------|
-| `plugin/codegenie-models.ts` | 新增 | ~45 行 | CodeGenie 模型资源定义 |
-| `provider/provider.ts` | 修改 | ~15 行 | 注入配置 + 添加 custom loader |
-| `cli/cmd/tui/component/dialog-model.tsx` | 修改 | ~5 行 | 排序 + Free 标签 |
-
----
-
-## 10. 数据流图
-
-### 10.1 CLI 登录流程
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                   CLI `opencode auth login` 流程                    │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  1. Plugin.list() 获取所有插件                                      │
-│     │                                                               │
-│     ▼                                                               │
-│  2. resolvePluginProviders() 提取 auth providers                   │
-│     │                                                               │
-│     ▼                                                               │
-│  3. 按 priority 排序，codegenie(-1) 排最前                          │
-│     │                                                               │
-│     ▼                                                               │
-│  4. 用户选择 provider                                               │
-│     │                                                               │
-│     ▼                                                               │
-│  5. 调用 hook.auth.methods[x].authorize()                          │
-│     │  - 启动本地服务器监听回调 (port 10101)                         │
-│     │  - 打开浏览器访问华为登录页                                    │
-│     │  - 等待用户授权                                                │
-│     ▼                                                               │
-│  6. 回调返回 tempToken + siteId                                     │
-│     │                                                               │
-│     ▼                                                               │
-│  7. 用 tempToken 换取 jwtToken                                      │
-│     │                                                               │
-│     ▼                                                               │
-│  8. 用 jwtToken 换取 accessToken + refreshToken                    │
-│     │                                                               │
-│     ▼                                                               │
-│  9. Auth.set("codegenie", {                                         │
-│       type: "oauth",                                                │
-│       access: accessToken,                                          │
-│       refresh: refreshToken,                                        │
-│       expires: Date.now() + 30min                                   │
-│     })                                                              │
-│     │                                                               │
-│     ▼                                                               │
-│  10. jwtToken 加密存储到 ~/.config/codegenie/token.enc              │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 10.2 登录接口调用详情
-
-#### 步骤 5：打开浏览器登录页
-
-**请求方式**: 浏览器打开 URL
-
-**请求 URL**:
-```
-GET {regionalizedBaseUrl}/{authUrl}?port={port}&appid={appId}&code={clientSecret}
-```
-
-**示例**:
-```
-GET https://cn.devecostudio.huawei.com/console/DevEcoIDE/apply?port=10101&appid=1008&code=a1b2c3d4e5f6...
-```
-
-**参数说明**:
-
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| `port` | `10101` | 本地回调服务器端口 |
-| `appid` | `1008` | CodeGenie 专用 AppId |
-| `code` | UUID (无横线) | 一次性 clientSecret，用于验证回调合法性 |
-
-**区域化 Base URL**:
-
-| 国家 | Base URL |
-|------|----------|
-| CN | `https://cn.devecostudio.huawei.com` |
-| SG | `https://devecostudio.huawei.com` |
-| EU | `https://eu.devecostudio.huawei.com` |
-| RU | `https://ru.devecostudio.huawei.com` |
-
----
-
-#### 步骤 6：OAuth 回调
-
-**回调 URL**:
-```
-GET http://localhost:{port}/callback?code={clientSecret}&tempToken={tempToken}&siteId={siteId}
-```
-
-**示例**:
-```
-GET http://localhost:10101/callback?code=a1b2c3d4e5f6...&tempToken=eyJhbG...&siteId=1
-```
-
-**回调参数**:
-
-| 参数 | 说明 |
-|------|------|
-| `code` | 与步骤 5 的 clientSecret 比对，验证回调合法性 |
-| `tempToken` | 临时令牌，用于换取 jwtToken |
-| `siteId` | 站点 ID：`1`=CN, `5`=SG, `7`=EU, `8`=RU |
-| `quit` | 可选，`true`/`access_denied` 表示用户取消 |
-
----
-
-#### 步骤 7：用 tempToken 换取 jwtToken
-
-**请求方式**: `GET`
-
-**请求 URL**:
-```
-GET {regionalizedBaseUrl}/{tempTokenCheckUrl}?tempToken={tempToken}&site={countryCode}&version=1.0.0&appid=1008
-```
-
-**示例**:
-```
-GET https://cn.devecostudio.huawei.com/authrouter/auth/api/temptoken/check?tempToken=eyJhbG...&site=CN&version=1.0.0&appid=1008
-```
-
-**请求参数**:
-
-| 参数 | 说明 |
-|------|------|
-| `tempToken` | 步骤 6 回调获取的临时令牌 |
-| `site` | 国家码：CN / SG / EU / RU |
-| `version` | 固定值 `"1.0.0"` |
-| `appid` | 固定值 `"1008"` |
-
-**返回值**: 纯文本 jwtToken（三段式 JWT 格式）
-
-```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NTYiLCJ1c2VyTmFtZSI6InVzZXIwMDEiLCJleHAiOjE3MDAwMDAwMDAsImlhdCI6MTcwMDAwMDAwMH0.xxxxx
-```
-
-**jwtToken Payload 结构**:
-```json
-{
-  "userId": "123456",
-  "userName": "user001",
-  "exp": 1700000000,
-  "iat": 1700000000
-}
+footer: model.cost?.input === 0 && (provider.id === "opencode" || provider.id === "codegenie") ? "Free" : undefined,
 ```
 
 ---
 
-#### 步骤 8：用 jwtToken 换取 accessToken + refreshToken
+## 附录
 
-**请求方式**: `GET`
+### A. 设计决策记录
 
-**请求 URL**:
-```
-GET {regionalizedBaseUrl}/{jwtTokenCheckUrl}
-```
+| 决策ID | 决策内容 | 决策原因 | 决策日期 |
+|--------|----------|----------|----------|
+| D-001 | 使用 saveAuthToDisk 替代 Auth.set | 导入 AppRuntime/Effect 导致循环依赖黑屏 | 2026-04-21 |
+| D-002 | 使用 sync.data.provider 替代 Auth.all | 避免在 TUI 组件中导入 Auth/AppRuntime/Effect | 2026-04-21 |
+| D-003 | Token 存储使用 AES-128-GCM | 平衡安全性与性能 | 2026-03-25 |
+| D-004 | 模型信息硬编码 | API 动态获取暂不可用 | 2026-03-25 |
+| D-005 | 引导界面在 home.tsx 而非 app.tsx | 最小化修改范围，app.tsx 保留 DialogProviderList | 2026-04-21 |
 
-**示例**:
-```
-GET https://cn.devecostudio.huawei.com/authrouter/auth/api/jwToken/check
-```
+### B. 与 copy 项目的主要差异
 
-**请求 Headers**:
+| 差异项 | copy 项目 | 新项目 | 原因 |
+|--------|-----------|--------|------|
+| Auth 写入方式 | `Auth.set()` (namespace 便捷函数) | `saveAuthToDisk()` (直接文件写入) | 无 Auth 便捷函数，且导入导致循环依赖 |
+| 认证检测 | `Auth.all()` + `AppRuntime.runPromise` | `sync.data.provider.some(...)` | 避免循环依赖 |
+| Plugin 系统 | `ServiceMap.Service` | `Context.Service` | 不同 Effect Context API |
+| Logo 组件 | 自定义渐变渲染 + charMap/charOpacity | 添加 `column` prop + `Show` 条件渲染 | 最小化改动 |
 
-| Header | 值 | 说明 |
-|--------|-----|------|
-| `refresh` | `"false"` | 首次获取 token |
-| `jwtToken` | 步骤 7 获取的 jwtToken | JWT 令牌 |
-
-**返回值**:
-```json
-{
-  "status": true,
-  "userInfo": {
-    "accessToken": "eyJhbG...",
-    "refreshToken": "eyJhbG...",
-    "nationalCode": "CN",
-    "realName": "true"
-  }
-}
-```
-
-**返回字段说明**:
-
-| 字段 | 说明 |
-|------|------|
-| `status` | 请求是否成功 |
-| `userInfo.accessToken` | 访问令牌，有效期 **30 分钟**，用于 API 鉴权 |
-| `userInfo.refreshToken` | 刷新令牌，用于在 accessToken 过期后刷新 |
-| `userInfo.nationalCode` | 国家码 |
-| `userInfo.realName` | 是否实名认证 |
-
----
-
-#### 步骤 9：保存到 Auth 存储
-
-**存储格式** (Oauth 类型):
-```json
-{
-  "type": "oauth",
-  "access": "<accessToken>",
-  "refresh": "<refreshToken>",
-  "expires": 1700000000000
-}
-```
-
-**存储位置**: `~/.local/share/opencode/auth.json`
-
-**过期时间**: 当前时间 + 30 分钟（`ACCESS_TOKEN_EXPIRES_MS = 30 * 60 * 1000`）
-
----
-
-### 10.3 Token 刷新流程
-
-当 accessToken 过期（超过 30 分钟）时，使用 `refresh: "true"` 刷新：
-
-**请求方式**: `GET`
-
-**请求 URL**:
-```
-GET {regionalizedBaseUrl}/{jwtTokenCheckUrl}
-```
-
-**请求 Headers**:
-
-| Header | 值 | 说明 |
-|--------|-----|------|
-| `refresh` | `"true"` | **刷新模式** |
-| `jwtToken` | 当前 jwtToken | JWT 令牌 |
-
-**返回值**: 与步骤 8 相同格式
-
-```json
-{
-  "status": true,
-  "userInfo": {
-    "accessToken": "<新的 accessToken>",
-    "refreshToken": "<新的 refreshToken>",
-    "nationalCode": "CN",
-    "realName": "true"
-  }
-}
-```
-
-**刷新流程**:
-```
-accessToken 过期 (30min)
-  │
-  ├─ 检查 Auth.get("codegenie").expires
-  │  └─ Date.now() >= expires → 需要刷新
-  │
-  ├─ 调用 LoginService.refreshToken(jwtToken)
-  │  └─ GET jwtTokenCheckUrl (refresh: "true")
-  │
-  ├─ 成功 → 更新 Auth 存储
-  │  └─ Auth.set("codegenie", { type: "oauth", access, refresh, expires })
-  │
-  └─ 失败 → 跳过当前操作（打点上报、模型请求等）
-```
-
----
-
-## 11. 测试设计
-
-### 11.1 单元测试
-
-```typescript
-describe("TokenStorage", () => {
-  it("should encrypt and decrypt token", async () => {
-    const storage = new TokenStorage()
-    await storage.saveToken("test-jwt-token")
-    const token = await storage.loadToken()
-    expect(token).toBe("test-jwt-token")
-  })
-
-  it("should clear token", async () => {
-    const storage = new TokenStorage()
-    await storage.saveToken("test-token")
-    await storage.clearToken()
-    const token = await storage.loadToken()
-    expect(token).toBeNull()
-  })
-})
-
-describe("LoginService", () => {
-  it("should generate valid client secret", () => {
-    const service = new LoginService()
-    const secret = service.generateClientSecret()
-    expect(secret).toMatch(/^[a-f0-9]{32}$/)
-  })
-})
-```
-
-### 11.2 集成测试
-
-```typescript
-describe("CodeGenie Auth Flow", () => {
-  it("should register in plugin list", async () => {
-    const plugins = await Plugin.list()
-    const codegenie = plugins.find(p => p.auth?.provider === "codegenie")
-    expect(codegenie).toBeDefined()
-  })
-
-  it("should appear in auth login options", async () => {
-    const options = await buildLoginOptions()
-    const codegenie = options.find(o => o.value === "codegenie")
-    expect(codegenie).toBeDefined()
-    expect(codegenie.hint).toBe("recommended")
-  })
-})
-```
-
----
-
-## 12. 附录
-
-### 12.1 完整文件列表
-
-| 文件 | 用途 | 状态 |
-|------|------|------|
-| `packages/opencode/src/auth/index.ts` | Auth 服务实现 | 未修改 |
-| `packages/opencode/src/plugin/index.ts` | Plugin 管理器 | **已修改** |
-| `packages/opencode/src/plugin/codegenie.ts` | CodeGenie 插件 | **新增** |
-| `packages/opencode/src/provider/provider.ts` | Provider 管理器 | 未修改 |
-| `packages/opencode/src/provider/auth.ts` | ProviderAuth 服务 | 未修改 |
-| `packages/opencode/src/cli/cmd/providers.ts` | CLI 认证命令 | **已修改** |
-| `packages/plugin/src/index.ts` | Hooks 类型定义 | 未修改 |
-
-### 12.2 版本历史
+### C. 版本历史
 
 | 版本 | 日期 | 修改内容 |
 |------|------|----------|
-| 1.0 | 2026-03-25 | 初始版本 - 功能设计文档 |
-| 1.1 | 2026-03-25 | 添加 OpenCode 原始代码修改清单 |
-| 2.0 | 2026-03-31 | 精简为最小侵入式修改方案，添加源码修改章节 |
-| 2.1 | 2026-04-02 | 添加 CodeGenie 模型列表集成设计（Section 13） |
-| 2.2 | 2026-04-08 | 更新登录流程：oauth 类型、accessToken 过期机制、接口调用详情（Section 10.2-10.3） |
+| 1.0 | 2026-03-25 | 初始版本 |
+| 2.0 | 2026-03-31 | 精简设计，最小化侵入式修改 |
+| 3.0 | 2026-04-21 | 按 SDD 格式重构：修正实现描述、补充 CodeGenieAuth API |
+| 4.0 | 2026-04-22 | 按 SDD 模板完整重构：补充目录、周边依赖、安全隐私、DFX 等章节；合并 03-tui-auth-check.md 内容 |
