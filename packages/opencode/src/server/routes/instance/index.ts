@@ -1,4 +1,4 @@
-import { describeRoute, resolver, validator } from "hono-openapi"
+﻿import { describeRoute, resolver, validator } from "hono-openapi"
 import { Hono } from "hono"
 import type { UpgradeWebSocket } from "hono/ws"
 import { Context, Effect } from "effect"
@@ -32,7 +32,7 @@ import { jsonRequest } from "./trace"
 export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
   const app = new Hono()
 
-  if (Flag.OPENCODE_EXPERIMENTAL_HTTPAPI) {
+  if (Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI) {
     const handler = ExperimentalHttpApiServer.webHandler().handler
     const context = Context.empty() as Context.Context<unknown>
     app.get("/question", (c) => handler(c.req.raw, context))

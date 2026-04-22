@@ -1,4 +1,4 @@
-import { Effect, Layer, Redacted, Schema } from "effect"
+﻿import { Effect, Layer, Redacted, Schema } from "effect"
 import { HttpApiBuilder, HttpApiMiddleware, HttpApiSecurity } from "effect/unstable/httpapi"
 import { HttpRouter, HttpServer, HttpServerRequest } from "effect/unstable/http"
 import { AppRuntime } from "@/effect/app-runtime"
@@ -71,13 +71,13 @@ const auth = Layer.succeed(
   Authorization.of({
     basic: (effect, { credential }) =>
       Effect.gen(function* () {
-        if (!Flag.OPENCODE_SERVER_PASSWORD) return yield* effect
+        if (!Flag.CODEGENIE_SERVER_PASSWORD) return yield* effect
 
-        const user = Flag.OPENCODE_SERVER_USERNAME ?? "opencode"
+        const user = Flag.CODEGENIE_SERVER_USERNAME ?? "opencode"
         if (credential.username !== user) {
           return yield* new Unauthorized({ message: "Unauthorized" })
         }
-        if (Redacted.value(credential.password) !== Flag.OPENCODE_SERVER_PASSWORD) {
+        if (Redacted.value(credential.password) !== Flag.CODEGENIE_SERVER_PASSWORD) {
           return yield* new Unauthorized({ message: "Unauthorized" })
         }
         return yield* effect

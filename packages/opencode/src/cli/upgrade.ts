@@ -11,13 +11,13 @@ export async function upgrade() {
   const latest = await AppRuntime.runPromise(Installation.Service.use((svc) => svc.latest(method))).catch(() => {})
   if (!latest) return
 
-  if (Flag.OPENCODE_ALWAYS_NOTIFY_UPDATE) {
+  if (Flag.CODEGENIE_ALWAYS_NOTIFY_UPDATE) {
     await Bus.publish(Installation.Event.UpdateAvailable, { version: latest })
     return
   }
 
   if (InstallationVersion === latest) return
-  if (config.autoupdate === false || Flag.OPENCODE_DISABLE_AUTOUPDATE) return
+  if (config.autoupdate === false || Flag.CODEGENIE_DISABLE_AUTOUPDATE) return
 
   const kind = Installation.getReleaseType(InstallationVersion, latest)
 

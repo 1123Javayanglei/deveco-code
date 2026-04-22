@@ -1,4 +1,4 @@
-import z from "zod"
+﻿import z from "zod"
 import type { ZodObject } from "zod"
 import { Database, eq } from "@/storage"
 import { GlobalBus } from "@/bus/global"
@@ -116,7 +116,7 @@ function process<Def extends Definition>(def: Def, event: Event<Def>, options: {
   Database.transaction((tx) => {
     projector(tx, event.data)
 
-    if (Flag.OPENCODE_EXPERIMENTAL_WORKSPACES) {
+    if (Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES) {
       tx.insert(EventSequenceTable)
         .values({
           aggregate_id: event.aggregateID,

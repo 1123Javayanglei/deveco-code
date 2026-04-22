@@ -1,4 +1,4 @@
-import { Session } from "@/session"
+﻿import { Session } from "@/session"
 import { SessionID } from "@/session/schema"
 import { SyncEvent } from "@/sync"
 import { Effect, Layer, Scope, Context } from "effect"
@@ -41,7 +41,7 @@ export const layer = Layer.effect(
       const result = yield* session.create(input)
       if (result.parentID) return result
       const conf = yield* cfg.get()
-      if (!(Flag.OPENCODE_AUTO_SHARE || conf.share === "auto")) return result
+      if (!(Flag.CODEGENIE_AUTO_SHARE || conf.share === "auto")) return result
       yield* share(result.id).pipe(Effect.ignore, Effect.forkIn(scope))
       return result
     })

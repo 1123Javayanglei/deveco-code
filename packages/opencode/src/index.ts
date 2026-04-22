@@ -1,4 +1,4 @@
-import yargs from "yargs"
+﻿import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 import { RunCommand } from "./cli/cmd/run"
 import { GenerateCommand } from "./cli/cmd/generate"
@@ -89,7 +89,7 @@ const cli = yargs(args)
   })
   .middleware(async (opts) => {
     if (opts.pure) {
-      process.env.OPENCODE_PURE = "1"
+      process.env.CODEGENIE_PURE = "1"
     }
 
     await Log.init({
@@ -106,7 +106,7 @@ const cli = yargs(args)
 
     process.env.AGENT = "1"
     process.env.OPENCODE = "1"
-    process.env.OPENCODE_PID = String(process.pid)
+    process.env.CODEGENIE_PID = String(process.pid)
 
     Log.Default.info("opencode", {
       version: InstallationVersion,
