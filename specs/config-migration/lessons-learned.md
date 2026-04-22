@@ -5,7 +5,7 @@
 ## 执行总结
 
 ### 已完成的工作
-- ✅ 所有 `OPENCODE_*` 环境变量 → `CODEGENIE_*` (216 处引用，~40 个文件)
+- ✅ 所有 `OPENCODE_*` 环境变量 → `CODEGENIE_*` (~232 处引用，~47 个文件)
 - ✅ 配置文件名: `opencode.json` → `codegenie.json`, `opencode.jsonc` → `codegenie.jsonc`
 - ✅ 配置目录名: `.opencode` → `.codegenie`
 - ✅ `CODEGENIE_DISABLE_CLAUDE_CODE` 默认为 `true`（逻辑反转）
@@ -153,13 +153,14 @@ bun typecheck
 | config/config.ts | 18 |
 | session/instruction.ts | 9 |
 | cli/cmd/tui/config/tui.ts | 8 |
+| cli/cmd/tui/app.tsx | 6 |
 | provider/models.ts | 5 |
 | storage/db.ts | 5 |
 | tool/registry.ts | 4 |
 | plugin/index.ts | 4 |
 | control-plane/workspace.ts | 4 |
-| 其他文件 (~20个) | 各 2-3 |
-| **总计** | **216 处引用** |
+| 其他文件 (~27个) | 各 2-3 |
+| **总计** | **~232 处引用** |
 
 ### 不修改的内容确认
 

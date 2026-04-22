@@ -53,6 +53,8 @@
 | CODEGENIE_MODELS_URL | OPENCODE_MODELS_URL | 模型列表 URL |
 | CODEGENIE_MODELS_PATH | OPENCODE_MODELS_PATH | 模型列表路径 |
 | CODEGENIE_GIT_BASH_PATH | OPENCODE_GIT_BASH_PATH | Git Bash 路径 |
+| CODEGENIE_ROUTE | OPENCODE_ROUTE | TUI 初始路由（JSON） |
+| CODEGENIE_FAST_BOOT | OPENCODE_FAST_BOOT | 跳过同步等待直接就绪 |
 
 ### 2.2 功能开关环境变量
 
@@ -291,6 +293,63 @@ Flag.CODEGENIE_EXPERIMENTAL_LSP_TY
 
 ---
 
+### 3.7 app.tsx - TUI 主界面 Flag 引用
+
+**文件**: `packages/opencode/src/cli/cmd/tui/app.tsx` (6 处 CODEGENIE 引用)
+
+**变更**: Flag 引用更新
+
+```typescript
+Flag.CODEGENIE_DISABLE_MOUSE                      // 原 OPENCODE_DISABLE_MOUSE
+Flag.CODEGENIE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT  // 3 处（鼠标选择复制）
+Flag.CODEGENIE_DISABLE_TERMINAL_TITLE               // 原 OPENCODE_DISABLE_TERMINAL_TITLE
+Flag.CODEGENIE_SHOW_TTFD                            // 原 OPENCODE_SHOW_TTFD
+```
+
+---
+
+### 3.8 dialog.tsx / dialog-session-list.tsx / sdk.tsx / session/index.tsx - TUI 组件 Flag 引用
+
+**文件**: `packages/opencode/src/cli/cmd/tui/ui/dialog.tsx` (2 处)
+**文件**: `packages/opencode/src/cli/cmd/tui/component/dialog-session-list.tsx` (2 处)
+**文件**: `packages/opencode/src/cli/cmd/tui/context/sdk.tsx` (2 处)
+**文件**: `packages/opencode/src/cli/cmd/tui/routes/session/index.tsx` (2 处)
+
+**变更**: Flag 引用更新
+
+```typescript
+// dialog.tsx
+Flag.CODEGENIE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT  // 2 处
+
+// dialog-session-list.tsx
+Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES  // 2 处
+
+// sdk.tsx
+Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES  // 2 处
+
+// session/index.tsx
+Flag.CODEGENIE_EXPERIMENTAL_MARKDOWN  // 2 处
+```
+
+---
+
+### 3.9 route.tsx / sync.tsx - TUI 上下文运行时环境变量
+
+**文件**: `packages/opencode/src/cli/cmd/tui/context/route.tsx` (2 处)
+**文件**: `packages/opencode/src/cli/cmd/tui/context/sync.tsx` (1 处)
+
+**变更**: 运行时环境变量名替换
+
+```typescript
+// route.tsx - TUI 初始路由
+process.env["CODEGENIE_ROUTE"]  // 原 OPENCODE_ROUTE
+
+// sync.tsx - 跳过同步等待
+process.env.CODEGENIE_FAST_BOOT  // 原 OPENCODE_FAST_BOOT
+```
+
+---
+
 ## 四、变更文件统计
 
 ### 4.1 按引用数量排序（前 30 个文件）
@@ -327,6 +386,13 @@ Flag.CODEGENIE_EXPERIMENTAL_LSP_TY
 | cli/cmd/tui/worker.ts | 2 |
 | auth/index.ts | 2 |
 | file/watcher.ts | 2 |
+| cli/cmd/tui/app.tsx | 6 |
+| cli/cmd/tui/ui/dialog.tsx | 2 |
+| cli/cmd/tui/context/sdk.tsx | 2 |
+| cli/cmd/tui/component/dialog-session-list.tsx | 2 |
+| cli/cmd/tui/routes/session/index.tsx | 2 |
+| cli/cmd/tui/context/route.tsx | 2 |
+| cli/cmd/tui/context/sync.tsx | 1 |
 
 ### 4.2 变更统计
 
@@ -338,9 +404,9 @@ Flag.CODEGENIE_EXPERIMENTAL_LSP_TY
 | Claude Code 继承禁用 | ✅ 完成 | 2026-04-22 |
 | Flag引用批量更新 | ✅ 完成 | 2026-04-22 |
 
-**总计**: 
-- CODEGENIE 引用: 216 处
-- 涉及文件: ~40 个 TypeScript 文件
+**总计**:
+- CODEGENIE 引用: ~232 处
+- 涉及文件: ~47 个 TypeScript 文件
 - 保留的 @opencode-ai 引用: 111 处（未修改）
 
 ---

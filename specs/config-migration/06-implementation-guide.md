@@ -58,7 +58,7 @@ export const CODEGENIE_DISABLE_CLAUDE_CODE = !falsy("CODEGENIE_DISABLE_CLAUDE_CO
 
 | 原值 | 新值 | 位置 | 排除 |
 |-----|------|------|------|
-| `OPENCODE_` | `CODEGENIE_` | src, test | `@opencode-ai`, `OpencodeClient` |
+| `OPENCODE_` | `CODEGENIE_` | src, test | `@opencode-ai`, `OpencodeClient`, `OPENCODE_VERSION/CHANNEL/LIBC/MIGRATIONS/WORKER_PATH`, `OPENCODE_PROCESS_ROLE/RUN_ID` |
 | `opencode.json` | `codegenie.json` | src, test | - |
 | `.opencode` | `.codegenie` | src, test | URL中的 |
 
@@ -152,6 +152,8 @@ grep -r "@codegenie/" packages/opencode/src  # 应为空（Effect ID）
 | SDK 类型 | `OpencodeClient` | 保持原样 |
 | Effect ID | `@opencode/*` | `grep @codegenie/ src` 应为空 |
 | 仓库 URL | GitHub 仓库地址 | 保持原样 |
+| 构建时全局变量 | `OPENCODE_VERSION`, `OPENCODE_CHANNEL`, `OPENCODE_LIBC`, `OPENCODE_MIGRATIONS`, `OPENCODE_WORKER_PATH` | 需 build 脚本同步修改 |
+| 进程通信标识 | `OPENCODE_PROCESS_ROLE`, `OPENCODE_RUN_ID` | Worker 进程通信标识 |
 
 ---
 
