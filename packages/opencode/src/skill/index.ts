@@ -15,6 +15,8 @@ import { Config } from "../config"
 import { ConfigMarkdown } from "../config"
 import { Glob } from "@opencode-ai/shared/util/glob"
 import { Log } from "../util"
+import { Defaults } from "./defaults"
+import { InstallationVersion } from "@/installation/version"
 import { Discovery } from "./discovery"
 
 const log = Log.create({ service: "skill" })
@@ -149,6 +151,12 @@ const discoverSkills = Effect.fnUntraced(function* (
   worktree: string,
 ) {
   const state: ScanState = { matches: new Set(), dirs: new Set() }
+
+  // Extract and scan default (embedded) skills
+  if (!Flag.CODEGENIE_DISABLE_DEFAULT_SKILLS) {
+    const defaultDir = yield* Defaults.ensure(InstallationVersion, fsys).pipe(Effect.orDie)
+    yield* scan(state, defaultDir, SKILL_PATTERN)
+  }
 
   if (!Flag.CODEGENIE_DISABLE_EXTERNAL_SKILLS) {
     for (const dir of EXTERNAL_DIRS) {

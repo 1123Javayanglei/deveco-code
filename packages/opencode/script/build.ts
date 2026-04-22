@@ -47,6 +47,39 @@ const migrations = await Promise.all(
 )
 console.log(`Loaded ${migrations.length} migrations`)
 
+// Load default skills from resources/skills/
+async function walk(directory: string): Promise<string[]> {
+  const result: string[] = []
+  async function recurse(dir: string) {
+    for (const entry of await fs.promises.readdir(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        await recurse(full)
+      } else if (entry.name !== ".DS_Store") {
+        result.push(full)
+      }
+    }
+  }
+  await recurse(directory)
+  return result
+}
+
+const defaultSkillsDir = path.join(dir, "resources/skills")
+const defaultSkillsData: Record<string, Record<string, string>> = {}
+if (fs.existsSync(defaultSkillsDir)) {
+  for (const entry of await fs.promises.readdir(defaultSkillsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const files: Record<string, string> = {}
+    const skillPath = path.join(defaultSkillsDir, entry.name)
+    for (const file of await walk(skillPath)) {
+      const rel = path.relative(skillPath, file)
+      files[rel] = await Bun.file(file).text()
+    }
+    defaultSkillsData[entry.name] = files
+  }
+}
+console.log(`Loaded ${Object.keys(defaultSkillsData).length} default skills`)
+
 const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
 const skipInstall = process.argv.includes("--skip-install")
@@ -231,6 +264,7 @@ for (const item of targets) {
       OPENCODE_WORKER_PATH: workerPath,
       OPENCODE_CHANNEL: `'${Script.channel}'`,
       OPENCODE_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
+      CODEGENIE_DEFAULT_SKILLS: JSON.stringify(defaultSkillsData),
     },
   })
 
