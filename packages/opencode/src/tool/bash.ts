@@ -1,4 +1,4 @@
-﻿import z from "zod"
+import z from "zod"
 import os from "os"
 import { createWriteStream } from "node:fs"
 import * as Tool from "./tool"
@@ -442,7 +442,11 @@ export const BashTool = Tool.define(
 
       const code: number | null = yield* Effect.scoped(
         Effect.gen(function* () {
-          const handle = yield* spawner.spawn(cmd(input.shell, input.name, input.command, input.cwd, input.env))
+          const command =
+            process.platform === "win32"
+              ? Shell.adaptWindowsRedirects(input.command, Shell.redirectKind(input.shell))
+              : input.command
+          const handle = yield* spawner.spawn(cmd(input.shell, input.name, command, input.cwd, input.env))
 
           yield* Effect.forkScoped(
             Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {

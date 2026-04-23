@@ -48,10 +48,8 @@ When you encounter an obstacle, do not use destructive actions as a shortcut to 
 - To collect device logs, user `hdc_log` instead of shell commands for log collection
 - Successful execution of `build_project` is a prerequisite for running `start_app`. `start_app` without `build_project` will CAUSE old product deployed, which is NOT ACCEPTABLE.
 - If `build_project` successful, try to `start_app`.
-- **HarmonyOS / OpenHarmony / ArkTS builds**: Do not use Bash to compile or package the app. Never run `node`, `node.exe`, `hvigorw`, `hvigorw.bat`, `hvigor`, or scripts that call them (typical `ohpm run …` / `npm run …` hvigor targets) to assemble HAP/HSP/HAR or answer “does it compile?”. Those invocations bypass the integrated pipeline (product, module, clean, `DEVECO_HOME`, structured logs). For every compile, rebuild, or artifact export, use **`build_project` only**. On failure, fix code or config from `build_project` output—do not retry the same build via ad-hoc shell commands.
 
 - Reserve using the Bash exclusively for system commands and terminal operations that require shell execution. If you are unsure and there is a relevant dedicated tool, default to using the dedicated tool and only fallback on using the Bash tool for these if it is absolutely necessary.
-- **Bash on Windows**: The Bash tool often runs in a Unix-style shell on Windows (Git Bash, MSYS2, etc.). Never use CMD-style output redirection to `nul` or `NUL` (e.g. `> nul`, `2>nul`, `>> nul`). In these shells `nul` is a regular filename, so the redirect creates a file named `nul` in the working directory; on Windows that name is reserved for the NUL device and the file is painful or impossible to remove normally. To discard output in Bash, use `/dev/null` instead (e.g. `command >/dev/null 2>&1`). Do not create or write files whose last path segment is a Windows reserved name: `nul`, `con`, `prn`, `aux`, `com1`–`com9`, or `lpt1`–`lpt9` (any case).
 - Break down and manage your work with the `todowrite` tool. These tools are helpful for planning your work and helping the user track your progress. Mark each task as completed as soon as you are done with the task. Do not batch up multiple tasks before marking them as completed.
 - You can call multiple tools in a single response. If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel. Maximize use of parallel tool calls where possible to increase efficiency. However, if some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially. For instance, if one operation must complete before another starts, run these operations sequentially instead.
 
@@ -113,7 +111,7 @@ Deliver complete results for ArkTS tasks by following this order:
 2. Load relevant skills that support implementation work in this agent.
 3. Break down the task by pages or functionalities; implement and verify one at a time.
 4. Make minimal and clean code changes.
-5. Run `build_project` before finalizing (never replace it with Bash + `node`/hvigor/ohpm/npm compile); if `build_project` successful, try `start_app`.
+5. Run `build_project` before finalizing, if `build_project` successful, try `start_app`.
 6. If `build_project` fail with ERROR, load skill `arkts-error-fixes` to fix building error.  
 7. Device selection rules for `start_app`:
    - If a connected physical device (真机) is available, ALWAYS use it directly without asking the user. Pass its name/ID as the `hvd` parameter.

@@ -1,4 +1,4 @@
-﻿import { Flag } from "@/flag/flag"
+import { Flag } from "@/flag/flag"
 import { lazy } from "@/util/lazy"
 import { Filesystem } from "@/util"
 import { which } from "@/util/which"
@@ -101,6 +101,45 @@ export function login(file: string) {
 
 export function posix(file: string) {
   return POSIX.has(name(file))
+}
+
+/**
+ * Windows redirect style: cmd / powershell / posix (Git Bash, MSYS, etc.).
+ * Default Git Bash must use `/dev/null`, not `nul` or `> null`.
+ */
+export function redirectKind(shellPath: string): "cmd" | "powershell" | "posix_win" | null {
+  if (process.platform !== "win32") return null
+  const base = path.win32.basename(shellPath).toLowerCase()
+  const stem = base.endsWith(".exe") ? base.slice(0, -4) : base
+  if (stem === "pwsh" || stem === "powershell") return "powershell"
+  if (stem === "cmd") return "cmd"
+  return "posix_win"
+}
+
+/** Normalize null-sink redirects for the actual Windows shell. */
+export function adaptWindowsRedirects(line: string, kind: ReturnType<typeof redirectKind>): string {
+  if (kind === null) return line
+  if (kind === "powershell") {
+    return line
+      .replace(/(\d*)>>\s*nul\b/gi, (_, d) => `${d}>>$null`)
+      .replace(/(\d*)>\s*nul\b/gi, (_, d) => `${d}>$null`)
+      .replace(/(\d*)>>(?!\$)\s*null\b/gi, (_, d) => `${d}>>$null`)
+      .replace(/(\d*)>(?!\$)\s*null\b/gi, (_, d) => `${d}>$null`)
+  }
+  if (kind === "posix_win") {
+    return line
+      .replace(/(\d*)>>\s*nul\b/gi, (_, d) => `${d}>>/dev/null`)
+      .replace(/(\d*)>\s*nul\b/gi, (_, d) => `${d}>/dev/null`)
+      .replace(/(\d*)>>\s*\$null\b/g, (_, d) => `${d}>>/dev/null`)
+      .replace(/(\d*)>\s*\$null\b/g, (_, d) => `${d}>/dev/null`)
+      .replace(/(\d*)>>(?!\$)\s*null\b/gi, (_, d) => `${d}>>/dev/null`)
+      .replace(/(\d*)>(?!\$)\s*null\b/gi, (_, d) => `${d}>/dev/null`)
+  }
+  return line
+    .replace(/(\d*)>>\s*\$null\b/gi, (_, d) => `${d}>>nul`)
+    .replace(/(\d*)>\s*\$null\b/gi, (_, d) => `${d}>nul`)
+    .replace(/(\d*)>>(?!\$)\s*null\b/gi, (_, d) => `${d}>>nul`)
+    .replace(/(\d*)>(?!\$)\s*null\b/gi, (_, d) => `${d}>nul`)
 }
 
 export const preferred = lazy(() => select(process.env.SHELL))
