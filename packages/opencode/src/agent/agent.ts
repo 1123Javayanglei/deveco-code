@@ -9,6 +9,10 @@ import { Auth } from "../auth"
 import { ProviderTransform } from "../provider"
 
 import PROMPT_GENERATE from "./generate.txt"
+import PROMPT_BUILD from "./prompt/build.txt"
+import PROMPT_PLAN from "./prompt/plan.txt"
+import PROMPT_ASK from "./prompt/ask.txt"
+import PROMPT_DEBUG from "./prompt/debug.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
@@ -108,41 +112,96 @@ export const layer = Layer.effect(
         const agents: Record<string, Info> = {
           build: {
             name: "build",
-            description: "The default agent. Executes tools based on configured permissions.",
+            description: "ArkTS build-focused primary agent.",
             options: {},
             permission: Permission.merge(
               defaults,
               Permission.fromConfig({
                 question: "allow",
-                plan_enter: "allow",
+                plan_enter: "ask",
+                plan_write: "deny",
               }),
               user,
             ),
             mode: "primary",
             native: true,
+            prompt: PROMPT_BUILD,
           },
           plan: {
             name: "plan",
-            description: "Plan mode. Disallows all edit tools.",
+            description: "ArkTS planning agent with external plan-file workflow.",
             options: {},
             permission: Permission.merge(
               defaults,
               Permission.fromConfig({
                 question: "allow",
-                plan_exit: "allow",
-                external_directory: {
-                  [path.join(Global.Path.data, "plans", "*")]: "allow",
-                },
-                edit: {
-                  "*": "deny",
-                  [path.join(".opencode", "plans", "*.md")]: "allow",
-                  [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
-                },
+                plan_exit: "ask",
+                plan_write: "allow",
+                bash: "deny",
+                build_project: "deny",
+                check_ets_files: "deny",
+                perform_ui_action: "deny",
+                get_app_ui_tree: "deny",
+                start_app: "deny",
+                hdc_log: "deny",
+                edit: "deny",
               }),
               user,
             ),
             mode: "primary",
             native: true,
+            prompt: PROMPT_PLAN,
+          },
+          Ask: {
+            name: "Ask",
+            description: "Help developers analyze local project code and support engineering Q&A.",
+            options: {},
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                question: "deny",
+                read: "allow",
+                glob: "allow",
+                grep: "allow",
+                lsp: "allow",
+                ls: "allow",
+                codesearch: "allow",
+                open_harmony_knowledge: "allow",
+                todoread: "allow",
+                bash: "deny",
+                build_project: "deny",
+                check_ets_files: "deny",
+                perform_ui_action: "deny",
+                get_app_ui_tree: "deny",
+                start_app: "deny",
+                hdc_log: "deny",
+                edit: "deny",
+                write: "deny",
+                multiedit: "deny",
+                apply_patch: "deny",
+                skill: "deny",
+                todowrite: "deny",
+                plan_write: "deny",
+              }),
+              user,
+            ),
+            mode: "primary",
+            prompt: PROMPT_ASK,
+          },
+          debug: {
+            name: "debug",
+            description: "ArkTS runtime-evidence debug agent (without phone automation)",
+            options: {},
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                plan_enter: "deny",
+                plan_exit: "deny",
+              }),
+              user,
+            ),
+            mode: "primary",
+            prompt: PROMPT_DEBUG,
           },
           general: {
             name: "general",

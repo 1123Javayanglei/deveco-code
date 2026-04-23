@@ -238,7 +238,7 @@ export const layer: Layer.Layer<
             tool.switchcwd,
             tool.ohknowledge,
             ...(Flag.CODEGENIE_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
-            ...(Flag.CODEGENIE_EXPERIMENTAL_PLAN_MODE && Flag.CODEGENIE_CLIENT === "cli" ? [tool.plan, tool.planwrite, tool.planenter] : []),
+            ...(Flag.CODEGENIE_CLIENT === "cli" ? [tool.plan, tool.planwrite, tool.planenter] : []),
           ],
           task: tool.task,
           read: tool.read,
