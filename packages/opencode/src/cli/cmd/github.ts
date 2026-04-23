@@ -985,7 +985,8 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
               const err = result.info.error
               console.error("Agent error:", err)
               if (err.name === "ContextOverflowError") throw new Error(formatPromptTooLargeError(files))
-              throw new Error(`${err.name}: ${err.data?.message || ""}`)
+              const message = "message" in err.data ? err.data.message : ""
+              throw new Error(`${err.name}: ${message}`)
             }
 
             const text = extractResponseText(result.parts)
@@ -1014,7 +1015,8 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
               const err = summary.info.error
               console.error("Summary agent error:", err)
               if (err.name === "ContextOverflowError") throw new Error(formatPromptTooLargeError(files))
-              throw new Error(`${err.name}: ${err.data?.message || ""}`)
+              const message = "message" in err.data ? err.data.message : ""
+              throw new Error(`${err.name}: ${message}`)
             }
 
             const summaryText = extractResponseText(summary.parts)
