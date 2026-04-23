@@ -24,10 +24,41 @@
 | 配置路径/文件名 | 3 | 10 | ✅ 完成 |
 | 日志消息 | 7 | 7 | ✅ 完成 |
 | Desktop Electron 应用名/ID | 1 | 4 | ✅ 完成 |
+| Workspace 依赖修复 | 3 | 4 | ✅ 完成 |
 
 ---
 
-## 二、详细变更记录
+## 二、Workspace 依赖修复（追加）
+
+> **背景**: 重命名 workspace 包名后，排除包的依赖引用和源码 import 需同步更新，否则构建失败。
+
+### 2.0 package.json 依赖修复
+
+| 文件路径 | 原值 | 新值 | 行号 | 验证 |
+|---------|------|------|------|------|
+| `packages/web/package.json` | `"opencode": "workspace:*"` | `"codegenie": "workspace:*"` | 39 | ✅ |
+
+### 2.1 源码 import 修复
+
+| 文件路径 | 原值 | 新值 | 行号 | 验证 |
+|---------|------|------|------|------|
+| `packages/web/src/components/Share.tsx` | `from "opencode/session/message-v2"` | `from "codegenie/session/message-v2"` | 8-10 | ✅ |
+| `packages/web/src/components/share/part.tsx` | `from "opencode/session/message-v2"` | `from "codegenie/session/message-v2"` | 30 | ✅ |
+
+---
+
+### 2.2 遗漏修复（追加）
+
+> **背景**: 品牌重命名提交遗漏了两处内部标识，需手动修复。
+
+| 文件路径 | 原值 | 新值 | 行号 | 验证 |
+|---------|------|------|------|------|
+| `packages/opencode/src/index.ts` | `process.env.OPENCODE = "1"` | `process.env.CODEGENIE = "1"` | 108 | ✅ |
+| `packages/opencode/src/index.ts` | `Log.Default.info("opencode", ...)` | `Log.Default.info("codegenie", ...)` | 111 | ✅ |
+
+---
+
+## 三、详细变更记录
 
 ### 2.1 REQ-001: 数据库名称 (opencode.db → codegenie.db)
 
@@ -324,6 +355,8 @@
 | CLI help 输出 | ✅ 通过 | 所有品牌名正确 |
 | 需求文档更新 | ✅ 完成 | 验收清单已标记 |
 | 源码修改文档 | ✅ 完成 | 本文档 |
+| Workspace 依赖修复 | ✅ 完成 | packages/web 依赖和 import |
+| 构建验证 | ✅ 通过 | `bun build --single --skip-install` |
 
 ---
 
@@ -333,6 +366,7 @@
 |------|------|------|
 | process.env.OPENCODE* 替换 | ✅ 完成 | 后台任务 + 手动补充 |
 | desktop-electron APP_NAMES/APP_IDS | ✅ 完成 | 手动修复 |
+| Workspace 依赖修复 | ✅ 完成 | packages/web 依赖和 import |
 | `bun test` 验证 | ⏳ 待执行 | 需用户执行 |
 | 应用启动验证 | ⏳ 待执行 | 需用户执行 |
 
@@ -342,5 +376,6 @@
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| 1.2 | 2026-04-23 | 新增 Workspace 依赖修复章节，记录 packages/web 依赖和 import 更新 |
 | 1.1 | 2026-04-22 | 更新 REQ-005 状态为完成，添加 desktop-electron APP_NAMES/APP_IDS |
 | 1.0 | 2026-04-22 | 初始版本，记录所有已完成变更 |

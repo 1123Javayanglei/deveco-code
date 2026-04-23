@@ -105,10 +105,10 @@ const cli = yargs(args)
     Heap.start()
 
     process.env.AGENT = "1"
-    process.env.OPENCODE = "1"
+    process.env.CODEGENIE = "1"
     process.env.CODEGENIE_PID = String(process.pid)
 
-    Log.Default.info("opencode", {
+    Log.Default.info("codegenie", {
       version: InstallationVersion,
       args: process.argv.slice(2),
       process_role: processMetadata.processRole,

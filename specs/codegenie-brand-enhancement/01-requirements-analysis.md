@@ -149,7 +149,67 @@
 
 ---
 
-## 四、验收清单
+## 四、Workspace 包名重命名注意事项（重要！）
+
+> **警告**: 当重命名 workspace 包名（`package.json` 的 `name` 字段）时，即使某些包被排除修改，仍需检查其对被重命名包的 **workspace 依赖引用**。
+
+### 4.1 问题背景
+
+Workspace 依赖（`"packageName": "workspace:*"`）使用 **包名匹配**，而非路径匹配。
+
+当 workspace 中某个包的 `name` 字段被重命名后：
+- 其他包（即使是排除修改的包）对该包的依赖引用 **必须同步更新**
+- 否则 `bun install` 或构建时会报错：`Workspace dependency "xxx" not found`
+
+### 4.2 本次重命名的受影响依赖
+
+| 依赖包 | 依赖位置 | 原依赖 | 需更新为 | 状态 |
+|-------|---------|--------|---------|------|
+| `packages/web` | `package.json` devDependencies | `"opencode": "workspace:*"` | `"codegenie": "workspace:*"` | ⚠️ 需检查 |
+| `packages/opencode` | `package.json` dependencies | `"@opencode-ai/sdk": "workspace:*"` | 保持不变（SDK包名未改） | ✅ 无需修改 |
+| `packages/opencode` | `package.json` dependencies | `"@opencode-ai/script": "workspace:*"` | 保持不变 | ✅ 无需修改 |
+| `packages/opencode` | `package.json` dependencies | `"@opencode-ai/plugin": "workspace:*"` | 保持不变 | ✅ 无需修改 |
+| `packages/opencode` | `package.json` dependencies | `"@opencode-ai/shared": "workspace:*"` | 保持不变 | ✅ 无需修改 |
+| `root package.json` | dependencies | `"@opencode-ai/plugin": "workspace:*"` | 保持不变 | ✅ 无需修改 |
+| `root package.json` | dependencies | `"@opencode-ai/script": "workspace:*"` | 保持不变 | ✅ 无需修改 |
+| `root package.json` | dependencies | `"@opencode-ai/sdk": "workspace:*"` | 保持不变 | ✅ 无需修改 |
+
+### 4.3 排除包的源码 import 检查
+
+排除包（如 `packages/web`）的源码中如果有 `import from "opencode/..."` 语句，也需要同步更新为 `import from "codegenie/..."`。
+
+| 包 | 文件 | 原引用 | 需更新为 | 状态 |
+|-----|------|--------|---------|------|
+| `packages/web` | `src/components/Share.tsx` | `"opencode/session/message-v2"` | `"codegenie/session/message-v2"` | ⚠️ 需检查 |
+| `packages/web` | `src/components/share/part.tsx` | `"opencode/session/message-v2"` | `"codegenie/session/message-v2"` | ⚠️ 需检查 |
+
+### 4.4 检查命令
+
+重命名 workspace 包名后，务必执行以下检查：
+
+```bash
+# 1. 检查所有 workspace 依赖是否引用旧包名
+grep -rn '"opencode":' packages/*/package.json --include="package.json"
+grep -rn '"opencode": "workspace' packages/*/package.json --include="package.json"
+
+# 2. 检查排除包的源码 import
+grep -rn 'from "opencode/' packages/web packages/desktop packages/enterprise --include="*.ts" --include="*.tsx"
+
+# 3. 运行构建验证
+bun run --cwd packages/opencode build --single --skip-install
+```
+
+### 4.5 规则总结
+
+| 情况 | 是否需要更新 | 说明 |
+|-----|------------|------|
+| 排除包的 `workspace:*` 依赖引用旧包名 | **必须更新** | 包名匹配，否则找不到包 |
+| 排除包的源码 import 引用旧包名 | **必须更新** | 否则运行时找不到模块 |
+| 排除包的其他内容（URL、文本等） | **不更新** | 按排除规则执行 |
+
+---
+
+## 五、验收清单
 
 - [x] REQ-001: 数据库 `codegenie.db`
 - [x] REQ-002: mDNS `codegenie.local`
@@ -165,13 +225,16 @@
 - [x] URL 中的品牌名保持不变（`opencode.ai`, `opencode.internal`）
 - [x] Logo 文字保持不变（`Powered by BITFUN & OpenCode`）
 - [x] API 端点路径保持不变（`.well-known/opencode`）
+- [x] Workspace 依赖引用同步更新（`packages/web` → `codegenie`）
+- [x] 排除包源码 import 同步更新（`packages/web` → `codegenie/...`）
 
 ---
 
-## 五、版本历史
+## 六、版本历史
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| 4.0 | 2026-04-23 | 新增"Workspace 包名重命名注意事项"章节，防止排除包的依赖引用遗漏 |
 | 3.1 | 2026-04-23 | 补充排除项：URL 中的品牌名、fetch 参数 URL、Logo 文字、API 端点路径 |
 | 3.0 | 2026-04-23 | 简化需求，只关注 CLI，排除 TUI 组件、web、desktop、enterprise、测试文件 |
 | 2.1 | 2026-04-22 | 补充 CLI 命令描述修复 |

@@ -1,6 +1,8 @@
 # CodeGenie 品牌增强 - 实现指南
 
 > **策略**: 本次品牌增强采用**直接替换策略**，无向后兼容。实现顺序基于依赖关系：底层组件优先，用户界面最后。
+> 
+> **重要提示**: 重命名 workspace 包名后，务必检查排除包的依赖引用和源码 import，详见 §"阶段 11: Workspace 依赖检查"。
 
 ---
 
@@ -159,6 +161,10 @@ bun typecheck
 | `packages/opencode/src/global/index.ts` | 8 | `const app = "opencode"` | `const app = "codegenie"` |
 | `packages/opencode/package.json` | 4 | `"name": "opencode"` | `"name": "codegenie"` |
 | `packages/opencode/package.json` | 22 | `"opencode": "./bin/opencode"` | `"codegenie": "./bin/codegenie"` |
+| `packages/opencode/src/index.ts` | 108 | `process.env.OPENCODE = "1"` | `process.env.CODEGENIE = "1"` |
+| `packages/opencode/src/index.ts` | 111 | `Log.Default.info("opencode", ...)` | `Log.Default.info("codegenie", ...)` |
+
+> **注意**: `src/index.ts` 第 108 行的 `process.env.OPENCODE = "1"` 是**内部进程标识**，不是构建时全局声明，必须修改。第 111 行是日志品牌标识，属于 REQ-004 文本品牌替换范围。这两处容易被遗漏，务必检查。
 
 ### 4.2 实现步骤
 
@@ -191,6 +197,20 @@ grep -n '"name": "opencode"' package.json
 # 预期结果: 无匹配
 
 grep -n '"name": "codegenie"' package.json
+# 预期结果: 1 处匹配
+
+# 检查内部进程标识（易遗漏！）
+grep -n 'process.env.OPENCODE = "1"' src/index.ts
+# 预期结果: 无匹配
+
+grep -n 'process.env.CODEGENIE = "1"' src/index.ts
+# 预期结果: 1 处匹配
+
+# 检查日志品牌标识（易遗漏！）
+grep -n 'Log.Default.info("opencode"' src/index.ts
+# 预期结果: 无匹配
+
+grep -n 'Log.Default.info("codegenie"' src/index.ts
 # 预期结果: 1 处匹配
 
 # 类型检查
@@ -703,7 +723,82 @@ bun typecheck
 
 ---
 
-## 十二、批量替换注意事项
+## 十二、阶段 11: Workspace 依赖检查（重要！）
+
+> **警告**: 本阶段必须在所有包名重命名完成后执行，否则会导致构建失败。
+
+### 12.1 问题背景
+
+当 workspace 中某个包的 `package.json` 的 `name` 字段被重命名后，其他包（即使是排除修改的包）对该包的 **workspace 依赖引用** 必须同步更新。
+
+Workspace 依赖使用 **包名匹配**（`"packageName": "workspace:*"`），而非路径匹配。
+
+### 12.2 本次重命名的受影响项
+
+#### 12.2.1 package.json 依赖
+
+| 包 | 文件 | 原依赖 | 需更新为 | 状态 |
+|-----|------|--------|---------|------|
+| `packages/web` | `package.json` | `"opencode": "workspace:*"` | `"codegenie": "workspace:*"` | ⚠️ 必须 |
+
+#### 12.2.2 源码 import
+
+| 包 | 文件 | 原引用 | 需更新为 | 状态 |
+|-----|------|--------|---------|------|
+| `packages/web` | `src/components/Share.tsx` | `"opencode/session/*"` | `"codegenie/session/*"` | ⚠️ 必须 |
+| `packages/web` | `src/components/share/part.tsx` | `"opencode/session/*"` | `"codegenie/session/*"` | ⚠️ 必须 |
+
+### 12.3 实现步骤
+
+**Step 1**: 搜索所有对旧包名的 workspace 依赖引用
+
+```bash
+# 搜索所有 package.json 中的 workspace 依赖
+grep -rn '"opencode": "workspace' packages/*/package.json
+# 预期结果: 无匹配（若有，需更新）
+```
+
+**Step 2**: 搜索排除包源码中的 import 引用
+
+```bash
+# 搜索排除包的源码 import
+grep -rn 'from "opencode/' packages/web packages/desktop packages/enterprise --include="*.ts" --include="*.tsx"
+# 预期结果: 无匹配（若有，需更新）
+```
+
+**Step 3**: 对每个匹配项进行更新
+
+- `package.json` 依赖：将 `"opencode": "workspace:*"` 改为 `"codegenie": "workspace:*"`
+- 源码 import：将 `"opencode/..."` 改为 `"codegenie/..."`
+
+### 12.4 TDD 验证
+
+**验证命令**:
+```bash
+# 1. 检查 workspace 依赖无遗留旧包名
+grep -rn '"opencode": "workspace' packages/*/package.json
+# 预期结果: 无匹配
+
+# 2. 检查排除包源码 import 无遗留旧包名
+grep -rn 'from "opencode/' packages/web packages/desktop packages/enterprise --include="*.ts" --include="*.tsx"
+# 预期结果: 无匹配
+
+# 3. 运行构建验证
+bun run --cwd packages/opencode build --single --skip-install
+# 预期结果: 构建成功
+```
+
+### 12.5 测试用例
+
+| 测试项 | 验证方法 | 预期结果 |
+|-------|---------|---------|
+| workspace 依赖 | `bun install` | 无报错 |
+| 构建验证 | `bun run build` | 构建成功 |
+| 排除包源码 | 启动 web/desktop | 正常运行 |
+
+---
+
+## 十三、批量替换注意事项
 
 ### 12.1 排除处理
 
@@ -756,9 +851,9 @@ grep -rn "@codegenie/" src    # 预期: 无匹配
 
 ---
 
-## 十三、回滚与恢复
+## 十四、回滚与恢复
 
-### 13.1 Git 回滚
+### 14.1 Git 回滚
 
 若需回滚单个阶段:
 
@@ -773,7 +868,7 @@ git checkout HEAD -- packages/opencode/src/storage/db.ts
 git checkout HEAD -- packages/opencode/
 ```
 
-### 13.2 数据迁移回滚
+### 14.2 数据迁移回滚
 
 数据库名称变更后，需考虑数据迁移:
 
@@ -785,7 +880,7 @@ cp ~/.local/share/opencode/opencode.db ~/.local/share/opencode/opencode.db.bak
 cp ~/.local/share/opencode/opencode.db.bak ~/.local/share/opencode/opencode.db
 ```
 
-### 13.3 配置迁移回滚
+### 14.3 配置迁移回滚
 
 环境变量变更后，需更新用户配置:
 
@@ -799,9 +894,9 @@ cp ~/.local/share/opencode/opencode.db.bak ~/.local/share/opencode/opencode.db
 
 ---
 
-## 十四、最终验收
+## 十五、最终验收
 
-### 14.1 功能验收清单
+### 15.1 功能验收清单
 
 | 需求 | 验收项 | 验证命令 |
 |-----|-------|---------|
@@ -816,7 +911,7 @@ cp ~/.local/share/opencode/opencode.db.bak ~/.local/share/opencode/opencode.db
 | REQ-009 | scriptName 为 `codegenie` | 见 9.3 验证命令 |
 | REQ-010 | HTTP Headers 为 `x-codegenie-*` | 见 8.3 验证命令 |
 
-### 14.2 排除验收清单
+### 15.2 排除验收清单
 
 | 验收项 | 验证命令 | 预期结果 |
 |-------|---------|---------|
@@ -826,7 +921,7 @@ cp ~/.local/share/opencode/opencode.db.bak ~/.local/share/opencode/opencode.db
 | 构建时变量保持不变 | `grep -rn "OPENCODE_VERSION" src` | 存在匹配 |
 | 进程通信标识保持不变 | `grep -rn "OPENCODE_RUN_ID" src` | 存在匹配 |
 
-### 14.3 构建验证
+### 15.3 构建验证
 
 ```bash
 cd packages/opencode
@@ -846,10 +941,11 @@ bun run dev
 
 ---
 
-## 十五、版本历史
+## 十六、版本历史
 
 | 版本 | 日期 | 修改内容 |
 |-----|------|---------|
+| 3.0 | 2026-04-23 | 新增"阶段 11: Workspace 依赖检查"，防止排除包依赖遗漏 |
 | 2.0 | 2026-04-22 | 完整重写，基于需求分析和源码变更清单，提供阶段化实现指南 |
 | 1.1 | 2026-04-09 | 补充 Logo 右侧文案与 TUI 实现要点 |
 | 1.0 | 2026-04-02 | 初始版本 |
