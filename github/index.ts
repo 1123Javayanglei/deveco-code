@@ -128,7 +128,6 @@ try {
   assertContextEvent("issue_comment", "pull_request_review_comment")
   assertPayloadKeyword()
   await assertOpencodeConnected()
-
   accessToken = await getAccessToken()
   octoRest = new Octokit({ auth: accessToken })
   octoGraph = graphql.defaults({
