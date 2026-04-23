@@ -8,9 +8,13 @@
 
 | 名称 | 地址 | 用途 |
 |------|------|------|
-| `opencode` | `git@github.com:anomalyco/opencode.git` | 上游 |
-| `origin` | `git@gitcode.com:OwenO/codegenie-cli.git` | 个人 fork |
-| `gitcode` | `git@gitcode.com:codegenie/codegenie-cli.git` | 组织仓库 |
+| `opencode` | `git@github.com:anomalyco/opencode.git` | OpenCode上游源码 |
+| `gitcode` | `git@gitcode.com:codegenie/codegenie-cli.git` | CodeGenie源码 |
+
+## 同步策略
+
+- 始终从上游稳定的 **release tag** 同步（如 `v1.14.21`），不从分支同步
+- 每次同步前确认目标 tag 为已发布的稳定版本
 
 ## 同步流程
 
@@ -28,6 +32,7 @@
 2. **HarmonyOS 相关文件**：CodeGenie 独有功能，保留本地
 3. **上游 bug 修复 / 功能增强**：优先接受上游变更
 4. **配置和构建脚本**：以 CodeGenie 本地实现为准，合并上游新增配置
+5. **查阅特性文档**：遇到冲突时，先到 `specs/` 目录下查找对应的特性文档（如 `specs/config-migration/`、`specs/codegenie-brand-enhancement/`），其中包含详细的特性描述和实现指南，可帮助判断冲突的正确解决方式。也可参考 [UPSTREAM-SYNC-LESSONS.md](./UPSTREAM-SYNC-LESSONS.md) 中的历史经验。
 
 ## 同步后验证
 
@@ -38,3 +43,8 @@
 ## 同步记录
 
 同步记录维护在 [UPSTREAM-SYNC-CHANGELOG.md](./UPSTREAM-SYNC-CHANGELOG.md) 中。
+
+## 经验总结
+
+同步过程中积累的经验和踩坑记录维护在 [UPSTREAM-SYNC-LESSONS.md](./UPSTREAM-SYNC-LESSONS.md) 中。
+多次遇到的问题或隐蔽陷阱应记录到该文档，供后续同步参考。
