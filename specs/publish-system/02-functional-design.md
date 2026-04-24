@@ -139,10 +139,10 @@ if (fs.existsSync(vendorSrc)) {
 
 - 添加 `"postinstall": "bun run script/postinstall.ts"`
 - 添加 mcp-bridge 依赖:
-  - `@deveco-codegenie/mcp-bridge: 1.0.1-beta4`
-  - `@deveco-codegenie/mcp-bridge-darwin-arm64: 1.0.1-beta4`
-  - `@deveco-codegenie/mcp-bridge-darwin-x64: 1.0.1-beta4`
-  - `@deveco-codegenie/mcp-bridge-win32-x64: 1.0.1-beta4`
+  - `@deveco-codegenie/mcp-bridge: 1.1.0`
+  - `@deveco-codegenie/mcp-bridge-darwin-arm64: 1.1.0`
+  - `@deveco-codegenie/mcp-bridge-darwin-x64: 1.1.0`
+  - `@deveco-codegenie/mcp-bridge-win32-x64: 1.1.0`
 
 ### 3.7 `.gitignore`（修改）
 

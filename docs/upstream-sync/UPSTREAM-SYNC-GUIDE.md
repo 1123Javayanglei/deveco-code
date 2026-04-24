@@ -15,13 +15,14 @@
 
 - 始终从上游稳定的 **release tag** 同步（如 `v1.14.21`），不从分支同步
 - 每次同步前确认目标 tag 为已发布的稳定版本
+- **必须保留上游原始提交历史**，禁止使用 `--squash`
 
 ## 同步流程
 
 1. 确保当前分支工作区干净（`git status`）
 2. fetch 上游目标版本：`git fetch opencode <tag>`
 3. 查看上游变更范围：`git log --oneline <old-tag>..<new-tag>`
-4. 执行合并：`git merge <new-tag> --no-edit`
+4. 执行合并：`git merge --no-ff <new-tag> --no-edit`（禁止使用 `--squash`，会丢失上游原始提交）
 5. 解决冲突（参考下方原则）
 6. 在 [UPSTREAM-SYNC-CHANGELOG.md](./UPSTREAM-SYNC-CHANGELOG.md) 中添加同步记录
 7. 验证构建（参考下方验证步骤）
