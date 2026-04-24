@@ -272,7 +272,7 @@ const CODEGENIE_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"  // 从 OPENCODE_SK
 
 // Flag 引用用于外部技能发现条件
 if (!Flag.CODEGENIE_DISABLE_EXTERNAL_SKILLS) {
-  // 扫描 .claude 和 .agents 目录
+  // 扫描.agents 目录
 }
 ```
 
