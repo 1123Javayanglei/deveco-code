@@ -9,13 +9,13 @@ import crypto from "crypto"
 import http, { IncomingMessage, ServerResponse } from "http"
 import https from "https"
 import { OAUTH_DUMMY_KEY } from "@/auth"
+import { Global } from "@/global"
 import { URL } from "url"
 
 const execAsync = promisify(exec)
 const PROVIDER_ID = "codegenie"
 
-// Helper: write auth data directly to auth.json (avoids circular deps with Auth.Service)
-const authFilePath = path.join(homedir(), ".local", "share", "opencode", "auth.json")
+const authFilePath = path.join(Global.Path.data, "auth.json")
 export async function saveAuthToDisk(key: string, info: Record<string, unknown>) {
   try {
     let data: Record<string, unknown> = {}
