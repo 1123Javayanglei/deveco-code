@@ -60,8 +60,8 @@
 - 文档和示例
 
 **验收标准**:
-- [ ] `codegenie.json` 可被正确加载
-- [ ] 源代码中无 `opencode.json` 引用
+- [x] `codegenie.json` 可被正确加载 ✅
+- [x] 源代码中无 `opencode.json` 引用 ✅（排除主题文件）
 
 ---
 
@@ -75,8 +75,8 @@
 - 全局配置目录（如 `~/.opencode` → `~/.codegenie`）
 
 **验收标准**:
-- [ ] `.codegenie` 目录可被正确识别
-- [ ] 源代码中无 `.opencode` 引用
+- [x] `.codegenie` 目录可被正确识别 ✅
+- [x] 源代码中无 `.opencode` 引用 ✅（排除 URL）
 
 ---
 
@@ -151,14 +151,14 @@ opencode.json → codegenie.json
 
 ### 5.1 功能验收
 
-- [ ] 所有环境变量正确替换
-- [ ] 配置文件名正确替换
-- [ ] 配置目录名正确替换
-- [ ] Claude Code 继承默认禁用
+- [x] 所有环境变量正确替换 ✅
+- [x] 配置文件名正确替换 ✅
+- [x] 配置目录名正确替换 ✅
+- [x] Claude Code 继承默认禁用 ✅
 
 ### 5.2 排除验收
 
-- [ ] 确认无 `OPENCODE_*` 引用（排除外部 SDK）
-- [ ] 确认无 `@codegenie-ai` 误改（应保持 `@opencode-ai`）
-- [ ] 确认无 `codegenie-gitlab-auth` 误改（应保持原样）
-- [ ] 确认无 Effect Service ID 误改
+- [x] 确认无 `OPENCODE_*` 引用（排除外部 SDK） ✅
+- [x] 确认无 `@codegenie-ai` 误改（应保持 `@opencode-ai`） ✅
+- [x] 确认无 `codegenie-gitlab-auth` 误改（应保持原样） ✅
+- [x] 确认无 Effect Service ID 误改 ✅

@@ -30,12 +30,14 @@
 
 | 场景编号 | 场景描述 | 验证命令 | 预期结果 |
 |---------|---------|---------|---------|
-| VERIFY-001 | 无 OPENCODE 引用 | `grep OPENCODE_ src | grep -v @opencode-ai` | 空 |
-| VERIFY-002 | SDK 包名未误改 | `grep @codegenie-ai src` | 空 |
-| VERIFY-003 | 外部插件未误改 | `grep codegenie-gitlab-auth src` | 空 |
-| VERIFY-004 | Effect ID 未误改 | `grep @codegenie/ src` | 空 |
-| VERIFY-005 | 配置文件名正确 | `grep opencode.json src` | 空 |
-| VERIFY-006 | 配置目录名正确 | `grep .opencode src` | 空 |
+| VERIFY-001 | 无 OPENCODE 引用 | `grep OPENCODE_ src | grep -v @opencode-ai` | 空（已完成） |
+| VERIFY-002 | SDK 包名未误改 | `grep @codegenie-ai src` | 空（已完成） |
+| VERIFY-003 | 外部插件未误改 | `grep codegenie-gitlab-auth src` | 空（已完成） |
+| VERIFY-004 | Effect ID 未误改 | `grep @codegenie/ src` | 空（已完成） |
+| VERIFY-005 | 配置文件名正确 | `grep "opencode.json" src | grep -v theme` | 空（已完成 ✅ 2026-04-24） |
+| VERIFY-006 | 配置目录名正确 | `grep ".opencode" src | grep -v URL` | 空（已完成） |
+
+> **注**: VERIFY-005 和 VERIFY-006 需排除主题文件（theme 目录下的 `opencode.json` 是主题配色文件，非配置文件）和 URL 引用。
 
 ---
 

@@ -297,6 +297,20 @@
 
 ---
 
+### 2.14 配置文件名遗漏修复（追加）
+
+> **背景**: 配置迁移遗漏了 `config.ts` 中的全局配置文件加载逻辑及相关注释。
+
+| 文件路径 | 原值 | 新值 | 行号 | 验证 |
+|---------|------|------|------|------|
+| `src/config/config.ts` | `loadFile(path.join(Global.Path.config, "opencode.json"))` | `loadFile(path.join(Global.Path.config, "codegenie.json"))` | 395 | ✅ |
+| `src/config/config.ts` | `loadFile(path.join(Global.Path.config, "opencode.jsonc"))` | `loadFile(path.join(Global.Path.config, "codegenie.jsonc"))` | 396 | ✅ |
+| `src/cli/cmd/tui/config/tui-migrate.ts` | 注释 "from opencode.json files" | 注释 "from codegenie.json files" | 32 | ✅ |
+| `src/cli/cmd/tui/config/tui.ts` | 注释 "old opencode.json shape" | 注释 "old codegenie.json shape" | 211 | ✅ |
+| `src/provider/provider.ts` | 注释 "from opencode.json provider config" | 注释 "from codegenie.json provider config" | 315 | ✅ |
+
+---
+
 ### 2.14 Desktop Electron 应用名称和 ID
 
 | 文件路径 | 原值 | 新值 | 验证 |
@@ -376,6 +390,7 @@
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| 1.3 | 2026-04-24 | 新增配置文件名遗漏修复章节，记录 config.ts、tui-migrate.ts、tui.ts、provider.ts 注释更新 |
 | 1.2 | 2026-04-23 | 新增 Workspace 依赖修复章节，记录 packages/web 依赖和 import 更新 |
 | 1.1 | 2026-04-22 | 更新 REQ-005 状态为完成，添加 desktop-electron APP_NAMES/APP_IDS |
 | 1.0 | 2026-04-22 | 初始版本，记录所有已完成变更 |

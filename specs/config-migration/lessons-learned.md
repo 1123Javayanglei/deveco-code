@@ -10,12 +10,16 @@
 - ✅ 配置目录名: `.opencode` → `.codegenie`
 - ✅ `CODEGENIE_DISABLE_CLAUDE_CODE` 默认为 `true`（逻辑反转）
 - ✅ specs/config-migration/ 文档套件更新
+- ✅ config.ts 全局配置加载逻辑修复（2026-04-24 追加）
+- ✅ 相关注释更新（tui-migrate.ts, tui.ts, provider.ts）
 
-### 验证结果（2026-04-22）
+### 验证结果（2026-04-24 追加）
 - **src/ 目录**: 0 个 `Flag.OPENCODE_*` 引用（全部已改为 `Flag.CODEGENIE_*`）
 - **SDK 包名**: 0 个 `@codegenie-ai` 误改（保持 `@opencode-ai`，共 111 处引用）
 - **Effect ID**: 0 个 `@codegenie/` 误改（保持 `@opencode/`）
 - **类型检查**: src/ 目录无错误
+- **配置文件名**: 0 个 `opencode.json` 引用（排除主题文件，全部已改为 `codegenie.json`）
+- **配置目录名**: 0 个 `.opencode` 引用（排除 URL 和主题文件）
 
 ---
 

@@ -392,8 +392,8 @@ export const layer = Layer.effect(
       let result: Info = pipe(
         {},
         mergeDeep(yield* loadFile(path.join(Global.Path.config, "config.json"))),
-        mergeDeep(yield* loadFile(path.join(Global.Path.config, "opencode.json"))),
-        mergeDeep(yield* loadFile(path.join(Global.Path.config, "opencode.jsonc"))),
+        mergeDeep(yield* loadFile(path.join(Global.Path.config, "codegenie.json"))),
+        mergeDeep(yield* loadFile(path.join(Global.Path.config, "codegenie.jsonc"))),
       )
 
       const legacy = path.join(Global.Path.config, "config")
