@@ -49,8 +49,8 @@ function detectPlatformAndArch() {
 
 function findBinary() {
   const { platform, arch } = detectPlatformAndArch()
-  const packageName = `opencode-${platform}-${arch}`
-  const binaryName = platform === "windows" ? "opencode.exe" : "opencode"
+  const packageName = `codegenie-${platform}-${arch}`
+  const binaryName = platform === "windows" ? "codegenie.exe" : "codegenie"
 
   try {
     // Use require.resolve to find the package
@@ -62,7 +62,7 @@ function findBinary() {
       throw new Error(`Binary not found at ${binaryPath}`)
     }
 
-    return { binaryPath, binaryName }
+    return { binaryPath, binaryName, packageDir }
   } catch (error) {
     throw new Error(`Could not find package ${packageName}: ${error.message}`, { cause: error })
   }
@@ -77,10 +77,9 @@ async function main() {
       return
     }
 
-    // On non-Windows platforms, just verify the binary package exists
-    // Don't replace the wrapper script - it handles binary execution
-    const { binaryPath } = findBinary()
-    const target = path.join(__dirname, "bin", ".opencode")
+    // On non-Windows platforms, hardlink binary to bin/.codegenie
+    const { binaryPath, packageDir } = findBinary()
+    const target = path.join(__dirname, "bin", ".codegenie")
     if (fs.existsSync(target)) fs.unlinkSync(target)
     try {
       fs.linkSync(binaryPath, target)
@@ -90,9 +89,7 @@ async function main() {
     fs.chmodSync(target, 0o755)
 
     // Copy vendor directory from platform package to main package
-    // so runtime can find vendor/ripgrep/rg
-    const platformPkgDir = path.dirname(binDir)
-    const vendorSrc = path.join(platformPkgDir, "vendor")
+    const vendorSrc = path.join(packageDir, "vendor")
     const vendorDst = path.join(__dirname, "vendor")
     if (fs.existsSync(vendorSrc)) {
       function copyDir(src, dst) {
@@ -111,7 +108,7 @@ async function main() {
       console.log(`vendor directory copied: ${vendorDst}`)
     }
   } catch (error) {
-    console.error("Failed to setup opencode binary:", error.message)
+    console.error("Failed to setup codegenie binary:", error.message)
     process.exit(1)
   }
 }

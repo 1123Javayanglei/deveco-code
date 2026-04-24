@@ -18,7 +18,7 @@
     "db": "bun drizzle-kit"
   },
   "bin": {
-    "opencode": "./bin/opencode"
+    "codegenie": "./bin/codegenie"
   },
   "exports": {
     "./*": "./src/*.ts"

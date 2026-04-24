@@ -123,6 +123,7 @@
     "electron"
   ],
   "overrides": {
+    "@opencode-ai/plugin": "workspace:*",
     "@types/bun": "catalog:",
     "@types/node": "catalog:"
   },
