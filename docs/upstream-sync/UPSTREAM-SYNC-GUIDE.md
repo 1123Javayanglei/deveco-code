@@ -23,8 +23,8 @@
 3. 查看上游变更范围：`git log --oneline <old-tag>..<new-tag>`
 4. 执行合并：`git merge <new-tag> --no-edit`
 5. 解决冲突（参考下方原则）
-6. 验证构建：`bun install && bun run build`
-7. 在 [UPSTREAM-SYNC-CHANGELOG.md](./UPSTREAM-SYNC-CHANGELOG.md) 中添加同步记录
+6. 在 [UPSTREAM-SYNC-CHANGELOG.md](./UPSTREAM-SYNC-CHANGELOG.md) 中添加同步记录
+7. 验证构建（参考下方验证步骤）
 
 ## 冲突解决原则
 
@@ -36,9 +36,12 @@
 
 ## 同步后验证
 
-- 项目构建通过：`bun run build`
-- 品牌一致性：`grep -r "OPENCODE_" packages/ --include="*.ts"` 应无结果
-- 功能回归测试（如适用）
+1. **依赖安装**：`bun install`，确保无报错
+2. **开发服务器**：`bun run dev`，确认 TUI 正常启动并显示 CodeGenie 界面
+3. **项目构建**：`bun run build`，确保构建通过
+4. **类型检查**：`bun run typecheck`，确保类型无误
+5. **品牌一致性**：`grep -r "OPENCODE_" packages/ --include="*.ts"` 检查无新增不应存在的 `OPENCODE_` 引用（上游本身使用的除外）
+6. **功能回归测试**（如适用）
 
 ## 同步记录
 
