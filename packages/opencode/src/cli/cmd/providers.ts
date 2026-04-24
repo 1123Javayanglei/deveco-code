@@ -361,6 +361,9 @@ export const ProvidersLoginCommand = cmd({
           openrouter: 5,
           vercel: 6,
         }
+        const PLUGIN_HINT: Record<string, string> = {
+          codegenie: "recommended",
+        }
         const pluginProviders = resolvePluginProviders({
           hooks,
           existingProviders: providers,
@@ -368,30 +371,30 @@ export const ProvidersLoginCommand = cmd({
           enabled,
           providerNames: Object.fromEntries(Object.entries(config.provider ?? {}).map(([id, p]) => [id, p.name])),
         })
-        const options = [
-          ...pipe(
-            providers,
-            values(),
-            sortBy(
-              (x) => priority[x.id] ?? 99,
-              (x) => x.name ?? x.id,
+        const options = sortBy(
+          [
+            ...pipe(
+              providers,
+              values(),
+              map((x) => ({
+                label: x.name,
+                value: x.id,
+                hint: {
+                    opencode: "recommended",
+                    openai: "ChatGPT Plus/Pro or API key",
+                    codegenie: "recommended",
+                  }[x.id],
+              })),
             ),
-            map((x) => ({
+            ...pluginProviders.map((x) => ({
               label: x.name,
               value: x.id,
-              hint: {
-                  opencode: "recommended",
-                  openai: "ChatGPT Plus/Pro or API key",
-                  codegenie: "recommended",
-                }[x.id],
+              hint: PLUGIN_HINT[x.id] ?? "plugin",
             })),
-          ),
-          ...pluginProviders.map((x) => ({
-            label: x.name,
-            value: x.id,
-            hint: "plugin",
-          })),
-        ]
+          ],
+          (x) => priority[x.value] ?? 99,
+          (x) => x.label ?? x.value,
+        )
 
         let provider: string
         if (args.provider) {
