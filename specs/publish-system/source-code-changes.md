@@ -26,6 +26,8 @@
 darwin-arm64, darwin-x64, win32-x64
 ```
 
+> 仅支持以上 3 种平台，因为 DevEco Toolbox 当前仅支持 macOS（Intel / Apple Silicon）和 Windows（x64）。
+
 ---
 
 ## 3. 缓存目录结构
