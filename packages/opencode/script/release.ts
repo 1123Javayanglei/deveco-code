@@ -39,7 +39,8 @@ process.chdir(cliDir)
 const pkg = (await Bun.file("./package.json").json()) as { name: string; license: string }
 const ALLOWED_PLATFORMS = new Set(["darwin-arm64", "darwin-x64", "win32-x64"])
 
-const binaries: Record<string, string> = {}
+// Map: scoped package name → { version, dir (relative to ./dist) }
+const binaries: Record<string, { version: string; dir: string }> = {}
 for (const filepath of new Bun.Glob("*/package.json").scanSync({ cwd: "./dist" })) {
   const distPkg = (await Bun.file(`./dist/${filepath}`).json()) as {
     name: string
@@ -56,10 +57,10 @@ for (const filepath of new Bun.Glob("*/package.json").scanSync({ cwd: "./dist" }
     console.log(`  Skipping ${distPkg.name} (baseline)`)
     continue
   }
-  binaries[distPkg.name] = distPkg.version
+  binaries[distPkg.name] = { version: distPkg.version, dir: path.dirname(filepath) }
 }
-console.log("  binaries:", binaries)
-const version = Object.values(binaries)[0]
+console.log("  binaries:", Object.fromEntries(Object.entries(binaries).map(([k, v]) => [k, v.version])))
+const version = Object.values(binaries)[0]?.version
 
 // Prepare main package
 await $`mkdir -p ./dist/${pkg.name}`
@@ -79,7 +80,7 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
       },
       version: version,
       license: pkg.license,
-      optionalDependencies: binaries,
+      optionalDependencies: Object.fromEntries(Object.entries(binaries).map(([k, v]) => [k, v.version])),
     },
     null,
     2,
@@ -87,12 +88,12 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
 )
 
 // Publish platform packages in parallel, then main package
-const tasks = Object.entries(binaries).map(async ([name]) => {
+const tasks = Object.entries(binaries).map(async ([name, { dir }]) => {
   if (process.platform !== "win32") {
-    await $`chmod -R 755 .`.cwd(`./dist/${name}`)
+    await $`chmod -R 755 .`.cwd(`./dist/${dir}`)
   }
-  await $`bun pm pack`.cwd(`./dist/${name}`)
-  await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(`./dist/${name}`)
+  await $`bun pm pack`.cwd(`./dist/${dir}`)
+  await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(`./dist/${dir}`)
   console.log(`  ✔ ${name}@${Script.version}`)
 })
 await Promise.all(tasks)
