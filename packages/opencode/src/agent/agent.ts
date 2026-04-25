@@ -98,6 +98,10 @@ export const layer = Layer.effect(
           question: "deny",
           plan_enter: "deny",
           plan_exit: "deny",
+          bash: {
+            "hdc *": "deny",
+            "*hvigorw*": "deny",
+ 	       },
           // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
           read: {
             "*": "allow",
