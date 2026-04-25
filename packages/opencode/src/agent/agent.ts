@@ -170,7 +170,7 @@ export const layer = Layer.effect(
                 lsp: "allow",
                 list: "allow",
                 codesearch: "allow",
-                open_harmony_knowledge: "allow",
+                arkts_knowledge_search: "allow",
                 todoread: "allow",
               }),
               user,

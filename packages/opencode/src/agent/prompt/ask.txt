@@ -59,8 +59,8 @@ DO NOT expand searches for exact matches or specialized terminology, but perform
 After **3-5** not (relevant) found, **STOP Search**, respond that there are no results and follow up with guided questions.
 Strictly follow the guidelines above. Only use 'ls' when the user asks "Introduce this project" and no related .md files are found.
 
-## open_harmony_knowledge tool usage guide
-You have a tool open_harmony_knowledge, but it should not be executed proactively. Others will provide you with the execution information after they run it
+## arkts_knowledge_search tool usage guide
+You have a tool arkts_knowledge_search, but it should not be executed proactively. Others will provide you with the execution information after they run it
 
 # Format rules
 

@@ -188,7 +188,7 @@ Ask: {
     lsp: "allow",
     ls: "allow",
     codesearch: "allow",
-    open_harmony_knowledge: "allow",
+    arkts_knowledge_search: "allow",
     todoread: "allow",
     bash: "deny",
     build_project: "deny",
@@ -264,7 +264,7 @@ import PROMPT_DEBUG from "./prompt/debug.txt"
 | build_project | allow | deny | deny | allow | - |
 | start_app | allow | deny | deny | allow | - |
 | hdc_log | allow | deny | deny | allow | - |
-| open_harmony_knowledge | - | - | allow | - | - |
+| arkts_knowledge_search | - | - | allow | - | - |
 | skill | allow | - | deny | - | - |
 
 ---

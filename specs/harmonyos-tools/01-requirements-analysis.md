@@ -186,7 +186,7 @@ codegenie-old 已有成熟的 HarmonyOS 开发工具集，codegenie-cli 作为�
 |------|------|
 | 场景描述 | 开发者询问 HarmonyOS 开发问题，AI 优先使用知识库检索 |
 | 前置条件 | 用户已通过 OAuth 授权（Auth.Service 提供 token） |
-| 操作步骤 | 1. AI 调用 open_harmony_knowledge(question="...")<br>2. 工具通过 Auth.Service 获取 OAuth token<br>3. POST 请求知识库 API<br>4. 解析响应，提取检索结果 |
+| 操作步骤 | 1. AI 调用 arkts_knowledge_search(question="...")<br>2. 工具通过 Auth.Service 获取 OAuth token<br>3. POST 请求知识库 API<br>4. 解析响应，提取检索结果 |
 | 预期结果 | 返回知识库答案（截断到 5KB） |
 | 异常处理 | 未授权 → 提示授权；4016 错误 → 提示重新授权 |
 

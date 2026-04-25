@@ -37,7 +37,7 @@ packages/opencode/src/tool/
 | `plan.ts`               | `plan_exit`            | Exits plan mode and switches to build agent                                 | `plan-exit.txt` |
 | `plan.ts`               | `plan_write`           | Writes plan content to plan file                                            | `plan-write.txt` |
 | `switch-cwd.ts`         | `switch_cwd`           | Sets per-session Harmony application root; validates layout                 | `switch-cwd.txt` |
-| `oh_knowledge.ts`       | `open_harmony_knowledge` | Search and obtain answers from the official HarmonyOS knowledge base      | (inline) |
+| `oh_knowledge.ts`       | `arkts_knowledge_search`| Search and obtain answers from the official HarmonyOS knowledge base      | (inline) |
 
 ### Supporting Libraries
 

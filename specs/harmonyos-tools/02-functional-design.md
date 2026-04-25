@@ -177,7 +177,7 @@ export const defaultLayer = layer.pipe(
 
 | 项目 | 设计 |
 |------|------|
-| 工具 ID | `open_harmony_knowledge` |
+| 工具 ID | `arkts_knowledge_search` |
 | 参数 | `question: string` |
 | 依赖 | `Auth.Service`（OAuth token） |
 | Service 捕获 | init 阶段 `const auth = yield* Auth.Service` |

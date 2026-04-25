@@ -5,6 +5,7 @@ import { Auth } from "@/auth"
 
 const BASE_URL = "https://cn.devecostudio.huawei.com/codeGenie/bigSearch"
 const MAX_RESULT_LENGTH = 5 * 1024
+export const KNOWLEDGE_TOOL_ID = "arkts_knowledge_search"
 
 interface AnswerPrompt {
   prompt?: string
@@ -32,16 +33,16 @@ const Parameters = z.object({
   question: z.string().describe("The question you want to ask about HarmonyOS/OpenHarmony knowledge"),
 })
 
-export const OhKnowledgeTool = Tool.define("open_harmony_knowledge", Effect.gen(function* () {
+export const OhKnowledgeTool = Tool.define(KNOWLEDGE_TOOL_ID, Effect.gen(function* () {
   const auth = yield* Auth.Service
   return {
     description:
-      "Search and obtain answers from the official HarmonyOS knowledge base. Use this tool FIRST (instead of webfetch) when user asks about HarmonyOS/OpenHarmony development knowledge, or when user provides a URL from developer.huawei.com or any HarmonyOS documentation site. Extract the topic or keywords from the URL path and use them as the question.",
+      "Search and obtain answers from the official arkts knowledge base. Use this tool FIRST (instead of webfetch) when user asks about HarmonyOS/OpenHarmony development knowledge, or when user provides a URL from developer.huawei.com or any HarmonyOS documentation site. Extract the topic or keywords from the URL path and use them as the question.",
     parameters: Parameters,
     execute: (args: z.infer<typeof Parameters>, ctx: Tool.Context) =>
       Effect.gen(function* () {
         yield* ctx.ask({
-          permission: "open_harmony_knowledge",
+          permission: KNOWLEDGE_TOOL_ID,
           patterns: [args.question],
           always: ["*"],
           metadata: {},
