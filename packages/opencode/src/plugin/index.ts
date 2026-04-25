@@ -19,6 +19,7 @@ import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
 import { CodegenieAuthPlugin } from "./codegenie"
 import AnalyticsPlugin from "./analytics/analytics-plugin"
+import HarmonyNapiDynamicToolsPlugin from "./harmony-napi-dynamic-tools"
 import { Effect, Layer, Context, Stream } from "effect"
 import { EffectBridge } from "@/effect"
 import { InstanceState } from "@/effect"
@@ -65,6 +66,7 @@ const INTERNAL_PLUGINS: PluginInstance[] = [
   CloudflareAIGatewayAuthPlugin,
   CodegenieAuthPlugin,
   AnalyticsPlugin,
+  HarmonyNapiDynamicToolsPlugin,
 ]
 
 function isServerPlugin(value: unknown): value is PluginInstance {
