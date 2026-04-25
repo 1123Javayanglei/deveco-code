@@ -25,6 +25,7 @@
 | 日志消息 | 7 | 7 | ✅ 完成 |
 | Desktop Electron 应用名/ID | 1 | 4 | ✅ 完成 |
 | Workspace 依赖修复 | 3 | 4 | ✅ 完成 |
+| TUI Sidebar/Footer 品牌显示 | 2 | 4 | ✅ 完成 |
 
 ---
 
@@ -55,6 +56,19 @@
 |---------|------|------|------|------|
 | `packages/opencode/src/index.ts` | `process.env.OPENCODE = "1"` | `process.env.CODEGENIE = "1"` | 108 | ✅ |
 | `packages/opencode/src/index.ts` | `Log.Default.info("opencode", ...)` | `Log.Default.info("codegenie", ...)` | 111 | ✅ |
+
+---
+
+### 2.16 TUI Sidebar/Footer 品牌显示修复（追加）
+
+> **背景**: 之前需求标注"TUI 组件不修改"，但 sidebar 和 footer 中显示的品牌名 `<b>Open</b><b>Code</b>` 是用户直接可见的品牌标识，需要同步更新。
+
+| 文件路径 | 原值 | 新值 | 行号 | 验证 |
+|---------|------|------|------|------|
+| `packages/opencode/src/cli/cmd/tui/feature-plugins/sidebar/footer.tsx` | `<b>Open</b>` | `<b>Code</b>` | 67 | ✅ |
+| `packages/opencode/src/cli/cmd/tui/feature-plugins/sidebar/footer.tsx` | `<b>Code</b>` | `<b>Genie</b>` | 69 | ✅ |
+| `packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx` | `<b>Open</b>` | `<b>Code</b>` | 86 | ✅ |
+| `packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx` | `<b>Code</b>` | `<b>Genie</b>` | 88 | ✅ |
 
 ---
 
@@ -390,6 +404,7 @@
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| 1.4 | 2026-04-25 | 新增 TUI sidebar/footer 品牌显示修复，将 `<b>Open</b><b>Code</b>` 改为 `<b>Code</b><b>Genie</b>` |
 | 1.3 | 2026-04-24 | 新增配置文件名遗漏修复章节，记录 config.ts、tui-migrate.ts、tui.ts、provider.ts 注释更新 |
 | 1.2 | 2026-04-23 | 新增 Workspace 依赖修复章节，记录 packages/web 依赖和 import 更新 |
 | 1.1 | 2026-04-22 | 更新 REQ-005 状态为完成，添加 desktop-electron APP_NAMES/APP_IDS |
