@@ -20,14 +20,14 @@ export type ReleaseType = "patch" | "minor" | "major"
 export const Event = {
   Updated: BusEvent.define(
     "installation.updated",
-    z.object({
-      version: z.string(),
+    Schema.Struct({
+      version: Schema.String,
     }),
   ),
   UpdateAvailable: BusEvent.define(
     "installation.update-available",
-    z.object({
-      version: z.string(),
+    Schema.Struct({
+      version: Schema.String,
     }),
   ),
 }
@@ -121,6 +121,18 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
         Effect.catch(() => Effect.succeed({ code: ChildProcessSpawner.ExitCode(1), stdout: "", stderr: "" })),
       )
 
+      const viewVersion = Effect.fnUntraced(function* (method: "npm" | "pnpm" | "bun", spec: string) {
+        const args = method === "bun" ? ["pm", "view", spec, "version", "--json"] : ["view", spec, "version", "--json"]
+        const result = yield* run([method, ...args])
+        if (result.code !== 0 || !result.stdout.trim()) {
+          return yield* new UpgradeFailedError({
+            stderr: result.stderr || result.stdout || `Failed to resolve ${spec}`,
+          })
+        }
+        return yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.String))(result.stdout)
+      })
+
+
       const methodImpl = Effect.fn("Installation.method")(function* () {
         const exec = process.execPath.toLowerCase()
 
@@ -148,7 +160,13 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
         return "unknown" as Method
       })
 
-      const latestImpl = Effect.fn("Installation.latest")(function* (_installMethod?: Method) {
+      const latestImpl = Effect.fn("Installation.latest")(function* (installMethod?: Method) {
+        const detectedMethod = installMethod || (yield* methodImpl())
+
+        if (detectedMethod === "npm" || detectedMethod === "bun" || detectedMethod === "pnpm") {
+          return yield* viewVersion(detectedMethod, `@codegenie-ai/codegenie-cli@${InstallationChannel}`)
+        }
+
         const r = (yield* text(["npm", "config", "get", "registry"])).trim()
         const reg = r || "https://registry.npmjs.org"
         const registry = reg.endsWith("/") ? reg.slice(0, -1) : reg
