@@ -2,4 +2,5 @@
 
 import { $ } from "bun"
 
+
 await $`bun run prettier --ignore-unknown --write .`
