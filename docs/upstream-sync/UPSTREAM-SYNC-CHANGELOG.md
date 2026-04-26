@@ -2,6 +2,19 @@
 
 > 同步规则和流程见 [UPSTREAM-SYNC-GUIDE.md](./UPSTREAM-SYNC-GUIDE.md)
 
+## 2026-04-27 | v1.14.23 → v1.14.24
+
+- **分支**: upstream-tracking-develop
+- **上游提交数**: 7
+- **冲突**: 19 个文件。17 个 package.json/extension.toml 纯版本号冲突（接受上游）；packages/opencode/package.json 保留 name="codegenie"、升级版本号；packages/web/package.json workspace 依赖从 opencode 改为 codegenie；bun.lock 通过 bun install 重新生成。
+- **功能逻辑冲突**: 无。
+- **auto-merge 陷阱修复**: packages/web/package.json 的 workspace:* 依赖被 --theirs 覆盖为 opencode，手动改回 codegenie。
+- **主要变更**:
+  - feat(httpapi): bridge file read endpoints (#24098)
+  - feat(httpapi): bridge mcp status endpoint (#24100)
+  - fix: ensure assistant messages always have reasoning on them for deepseek (#24180)
+  - fix: use existingModel as fallback for interleaved field (#24172)
+
 ## 2026-04-26 | v1.14.22 → v1.14.23
 
 - **分支**: upstream-tracking-develop
