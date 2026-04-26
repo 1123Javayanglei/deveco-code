@@ -1,4 +1,3 @@
-import z from "zod"
 import path from "path"
 import fs from "fs"
 import { Effect, Schema } from "effect"
@@ -84,8 +83,8 @@ export const PlanExitTool = Tool.define(
   }),
 )
 
-const WriteParameters = z.object({
-  content: z.string().describe("The full plan file content, including YAML frontmatter and markdown body."),
+const WriteParameters = Schema.Struct({
+  content: Schema.String.annotate({ description: "The full plan file content, including YAML frontmatter and markdown body." }),
 })
 
 export const PlanWriteTool = Tool.define(
@@ -96,7 +95,7 @@ export const PlanWriteTool = Tool.define(
     return {
       description: WRITE_DESCRIPTION,
       parameters: WriteParameters,
-      execute: (params: z.infer<typeof WriteParameters>, _ctx: Tool.Context) =>
+      execute: (params: Schema.Schema.Type<typeof WriteParameters>, _ctx: Tool.Context) =>
         Effect.gen(function* () {
           const info = yield* session.get(_ctx.sessionID)
           const planPath = Session.plan(info)
@@ -126,7 +125,7 @@ export const PlanEnterTool = Tool.define(
 
     return {
       description: ENTER_DESCRIPTION,
-      parameters: z.object({}),
+      parameters: Schema.Struct({}),
       execute: (_params: {}, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const info = yield* session.get(ctx.sessionID)

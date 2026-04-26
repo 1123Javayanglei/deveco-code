@@ -13,8 +13,7 @@
  * limitations under the License.
  */
 
-import z from "zod"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { findDevEcoHome, hdcPath } from "./lib/env"
 import DESCRIPTION from "./jscrash-report.txt"
@@ -374,22 +373,26 @@ function buildReport(
   }
 }
 
-const Parameters = z.object({
-  crash_log: z
-    .string()
-    .optional()
-    .describe("Raw crash log text. If omitted, collect recent hilog content from the device."),
-  device_id: z.string().optional().describe("Optional hdc target id"),
-  bundle_name: z.string().optional().describe("Optional bundle name to help filter the report"),
-  process_hint: z.string().optional().describe("Optional process name hint to help filter the report"),
-  lines: z.coerce.number().int().min(200).max(10000).default(4000).describe("Number of log lines to analyze"),
+const Parameters = Schema.Struct({
+  crash_log: Schema.optional(Schema.String)
+    .annotate({ description: "Raw crash log text. If omitted, collect recent hilog content from the device." }),
+  device_id: Schema.optional(Schema.String)
+    .annotate({ description: "Optional hdc target id" }),
+  bundle_name: Schema.optional(Schema.String)
+    .annotate({ description: "Optional bundle name to help filter the report" }),
+  process_hint: Schema.optional(Schema.String)
+    .annotate({ description: "Optional process name hint to help filter the report" }),
+  lines: Schema.Int
+    .check(Schema.isGreaterThanOrEqualTo(200), Schema.isLessThanOrEqualTo(10000))
+    .pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(4000)))
+    .annotate({ description: "Number of log lines to analyze" }),
 })
 
 export const JscrashReportTool = Tool.define("jscrash_report", Effect.gen(function* () {
   return {
     description: DESCRIPTION,
     parameters: Parameters,
-    execute: (args: z.infer<typeof Parameters>, _ctx: Tool.Context) =>
+    execute: (args: Schema.Schema.Type<typeof Parameters>, _ctx: Tool.Context) =>
       Effect.gen(function* () {
         const rawLog = trim(String(args.crash_log || ""))
         if (rawLog) {

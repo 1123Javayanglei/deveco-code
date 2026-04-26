@@ -13,8 +13,7 @@
  * limitations under the License.
  */
 
-import z from "zod"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { findDevEcoHome, hdcPath } from "./lib/env"
 import DESCRIPTION from "./hdc-log.txt"
@@ -51,18 +50,25 @@ interface HdcLogMetadata {
   lineCount?: number
 }
 
-const Parameters = z.object({
-  action: z.enum(["collect", "clear", "list_devices"]).describe("Action to perform"),
-  device_id: z.string().optional().describe("Optional hdc target id"),
-  log_prefix: z.string().default("[VCODER_DEBUG]").describe("Log prefix to filter"),
-  lines: z.number().int().min(1).max(5000).default(2000).describe("Number of log lines to collect"),
+const Parameters = Schema.Struct({
+  action: Schema.Literals(["collect", "clear", "list_devices"])
+    .annotate({ description: "Action to perform" }),
+  device_id: Schema.optional(Schema.String)
+    .annotate({ description: "Optional hdc target id" }),
+  log_prefix: Schema.String
+    .pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed("[VCODER_DEBUG]")))
+    .annotate({ description: "Log prefix to filter" }),
+  lines: Schema.Int
+    .check(Schema.isGreaterThanOrEqualTo(1), Schema.isLessThanOrEqualTo(5000))
+    .pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(2000)))
+    .annotate({ description: "Number of log lines to collect" }),
 })
 
 export const HdcLogTool = Tool.define("hdc_log", Effect.gen(function* () {
   return {
     description: DESCRIPTION,
     parameters: Parameters,
-    execute: (args: z.infer<typeof Parameters>, _ctx: Tool.Context<HdcLogMetadata>) =>
+    execute: (args: Schema.Schema.Type<typeof Parameters>, _ctx: Tool.Context<HdcLogMetadata>) =>
       Effect.gen(function* () {
         const home = yield* Effect.tryPromise(() => findDevEcoHome())
         if (!home) {

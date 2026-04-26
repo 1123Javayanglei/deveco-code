@@ -1,5 +1,4 @@
-import z from "zod"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { Auth } from "@/auth"
 
@@ -29,8 +28,8 @@ interface KnowledgeResponseError {
 
 type KnowledgeResponse = KnowledgeResponseSuccess | KnowledgeResponseError
 
-const Parameters = z.object({
-  question: z.string().describe("The question you want to ask about HarmonyOS/OpenHarmony knowledge"),
+const Parameters = Schema.Struct({
+  question: Schema.String.annotate({ description: "The question you want to ask about HarmonyOS/OpenHarmony knowledge" }),
 })
 
 export const OhKnowledgeTool = Tool.define(KNOWLEDGE_TOOL_ID, Effect.gen(function* () {
@@ -39,7 +38,7 @@ export const OhKnowledgeTool = Tool.define(KNOWLEDGE_TOOL_ID, Effect.gen(functio
     description:
       "Search and obtain answers from the official arkts knowledge base. Use this tool FIRST (instead of webfetch) when user asks about HarmonyOS/OpenHarmony development knowledge, or when user provides a URL from developer.huawei.com or any HarmonyOS documentation site. Extract the topic or keywords from the URL path and use them as the question.",
     parameters: Parameters,
-    execute: (args: z.infer<typeof Parameters>, ctx: Tool.Context) =>
+    execute: (args: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
       Effect.gen(function* () {
         yield* ctx.ask({
           permission: KNOWLEDGE_TOOL_ID,

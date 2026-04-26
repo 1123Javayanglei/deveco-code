@@ -53,7 +53,7 @@ Tool.define("id", Effect.gen(function* () {
 
   return {
     description: DESCRIPTION,         // from .txt file
-    parameters: Parameters,           // zod schema
+    parameters: Parameters,           // Effect Schema
     execute: (args, ctx) =>
       Effect.gen(function* () {
         // Phase 2: execute — 业务逻辑
@@ -91,13 +91,12 @@ lib/   tool/*.ts   registry.ts
 
 ```typescript
 // 导入规范
-import z from "zod"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION from "./tool-name.txt"
 
 // 参数定义（独立 const 以支持类型推导）
-const Parameters = z.object({ ... })
+const Parameters = Schema.Struct({ ... })
 
 // 工具定义
 export const ToolName = Tool.define("tool_id", Effect.gen(function* () {
@@ -105,7 +104,7 @@ export const ToolName = Tool.define("tool_id", Effect.gen(function* () {
   return {
     description: DESCRIPTION,
     parameters: Parameters,
-    execute: (args: z.infer<typeof Parameters>, ctx: Tool.Context) =>
+    execute: (args: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
       Effect.gen(function* () {
         // 业务逻辑
         return { title, output, metadata }
@@ -158,7 +157,7 @@ export const defaultLayer = layer.pipe(
 | 项目 | 设计 |
 |------|------|
 | 工具 ID | `hdc_log` |
-| 参数 | `action: enum[collect,clear,list_devices]`, `device_id?: string`, `log_prefix: string`, `lines: number` |
+| 参数 | `action: Schema.Literals(["collect","clear","list_devices"])`, `device_id?: string`, `log_prefix: string`（默认 `"[VCODER_DEBUG]"`）, `lines: number`（1–5000，默认 2000） |
 | 依赖 | `lib/env.ts`（findDevEcoHome, hdcPath） |
 | Effect 模式 | `Effect.tryPromise(() => findDevEcoHome())` + `Effect.tryPromise(() => Bun.file(hdc).exists())` |
 | 错误处理 | DevEco 未找到 → throw Error；hdc 命令失败 → throw Error |

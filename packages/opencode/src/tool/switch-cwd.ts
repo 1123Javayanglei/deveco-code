@@ -13,8 +13,7 @@
  * limitations under the License.
  */
 
-import z from "zod"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import path from "path"
 import * as Tool from "./tool"
 import { Instance } from "../project/instance"
@@ -44,17 +43,17 @@ async function isHarmonyApplicationRoot(dir: string) {
   return false
 }
 
-const Parameters = z.object({
-  project_path: z
-    .string()
-    .describe("Target project directory path. Relative path is resolved from the current workspace directory."),
+const Parameters = Schema.Struct({
+  project_path: Schema.String.annotate({
+    description: "Target project directory path. Relative path is resolved from the current workspace directory.",
+  }),
 })
 
 export const SwitchCwdTool = Tool.define("switch_cwd", Effect.gen(function* () {
   return {
     description: DESCRIPTION,
     parameters: Parameters,
-    execute: (args: z.infer<typeof Parameters>, ctx: Tool.Context) =>
+    execute: (args: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
       Effect.gen(function* () {
         const target = resolveTarget(args.project_path)
         const stat = yield* Effect.tryPromise(() => import("fs/promises").then((fs) => fs.stat(target)))

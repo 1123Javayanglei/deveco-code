@@ -59,7 +59,7 @@ import * as Tool from "./tool"
 ### 3.2 工具定义模式
 
 ```typescript
-// codegenie-old (async/await)
+// codegenie-old (async/await + zod)
 export const ToolName = Tool.define("tool_id", async () => ({
   description: "...",
   parameters: z.object({ ... }),
@@ -69,15 +69,15 @@ export const ToolName = Tool.define("tool_id", async () => ({
   }
 }))
 
-// codegenie-cli (Effect-TS)
+// codegenie-cli (Effect-TS + Effect Schema)
 export const ToolName = Tool.define("tool_id", Effect.gen(function* () {
   // 可选：捕获 Service
   const auth = yield* Auth.Service
 
   return {
     description: DESCRIPTION,
-    parameters: Parameters,
-    execute: (args: z.infer<typeof Parameters>, ctx: Tool.Context) =>
+    parameters: Parameters,           // Effect Schema (Schema.Struct)
+    execute: (args: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
       Effect.gen(function* () {
         const result = yield* Effect.tryPromise(() => someAsyncOp())
         return { title, output, metadata }
@@ -91,6 +91,8 @@ export const ToolName = Tool.define("tool_id", Effect.gen(function* () {
 | Aspect | codegenie-old | codegenie-cli |
 |--------|---------------|---------------|
 | Init | `async () => ({ ... })` | `Effect.gen(function* () { return { ... } })` |
+| Parameters | `z.object({ ... })` | `Schema.Struct({ ... })` |
+| Type inference | `z.infer<typeof Parameters>` | `Schema.Schema.Type<typeof Parameters>` |
 | Execute | `async execute(args, ctx)` | `execute: (args, ctx) => Effect.gen(...).pipe(Effect.orDie)` |
 | Ask | `await ctx.ask(...)` | `yield* ctx.ask(...)` |
 | Auth | `await Auth.get("codegenie")` | `yield* Auth.Service`（init 阶段闭包捕获） |
@@ -119,7 +121,7 @@ export const ToolName = Tool.define("tool_id", Effect.gen(function* () {
 
 - 依赖: `lib/env.ts`（findDevEcoHome, hdcPath）
 - Effect 模式: `Effect.tryPromise(() => findDevEcoHome())`
-- 参数: `action: enum[collect,clear,list_devices]`, `device_id?: string`, `log_prefix: string`, `lines: number`
+- 参数: `action: Schema.Literals(["collect","clear","list_devices"])`, `device_id?: Schema.String`, `log_prefix: Schema.String`（默认 `"[VCODER_DEBUG]"`）, `lines: Schema.Int`（1–5000，默认 2000）
 
 #### jscrash_report（`src/tool/jscrash_report.ts`）
 

@@ -64,7 +64,7 @@ describe("installation", () => {
       const layer = testLayer(() => jsonResponse({ tag_name: "v4.0.0-beta.1" }))
 
       const result = await Effect.runPromise(
-        Installation.Service.use((svc) => svc.latest("curl")).pipe(Effect.provide(layer)),
+        Installation.Service.use((svc) => svc.latest("unknown")).pipe(Effect.provide(layer)),
       )
       expect(result).toBe("4.0.0-beta.1")
     })
