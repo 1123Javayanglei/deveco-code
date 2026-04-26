@@ -41,12 +41,22 @@
 | `refactor` | 重构（不改变行为） |
 | `test` | 测试相关 |
 
-示例：
+标题示例：
 
 ```text
 feat(opencode): add dark mode
 fix(app): crash on startup
 fix: crash on startup
+```
+
+正文示例（按修改点逐条列出）：
+
+```text
+feat(opencode): add user profile page
+
+1. add ProfileView component
+2. add /profile route
+3. integrate user info API
 ```
 
 提交内容规范：

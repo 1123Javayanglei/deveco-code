@@ -27,15 +27,16 @@
 2. `git merge --no-commit --no-ff <new-tag>` — 模拟合并（仅计算，不提交）
 3. `git diff --name-only --diff-filter=U` — 列出冲突文件
 4. 逐个冲突文件：读取内容 → 判断类型（版本号/品牌名/功能逻辑/新增配置）→ 是否涉及 CodeGenie 自有特性
-5. `git merge --abort` — 撤销模拟合并
-6. 输出报告：变更概要 / 冲突清单及建议 / 高风险项 / 总体评估
+5. **查阅特性文档**：对涉及 CodeGenie 自有特性的冲突，查阅 [FEATURES-INDEX.md](../../specs/FEATURES-INDEX.md) 定位相关特性，读取其需求分析、功能设计和源码变更记录，作为冲突解决的依据
+6. `git merge --abort` — 撤销模拟合并
+7. 输出报告：变更概要 / 冲突清单及建议 / 高风险项 / 总体评估
 
 将完整报告展示给用户，明确标注高风险冲突和建议处理方式。**等待用户确认后再继续。**
 
 ### Step 3: 执行合并
 
 1. `git merge --no-ff <tag> --no-edit`
-2. 按分析报告逐个解决冲突（遵循下方原则）
+2. 按分析报告逐个解决冲突（遵循下方原则；涉及自有特性时综合代码与特性文档的要求进行判断）
 3. 冲突解决后执行 `bun install` 更新锁文件
 4. 在 [UPSTREAM-SYNC-CHANGELOG.md](./UPSTREAM-SYNC-CHANGELOG.md) 添加同步记录
 
@@ -54,7 +55,7 @@
 1. **CodeGenie 自有特性**（品牌标识 `CODEGENIE_*`/`CodeGenie`、HarmonyOS、自定义 flag 等）→ **始终保留本地**
 2. **上游功能变更**（bug 修复、功能增强、依赖升级）→ **接受上游**
 3. **配置和构建脚本** → 以本地为准，合并上游新增项；若与原则 1 冲突则遵循原则 1
-4. **辅助判断**：冲突时参考 `specs/` 目录下的特性文档，以及 [UPSTREAM-SYNC-LESSONS.md](./UPSTREAM-SYNC-LESSONS.md) 中的历史经验
+4. **辅助判断**：冲突时查阅 `specs/` 目录下的特性文档（需求分析、功能设计、源码变更记录）以明确自有特性的具体要求，并参考 [UPSTREAM-SYNC-LESSONS.md](./UPSTREAM-SYNC-LESSONS.md) 中的历史经验
 
 ## 相关文档
 
