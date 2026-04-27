@@ -1,7 +1,7 @@
 import { Session } from "@/session"
 import { SessionID, MessageID, PartID } from "./schema"
 import { Effect } from "effect"
-import { Log } from "@/node.ts"
+import { Log } from "@/util"
 import { KNOWLEDGE_TOOL_ID } from "@/tool/oh_knowledge.ts"
 
 export const log = Log.create({service: "knowledge"})
