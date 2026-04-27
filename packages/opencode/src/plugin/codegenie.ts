@@ -682,7 +682,7 @@ class LoginService {
     return result
   }
 
-  private parseJwt(token: string): JwtPayload {
+  public parseJwt(token: string): JwtPayload {
     const parts = token.split(".")
     if (parts.length !== 3) {
       throw new Error(`Invalid jwtToken format`)
@@ -794,6 +794,28 @@ class CodeGenieAuth {
         ...userInfo,
         createdAt: Date.now(),
         expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+      }
+    }
+    const jwtToken = await tokenStorage.loadToken()
+    if (jwtToken) {
+      try {
+        const parsed = loginService.parseJwt(jwtToken)
+        if (parsed.userId) {
+          return {
+            userId: parsed.userId,
+            userName: parsed.userName ?? "",
+            accessToken: "",
+            refreshToken: "",
+            jwtToken,
+            countryCode: "",
+            language: "",
+            isRealName: false,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+          }
+        }
+      } catch {
+        // ignore parse errors
       }
     }
     return null

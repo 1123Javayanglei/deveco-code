@@ -29,6 +29,8 @@ export interface AnalyticsEvent {
   uid: string
   userid: string
   sessionid: string
+  messageID: string
+  agentName: string
   query: string
   answer: string
   inputTokenCount: number
@@ -51,7 +53,9 @@ export interface FileDiffInfo {
 
 export interface SessionContext {
   sessionID: string
+  messageID: string
   modelId: string
+  agentName: string
   query: string
   startTime: number
   firstResponseTime: number | null

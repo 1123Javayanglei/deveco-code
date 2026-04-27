@@ -143,14 +143,44 @@ createEffect(
 
 ---
 
-## 阶段 4: 测试验证
+## 阶段 4: Bug 修复 — auth.json 路径一致性 + CLI 排序 (已完成 ✅)
 
-**目的**: 验证功能正确性
+**目的**: 修复 TUI 内登录后模型列表不可见、退出后需重新登录的 Bug，以及 CLI `auth login` 中 CodeGenie 未排第一且未标记 recommended 的问题
+
+**用户故事 US3**: 作为通过 TUI 引导界面登录的用户，我希望登录成功后能立即看到模型列表，且再次启动 TUI 时仍保持登录状态。
+
+**用户故事 US4**: 作为通过 CLI 登录的用户，我希望 CodeGenie OAuth 出现在 provider 列表第一位并标记为 "recommended"。
+
+### 独立测试
+
+- **场景 1**: TUI 内登录后模型列表正常显示（之前为空）
+- **场景 2**: TUI 内登录后退出重启，仍保持登录状态（之前需重新登录）
+- **场景 3**: CLI `auth login` 列表第一项为 "CodeGenie OAuth (recommended)"（之前排在 opencode 之后且标记为 "plugin"）
+
+### 实现
+
+- [x] T023 [US3] 修改 `plugin/codegenie.ts` 中 `saveAuthToDisk` 的路径
+  - 将 `path.join(homedir(), ".local", "share", "opencode", "auth.json")` 改为 `path.join(Global.Path.data, "auth.json")`
+  - 添加 `import { Global } from "@/global"`
+  - 确保 TUI 内登录和 CLI 登录写入同一 auth.json
+
+- [x] T024 [US4] 修改 `cli/cmd/providers.ts` 中 provider 列表构建逻辑
+  - 将 `pluginProviders` 从追加到数组末尾改为与 `providers` 合并后统一排序
+  - 新增 `PLUGIN_HINT` 映射，让 codegenie 的 hint 为 "recommended" 而非 "plugin"
+  - 使用 `sortBy` 统一按 `priority` 排序
+
+**检查点**: TUI 内登录后模型列表可见，CLI auth login 中 CodeGenie 排第一且标记 recommended
+
+---
+
+## 阶段 5: 测试验证
+
+**目的**: 验证功能正确性（含阶段 4 Bug 修复验证）
 
 ### 手动测试场景
 
 - [ ] T006 [P] 测试场景 1: 首次启动显示引导界面
-  - 清除配置: `rm -rf ~/.config/codegenie/ ~/.local/share/opencode/auth.json`
+  - 清除配置: `rm -rf ~/.config/codegenie/ ~/.local/share/codegenie/auth.json`
   - 启动 TUI: `bun run dev`
   - 验证: 应显示引导界面，包含 CodeGenie 登录选项
 
@@ -186,6 +216,18 @@ createEffect(
   - 发送一条消息
   - 验证: 消息正常发送并收到响应
 
+- [ ] T025 测试场景 8: TUI 内登录后模型列表可见（Bug 修复验证）
+  - 清除认证数据，启动 TUI
+  - 通过引导界面完成 CodeGenie OAuth 登录
+  - 验证: 登录成功后模型列表正常显示 CodeGenie 分组
+  - 退出 TUI 后重新启动
+  - 验证: 仍保持登录状态，模型列表仍可见
+
+- [ ] T026 测试场景 9: CLI auth login 排序验证（Bug 修复验证）
+  - 运行 `opencode auth login`
+  - 验证: 列表第一项为 "CodeGenie OAuth"，hint 为 "recommended"
+  - 验证: codegenie 排在 opencode 之前
+
 ### 平台兼容性测试
 
 - [ ] T019 [P] macOS 测试
@@ -194,7 +236,7 @@ createEffect(
 
 ---
 
-## 阶段 5: 文档更新
+## 阶段 6: 文档更新
 
 **目的**: 更新相关文档
 
@@ -207,7 +249,7 @@ createEffect(
 ### 阶段依赖
 
 ```
-阶段 1 (已完成 ✅) ──▶ 阶段 2 (已完成 ✅) ──▶ 阶段 3 (已完成 ✅) ──▶ 阶段 4 (测试) ──▶ 阶段 5 (文档)
+阶段 1 (已完成 ✅) ──▶ 阶段 2 (已完成 ✅) ──▶ 阶段 3 (已完成 ✅) ──▶ 阶段 4 (已完成 ✅) ──▶ 阶段 5 (测试) ──▶ 阶段 6 (文档)
 ```
 
 ### 任务依赖
@@ -220,6 +262,9 @@ T012 (模型配置) ──▶ T013 (Provider 注入) ──▶ T014 (Custom Load
                                                      │
                                                      ▼
                                               T016-T018 (测试) [可并行]
+                                                     │
+                                                     ▼
+                                              T023-T024 (Bug 修复) ──▶ T025-T026 (Bug 修复验证)
                                                      │
                                                      ▼
                                               T022 (文档)
@@ -268,3 +313,4 @@ T012 (模型配置) ──▶ T013 (Provider 注入) ──▶ T014 (Custom Load
 | 1.0 | 2026-03-31 | Claude | 初始版本 |
 | 1.1 | 2026-04-02 | Claude | 添加阶段 3: CodeGenie 模型列表集成任务（T012-T018） |
 | 2.0 | 2026-04-21 | Claude | 按 SDD 格式重构：修正 T001-T003 实现描述（home.tsx 非 app.tsx、sync.data.provider 非 isLoggedIn）、标记阶段 2-3 为已完成、补充 T019-T022 |
+| 3.0 | 2026-04-25 | Claude | 新增阶段 4 Bug 修复任务（T023-T024）、新增 T025-T026 Bug 修复验证测试、修正 auth.json 路径引用、更新阶段编号和依赖关系 |

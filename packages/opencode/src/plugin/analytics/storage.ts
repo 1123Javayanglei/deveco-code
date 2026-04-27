@@ -6,6 +6,7 @@ import { Global } from "../../global"
 
 const ANALYTICS_FILE = "analytics.json"
 const UID_FILE = "uid"
+const USERID_FILE = "userid"
 
 interface AnalyticsStorage {
   uid: string
@@ -86,8 +87,21 @@ export async function getPendingEvents(): Promise<unknown[]> {
   return storage.pendingEvents
 }
 
-export function getUserid(): string {
-  return process.env.CODEGENIE_USER_ID || process.env.USER || "unknown"
+export async function saveUserid(userid: string): Promise<void> {
+  await ensureDir()
+  const useridPath = path.join(getAnalyticsDir(), USERID_FILE)
+  await fs.writeFile(useridPath, userid, "utf-8")
+}
+
+export async function getUserid(): Promise<string> {
+  const useridPath = path.join(getAnalyticsDir(), USERID_FILE)
+  try {
+    const userid = await fs.readFile(useridPath, "utf-8")
+    if (userid && userid.trim()) return userid.trim()
+  } catch {
+    // file not exists
+  }
+  return "unknown"
 }
 
 export function getOsName(): string {

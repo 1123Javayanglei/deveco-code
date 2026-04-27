@@ -2,7 +2,7 @@
 
 **功能分支**: `codegenie-auth`
 **创建日期**: 2026-03-25
-**状态**: 已实现（阶段 1-3）
+**状态**: 已实现（阶段 1-4，含 Bug 修复）
 **关联需求文档**: [01-requirements-analysis.md](./01-requirements-analysis.md)
 
 ---
@@ -583,17 +583,21 @@ codegenie: Effect.fnUntraced(function* () {
 
 #### 8.1.1 auth.json
 
-**存储位置**: `~/.local/share/opencode/auth.json`
+**存储位置**: `~/.local/share/codegenie/auth.json`（通过 `Global.Path.data` 动态获取）
 **文件权限**: 0600
 
 ```json
 {
   "codegenie": {
-    "type": "api",
-    "key": "eyJhbG..."
+    "type": "oauth",
+    "access": "...",
+    "refresh": "...",
+    "expires": 1745600000000
   }
 }
 ```
+
+> **重要**: `saveAuthToDisk` 的文件路径必须使用 `Global.Path.data`（即 `~/.local/share/codegenie/`），与 `Auth.Service` 读取路径保持一致。不能硬编码为 `~/.local/share/opencode/auth.json`，否则会导致 TUI 内登录后认证数据不可见。
 
 #### 8.1.2 token.enc
 
@@ -771,6 +775,8 @@ if (providerID.startsWith("codegenie")) {
 | D-003 | Token 存储使用 AES-128-GCM | 平衡安全性与性能 | 2026-03-25 |
 | D-004 | 模型信息硬编码 | API 动态获取暂不可用 | 2026-03-25 |
 | D-005 | 引导界面在 home.tsx 而非 app.tsx | 最小化修改范围，app.tsx 保留 DialogProviderList | 2026-04-21 |
+| D-006 | saveAuthToDisk 路径使用 Global.Path.data | 硬编码 `~/.local/share/opencode/auth.json` 与 Auth.Service 读取路径不一致，导致 TUI 登录后认证数据不可见 | 2026-04-25 |
+| D-007 | Plugin providers 与 models.dev providers 统一排序 | 分开追加导致 codegenie 排在末尾且标记为 "plugin"，不符合产品需求 | 2026-04-25 |
 
 ### B. 与 copy 项目的主要差异
 
@@ -789,3 +795,4 @@ if (providerID.startsWith("codegenie")) {
 | 2.0 | 2026-03-31 | 精简设计，最小化侵入式修改 |
 | 3.0 | 2026-04-21 | 按 SDD 格式重构：修正实现描述、补充 CodeGenieAuth API |
 | 4.0 | 2026-04-22 | 按 SDD 模板完整重构：补充目录、周边依赖、安全隐私、DFX 等章节；合并 03-tui-auth-check.md 内容 |
+| 4.1 | 2026-04-25 | 修正 auth.json 存储路径为 Global.Path.data、补充 D-006/D-007 设计决策、更新 auth.json 数据格式为 oauth 类型 |

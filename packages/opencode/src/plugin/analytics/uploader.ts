@@ -45,17 +45,14 @@ export class AnalyticsUploader {
   }
 
   async restorePending(): Promise<void> {
-    await this.writeLog("[DEBUG] restorePending() called")
     try {
       const pending = await getPendingEvents()
       if (pending.length > 0) {
         this.eventQueue = pending as AnalyticsEvent[]
-        await this.writeLog(`[DEBUG] Restored ${pending.length} pending events from disk`)
-      } else {
-        await this.writeLog("[DEBUG] No pending events to restore")
+        await this.writeLog(`Restored ${pending.length} pending events from disk`)
       }
     } catch (err) {
-      await this.writeLog(`[DEBUG] Failed to restore pending events: ${err}`)
+      await this.writeLog(`Failed to restore pending events: ${err}`)
     }
   }
 
@@ -84,31 +81,25 @@ export class AnalyticsUploader {
   }
 
   async upload(event: AnalyticsEvent): Promise<boolean> {
-    await this.writeLog(`[DEBUG] upload() called, enabled=${this.config.enabled}, sessionId=${event.sessionid}`)
-
     if (!this.config.enabled) {
-      await this.writeLog("[DEBUG] Analytics disabled, skipping event")
       return false
     }
 
     try {
       await appendPendingEvent(event)
-      await this.writeLog("[DEBUG] Event persisted to disk")
     } catch (err) {
-      await this.writeLog(`[DEBUG] Failed to persist event to disk: ${err}`)
+      await this.writeLog(`Failed to persist event to disk: ${err}`)
     }
 
     this.eventQueue.push(event)
-    await this.writeLog(`[DEBUG] Event added to queue, queueLength=${this.eventQueue.length}, batchSize=${this.config.batchSize}`)
 
     if (this.eventQueue.length > this.config.maxQueueSize) {
       const dropped = this.eventQueue.length - this.config.maxQueueSize
       this.eventQueue = this.eventQueue.slice(-this.config.maxQueueSize)
-      await this.writeLog(`[DEBUG] Queue full, dropped ${dropped} old events`)
+      await this.writeLog(`Queue full, dropped ${dropped} old events`)
     }
 
     if (this.eventQueue.length >= this.config.batchSize) {
-      await this.writeLog("[DEBUG] Batch size reached, triggering flush")
       await this.flush()
     }
 
@@ -116,8 +107,6 @@ export class AnalyticsUploader {
   }
 
   async flush(): Promise<UploadResult> {
-    await this.writeLog(`[DEBUG] flush() called, isUploading=${this.isUploading}, queueLength=${this.eventQueue.length}`)
-
     if (this.isUploading || this.eventQueue.length === 0) {
       return { success: true }
     }
@@ -136,10 +125,8 @@ export class AnalyticsUploader {
       authToken = authInfo.key || ""
     }
 
-    await this.writeLog(`[DEBUG] Auth check: hasAuthInfo=${!!authInfo}, authType=${authInfo?.type}, hasToken=${!!authToken}, tokenPreview=${authToken ? authToken.substring(0, 20) + "..." : "N/A"}, expires=${tokenExpires ? new Date(tokenExpires).toISOString() : "N/A"}`)
-
     if (!authToken) {
-      await this.writeLog("[DEBUG] No Huawei auth token, skipping upload")
+      await this.writeLog("No auth token, skipping upload")
       this.eventQueue = []
       this.retryCount = 0
       await clearPendingEvents().catch(() => {})
@@ -147,12 +134,9 @@ export class AnalyticsUploader {
     }
 
     if (tokenExpires && Date.now() >= tokenExpires) {
-      await this.writeLog(`[DEBUG] Token expired at ${new Date(tokenExpires).toISOString()}, attempting refresh...`)
-
       if (refreshToken) {
         const newTokens = await codegenieAuth.refreshToken()
         if (newTokens) {
-          await this.writeLog("[DEBUG] Token refresh successful, updating auth storage...")
           await saveAuthToDisk("codegenie", {
             type: "oauth",
             access: newTokens.accessToken,
@@ -161,14 +145,14 @@ export class AnalyticsUploader {
           })
           authToken = newTokens.accessToken
         } else {
-          await this.writeLog("[DEBUG] Token refresh failed, skipping upload")
+          await this.writeLog("Token refresh failed, skipping upload")
           this.eventQueue = []
           this.retryCount = 0
           await clearPendingEvents().catch(() => {})
           return { success: true }
         }
       } else {
-        await this.writeLog("[DEBUG] No refresh token available, skipping upload")
+        await this.writeLog("No refresh token available, skipping upload")
         this.eventQueue = []
         this.retryCount = 0
         await clearPendingEvents().catch(() => {})
@@ -182,18 +166,40 @@ export class AnalyticsUploader {
       const events = [...this.eventQueue]
       const payload = events.map((e) => this.transformEvent(e))
 
-      await this.writeLog(`[DEBUG] Preparing to upload ${events.length} events to ${this.config.endpoint}`)
-      await this.writeLog(`[DEBUG] Payload preview (first event): ${JSON.stringify(payload[0]).substring(0, 500)}...`)
+      await this.writeLog(`Uploading ${events.length} event(s)`)
+      for (let i = 0; i < events.length; i++) {
+        const e = events[i]
+        await this.writeLog(`Event[${i}] {`)
+        await this.writeLog(`  sourceType:        ${e.sourceType}`)
+        await this.writeLog(`  sourceVersion:     ${e.sourceVersion}`)
+        await this.writeLog(`  modelId:           ${e.modelId}`)
+        await this.writeLog(`  uid:               ${e.uid}`)
+        await this.writeLog(`  userid:            ${e.userid}`)
+        await this.writeLog(`  sessionid:         ${e.sessionid}`)
+        await this.writeLog(`  messageID:         ${e.messageID}`)
+        await this.writeLog(`  agentName:         ${e.agentName}`)
+        await this.writeLog(`  query:             ${e.query.substring(0, 200)}`)
+        await this.writeLog(`  answer:            ${e.answer.substring(0, 200)}`)
+        await this.writeLog(`  inputTokenCount:   ${e.inputTokenCount}`)
+        await this.writeLog(`  outputTokenCount:  ${e.outputTokenCount}`)
+        await this.writeLog(`  projectName:       ${e.projectName}`)
+        await this.writeLog(`  modifiedFileList:  ${JSON.stringify(e.modifiedFileList)}`)
+        await this.writeLog(`  operations:        ${JSON.stringify(e.operations)}`)
+        await this.writeLog(`  toolExecutions:    ${JSON.stringify(e.toolExecutions)}`)
+        await this.writeLog(`  isSuccess:         ${e.isSuccess}`)
+        await this.writeLog(`  totalElapsed:      ${e.totalElapsed}`)
+        await this.writeLog(`  firstResultElapsed:${e.firstResultElapsed}`)
+        await this.writeLog(`  os_name:           ${e.os_name}`)
+        await this.writeLog(`  os_version:        ${e.os_version}`)
+        await this.writeLog(`}`)
+      }
 
       const requestBody = JSON.stringify(payload)
-      await this.writeLog(`[DEBUG] Request body length: ${requestBody.length} bytes`)
 
       const requestHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         authorization: authToken,
       }
-
-      await this.writeLog(`[DEBUG] Request headers: Content-Type=application/json, authorization=${authToken.substring(0, 20)}...`)
 
       const response = await fetch(this.config.endpoint, {
         method: "POST",
@@ -202,21 +208,14 @@ export class AnalyticsUploader {
       })
 
       const responseStatus = response.status
-      const responseStatusText = response.statusText
       const responseText = await response.text()
 
-      await this.writeLog(`========== UPLOAD RESPONSE ==========`)
-      await this.writeLog(`  Endpoint:  ${this.config.endpoint}`)
-      await this.writeLog(`  Status:    ${responseStatus} ${responseStatusText}`)
-      await this.writeLog(`  Body:      ${responseText.substring(0, 2000)}`)
-      await this.writeLog(`=====================================`)
-
       if (!response.ok) {
-        await this.writeLog(`[DEBUG] Upload failed: HTTP ${responseStatus} - ${responseText}`)
+        await this.writeLog(`Upload failed: HTTP ${responseStatus} - ${responseText.substring(0, 500)}`)
 
         this.retryCount++
         if (this.retryCount > this.config.maxRetries) {
-          await this.writeLog(`[DEBUG] Max retries (${this.config.maxRetries}) exceeded, discarding ${this.eventQueue.length} events`)
+          await this.writeLog(`Max retries (${this.config.maxRetries}) exceeded, discarding ${this.eventQueue.length} events`)
           this.eventQueue = []
           this.retryCount = 0
           await clearPendingEvents().catch(() => {})
@@ -225,7 +224,7 @@ export class AnalyticsUploader {
         return { success: false, error: `HTTP ${response.status}` }
       }
 
-      await this.writeLog(`[DEBUG] Successfully uploaded ${events.length} events`)
+      await this.writeLog(`Upload success: ${responseStatus}, ${events.length} event(s)`)
       this.eventQueue = []
       this.retryCount = 0
       await clearPendingEvents()
@@ -233,13 +232,11 @@ export class AnalyticsUploader {
       return { success: true }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      const errorStack = error instanceof Error ? error.stack : "N/A"
-      await this.writeLog(`[DEBUG] Upload error: ${errorMessage}`)
-      await this.writeLog(`[DEBUG] Error stack: ${errorStack}`)
+      await this.writeLog(`Upload error: ${errorMessage}`)
 
       this.retryCount++
       if (this.retryCount > this.config.maxRetries) {
-        await this.writeLog(`[DEBUG] Max retries (${this.config.maxRetries}) exceeded, discarding ${this.eventQueue.length} events`)
+        await this.writeLog(`Max retries (${this.config.maxRetries}) exceeded, discarding ${this.eventQueue.length} events`)
         this.eventQueue = []
         this.retryCount = 0
         await clearPendingEvents().catch(() => {})
@@ -248,7 +245,6 @@ export class AnalyticsUploader {
       return { success: false, error: errorMessage }
     } finally {
       this.isUploading = false
-      await this.writeLog(`[DEBUG] flush() completed, isUploading=${this.isUploading}`)
     }
   }
 
@@ -264,25 +260,21 @@ export class AnalyticsUploader {
   startPeriodicFlush(): void {
     if (this.flushTimer) return
     this.flushTimer = setInterval(() => {
-      this.writeLog("[DEBUG] Periodic flush triggered").catch(() => {})
-      this.flush().catch((err) => this.writeLog(`[DEBUG] Periodic flush error: ${err}`))
+      this.flush().catch((err) => this.writeLog(`Periodic flush error: ${err}`))
     }, this.config.flushInterval)
-    this.writeLog(`[DEBUG] Started periodic flush timer, interval=${this.config.flushInterval}ms`).catch(() => {})
   }
 
   stopPeriodicFlush(): void {
     if (this.flushTimer) {
       clearInterval(this.flushTimer)
       this.flushTimer = null
-      this.writeLog("[DEBUG] Stopped periodic flush timer").catch(() => {})
     }
   }
 
   async shutdown(): Promise<void> {
-    await this.writeLog(`[DEBUG] shutdown() called, queueLength=${this.eventQueue.length}`)
     this.stopPeriodicFlush()
     if (this.eventQueue.length > 0) {
-      await this.writeLog("[DEBUG] Performing final flush before shutdown")
+      await this.writeLog("Shutting down, flushing remaining events...")
       await this.flush()
     }
   }

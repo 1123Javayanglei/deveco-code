@@ -2,7 +2,7 @@
 
 **功能分支**: `codegenie-auth`
 **创建日期**: 2026-03-25
-**状态**: 已实现（阶段 1-3）
+**状态**: 已实现（阶段 1-4，含 Bug 修复）
 **Commit ID**: 参见 git log
 
 > **设计原则**: 最小侵入式修改，只在必要的位置添加代码，新增功能通过独立文件实现。
@@ -76,7 +76,9 @@ const DEFAULT_CONFIG: LoginConfig = {
 在 Effect 框架下，`plugin/codegenie.ts` 不能导入 `AppRuntime` 或 `Effect`，否则会引发循环依赖导致 TUI 黑屏。因此使用 `saveAuthToDisk()` 直接读写 auth.json 文件：
 
 ```typescript
-const authFilePath = path.join(homedir(), ".local", "share", "opencode", "auth.json")
+import { Global } from "@/global"
+
+const authFilePath = path.join(Global.Path.data, "auth.json")
 export async function saveAuthToDisk(key: string, info: Record<string, unknown>) {
   try {
     let data: Record<string, unknown> = {}
@@ -88,6 +90,8 @@ export async function saveAuthToDisk(key: string, info: Record<string, unknown>)
   } catch {}
 }
 ```
+
+> **Bug 修复 (2026-04-25)**: 原实现硬编码路径为 `path.join(homedir(), ".local", "share", "opencode", "auth.json")`，与 `Auth.Service` 读取路径 `~/.local/share/codegenie/auth.json` 不一致，导致 TUI 内登录后认证数据不可见。修复后使用 `Global.Path.data` 动态获取路径，确保与 `Auth.Service` 读写同一文件。
 
 ### `packages/opencode/src/plugin/codegenie-models.ts`
 
@@ -218,6 +222,29 @@ createEffect(
 1. 添加 `PLUGIN_PROVIDER_CONFIG` 常量映射 codegenie 的自定义名称
 2. 添加 codegenie 优先级 `-1`（排在第一位）
 3. 添加 codegenie hint `"recommended"`
+4. **Bug 修复 (2026-04-25)**: 将 `pluginProviders` 从追加到数组末尾改为与 `providers` 合并后统一 `sortBy` 排序
+5. **Bug 修复 (2026-04-25)**: 新增 `PLUGIN_HINT` 映射，让 codegenie 的 hint 为 `"recommended"` 而非 `"plugin"`
+
+**修复前**:
+```typescript
+const options = [
+  ...pipe(providers, values(), sortBy(...), map(...)),
+  ...pluginProviders.map((x) => ({ label: x.name, value: x.id, hint: "plugin" })),
+]
+```
+
+**修复后**:
+```typescript
+const PLUGIN_HINT: Record<string, string> = { codegenie: "recommended" }
+const options = sortBy(
+  [
+    ...pipe(providers, values(), map(...)),
+    ...pluginProviders.map((x) => ({ label: x.name, value: x.id, hint: PLUGIN_HINT[x.id] ?? "plugin" })),
+  ],
+  (x) => priority[x.value] ?? 99,
+  (x) => x.label ?? x.value,
+)
+```
 
 ---
 
@@ -309,3 +336,4 @@ footer: model.cost?.input === 0 && (provider.id === "opencode" || provider.id ==
 | 1.0 | 2026-03-25 | 初始版本（copy 项目） |
 | 2.0 | 2026-04-21 | 适配新工程 Effect 框架：saveAuthToDisk 替代 Auth.set、sync.data.provider 替代 Auth.all |
 | 2.1 | 2026-04-21 | 按 SDD 格式更新：修正 app.tsx 为未修改、补充 DEFAULT_CONFIG 完整字段、补充 CodeGenieAuth API、修正核心模块描述 |
+| 3.0 | 2026-04-25 | Bug 修复：saveAuthToDisk 路径改用 Global.Path.data、providers.ts 统一排序 + PLUGIN_HINT |

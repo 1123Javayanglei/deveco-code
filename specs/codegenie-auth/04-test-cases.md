@@ -2,7 +2,7 @@
 
 **功能分支**: `codegenie-auth`
 **创建日期**: 2026-04-21
-**状态**: 待验证
+**状态**: 待验证（含 Bug 修复验证）
 **Commit ID**: 参见 05-source-code-changes.md
 **关联需求文档**: [01-requirements-analysis.md](./01-requirements-analysis.md)
 
@@ -211,7 +211,7 @@
 ### 正向场景（必选）
 
 - [ ] **TC-FR010-001**: 首次启动显示引导界面
-  - **前置条件**: 清除 `~/.config/codegenie/` 和 `~/.local/share/opencode/auth.json`
+  - **前置条件**: 清除 `~/.config/codegenie/` 和 `~/.local/share/codegenie/auth.json`
   - **测试步骤**:
     1. 启动 TUI
   - **预期结果**: 显示 CodeGenie 引导界面，包含 "CodeGenie OAuth" 和 "Other providers" 两个选项
@@ -271,18 +271,89 @@
 
 ---
 
+## 需求 FR-013: auth.json 路径一致性
+
+**需求描述**: `saveAuthToDisk` 必须与 `Auth.Service` 读写同一 auth.json 文件
+
+### 正向场景（必选）
+
+- [ ] **TC-FR013-001**: TUI 内登录后模型列表可见
+  - **前置条件**: 未登录 CodeGenie，清除 `~/.config/codegenie/` 和 `~/.local/share/codegenie/auth.json`
+  - **测试步骤**:
+    1. 启动 TUI
+    2. 在引导界面选择 "CodeGenie OAuth"
+    3. 完成浏览器 OAuth 授权
+    4. 登录成功后查看模型列表 `/models`
+  - **预期结果**: 模型列表正常显示 CodeGenie 分组，包含 GLM-5 和 deepseek-v3.2
+  - **验证状态**: ⏳ 待验证
+
+- [ ] **TC-FR013-002**: TUI 内登录后退出重启仍保持登录
+  - **前置条件**: 通过 TUI 引导界面完成 CodeGenie OAuth 登录
+  - **测试步骤**:
+    1. 退出 TUI
+    2. 重新启动 TUI
+    3. 查看是否仍为登录状态
+  - **预期结果**: 仍为登录状态，无需重新登录，模型列表仍可见
+  - **验证状态**: ⏳ 待验证
+
+- [ ] **TC-FR013-003**: CLI 和 TUI 登录写入同一 auth.json
+  - **前置条件**: 未登录 CodeGenie
+  - **测试步骤**:
+    1. 通过 CLI `opencode auth login` 登录 CodeGenie
+    2. 检查 `~/.local/share/codegenie/auth.json` 中有 codegenie 条目
+    3. 清除认证，通过 TUI 引导界面登录
+    4. 检查 `~/.local/share/codegenie/auth.json` 中有 codegenie 条目
+  - **预期结果**: 两种登录方式写入同一文件
+  - **验证状态**: ⏳ 待验证
+
+### 异常场景（可选）
+
+- [ ] **TC-FR013-ERR-001**: 旧路径 auth.json 数据迁移
+  - **前置条件**: 存在 `~/.local/share/opencode/auth.json` 中的旧认证数据
+  - **测试步骤**:
+    1. 启动 TUI
+    2. 查看登录状态
+  - **预期结果**: 旧路径数据不被自动读取，需重新登录（预期行为）
+  - **验证状态**: ⏳ 待验证 / ⏭️ 跳过
+
+---
+
+## 需求 FR-014: Plugin Provider 统一排序
+
+**需求描述**: CLI `auth login` 的 provider 列表中，plugin providers 必须与 models.dev providers 统一排序
+
+### 正向场景（必选）
+
+- [ ] **TC-FR014-001**: CodeGenie OAuth 排在 provider 列表第一位
+  - **前置条件**: 无
+  - **测试步骤**:
+    1. 运行 `opencode auth login`
+    2. 查看 provider 列表
+  - **预期结果**: 列表第一项为 "CodeGenie OAuth"，排在 OpenCode Zen 之前
+  - **验证状态**: ⏳ 待验证
+
+- [ ] **TC-FR014-002**: CodeGenie OAuth 标记为 recommended
+  - **前置条件**: 无
+  - **测试步骤**:
+    1. 运行 `opencode auth login`
+    2. 查看 CodeGenie OAuth 的 hint
+  - **预期结果**: hint 显示为 "recommended"，而非 "plugin"
+  - **验证状态**: ⏳ 待验证
+
+---
+
 ## 验证统计
 
 ### 总体统计
 
 | 统计项 | 数量 | 已验证 | 通过 | 失败 | 跳过 |
 |--------|------|--------|------|------|------|
-| 正向场景（必选） | 10 | 0 | 0 | 0 | 0 |
+| 正向场景（必选） | 15 | 0 | 0 | 0 | 0 |
 | 可选场景 | 2 | 0 | 0 | 0 | 0 |
 | 逆向场景 | 3 | 0 | 0 | 0 | 0 |
 | 边界场景 | 1 | 0 | 0 | 0 | 0 |
-| 异常场景 | 3 | 0 | 0 | 0 | 0 |
-| **总计** | **19** | **0** | **0** | **0** | **0** |
+| 异常场景 | 4 | 0 | 0 | 0 | 0 |
+| **总计** | **25** | **0** | **0** | **0** | **0** |
 
 ### 需求覆盖统计
 
@@ -295,6 +366,8 @@
 | FR-007 | 0/1 | 0/0 | 0/0 | 0/0 | 0/0 | ⏳ 待验证 |
 | FR-010 | 0/3 | 0/0 | 0/1 | 0/0 | 0/0 | ⏳ 待验证 |
 | FR-011 | 0/1 | 0/0 | 0/0 | 0/0 | 0/1 | ⏳ 待验证 |
+| FR-013 | 0/3 | 0/0 | 0/0 | 0/0 | 0/1 | ⏳ 待验证 |
+| FR-014 | 0/2 | 0/0 | 0/0 | 0/0 | 0/0 | ⏳ 待验证 |
 
 ---
 
@@ -343,3 +416,4 @@
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
 | 1.0 | 2026-04-21 | Claude | 按 SDD 格式创建测试用例清单 |
+| 1.1 | 2026-04-25 | Claude | 新增 FR-013（路径一致性）和 FR-014（统一排序）测试用例，修正 auth.json 路径引用 |

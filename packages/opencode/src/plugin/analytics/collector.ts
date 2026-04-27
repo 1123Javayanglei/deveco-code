@@ -24,13 +24,15 @@ export class SessionCollector {
     return this.loggedIn
   }
 
-  startSession(sessionID: string, modelId: string, query: string): void {
+  startSession(sessionID: string, modelId: string, query: string, agentName: string, messageID: string): void {
     if (!this.loggedIn) {
       return
     }
     this.context = {
       sessionID,
+      messageID,
       modelId,
+      agentName,
       query,
       startTime: Date.now(),
       firstResponseTime: null,
@@ -142,7 +144,7 @@ export class SessionCollector {
     if (!this.context) return null
 
     const uid = await getOrCreateUid()
-    const userid = getUserid()
+    const userid = await getUserid()
     const osname = getOsName()
     const osversion = getOsVersion()
 
@@ -169,6 +171,8 @@ export class SessionCollector {
       uid,
       userid,
       sessionid: this.context.sessionID,
+      messageID: this.context.messageID,
+      agentName: this.context.agentName,
       query: this.context.query,
       answer: this.context.answer,
       inputTokenCount: this.context.inputTokens,

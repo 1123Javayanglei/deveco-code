@@ -2,7 +2,7 @@
 
 **功能分支**: `codegenie-auth`
 **创建日期**: 2026-03-25
-**状态**: 已实现（阶段 1-3）
+**状态**: 已实现（阶段 1-4，含 Bug 修复）
 **输入**: CodeGenie 华为账号 OAuth 登录集成
 
 ---
@@ -37,6 +37,7 @@
 | 假设 | 用户本地有浏览器可用 |
 | 假设 | 本地端口 10101 或 34567-34570 可用 |
 | 约束 | 插件文件不能导入 `AppRuntime`/`Effect`，否则循环依赖导致黑屏 |
+| 约束 | `saveAuthToDisk` 必须与 `Auth.Service` 读写同一 auth.json 文件，路径通过 `Global.Path.data` 获取 |
 | 约束 | 模型信息暂时硬编码，不通过 API 动态获取 |
 | 约束 | 对原始代码侵入性最小化 |
 
@@ -204,7 +205,7 @@ CodeGenie 华为账号登录集成是 codegenie-cli 的核心认证模块，位�
 | 项目 | 描述 |
 |------|------|
 | 场景描述 | 首次启动 TUI 无凭证时，通过引导界面完成 CodeGenie 登录 |
-| 前置条件 | 清除 `~/.config/codegenie/` 和 `~/.local/share/opencode/auth.json` |
+| 前置条件 | 清除 `~/.config/codegenie/` 和 `~/.local/share/codegenie/auth.json` |
 | 操作步骤 | 1. 启动 TUI<br>2. 在引导界面选择 "CodeGenie OAuth"<br>3. 在浏览器中完成华为账号授权<br>4. 等待 TUI 显示登录成功并进入主界面 |
 | 预期结果 | 登录成功，引导界面消失，进入主界面 |
 | 异常处理 | OAuth 服务不可用时，引导界面提供 "Other providers" 选项 |
@@ -307,6 +308,8 @@ CodeGenie 华为账号登录集成是 codegenie-cli 的核心认证模块，位�
 | FR-010 | TUI 首次引导 | 首次启动 TUI 时，无凭证用户显示引导界面 | P1 | 用户体验 |
 | FR-011 | Token 自动刷新 | OAuth Token 过期后自动刷新，无需用户重新登录 | P2 | 用户体验 |
 | FR-012 | 多区域支持 | 支持中国、新加坡、欧洲、俄罗斯多区域登录 | P2 | 产品需求 |
+| FR-013 | auth.json 路径一致性 | `saveAuthToDisk` 必须与 `Auth.Service` 读写同一 auth.json 文件，路径通过 `Global.Path.data` 获取，不能硬编码 | P1 | Bug 修复 |
+| FR-014 | Plugin Provider 统一排序 | CLI `auth login` 的 provider 列表中，plugin providers 必须与 models.dev providers 统一按 priority 排序，codegenie 应排第一且标记 "recommended" | P1 | Bug 修复 |
 
 ### 5.2 功能需求详细说明
 
@@ -373,6 +376,26 @@ CodeGenie 华为账号登录集成是 codegenie-cli 的核心认证模块，位�
 | 关联场景 | US-003 |
 | 依赖需求 | FR-002 |
 
+#### FR-013: auth.json 路径一致性
+
+| 项目 | 描述 |
+|------|------|
+| 需求描述 | `saveAuthToDisk` 必须与 `Auth.Service` 读写同一 auth.json 文件，路径必须通过 `Global.Path.data` 动态获取，不能硬编码为 `~/.local/share/opencode/auth.json` |
+| 验收标准 | 1. TUI 内登录后 `Auth.Service` 能读取到认证数据<br>2. TUI 内登录后模型列表正常显示<br>3. 退出 TUI 后再次启动仍保持登录状态<br>4. CLI `auth login` 和 TUI 引导登录写入同一 auth.json |
+| 关联场景 | US-001, US-002 |
+| 依赖需求 | FR-001, FR-010 |
+| Bug 背景 | `saveAuthToDisk` 硬编码路径为 `~/.local/share/opencode/auth.json`，而 `Auth.Service` 读取 `~/.local/share/codegenie/auth.json`（通过 `Global.Path.data`），导致 TUI 内登录后认证数据对 `Auth.Service` 不可见，表现为模型列表为空且退出后需重新登录 |
+
+#### FR-014: Plugin Provider 统一排序
+
+| 项目 | 描述 |
+|------|------|
+| 需求描述 | CLI `auth login` 的 provider 列表中，plugin providers（如 codegenie）必须与 models.dev providers 统一按 priority 排序，且 codegenie 应标记为 "recommended" 而非 "plugin" |
+| 验收标准 | 1. `auth login` 列表第一项显示 "CodeGenie OAuth"，hint 为 "recommended"<br>2. codegenie 排在 opencode 之前（priority -1 < 0）<br>3. 其他 plugin providers 仍标记为 "plugin" |
+| 关联场景 | US-001 |
+| 依赖需求 | FR-003, FR-005 |
+| Bug 背景 | plugin providers 被追加到 options 数组末尾，不参与 priority 排序，且 hint 统一为 "plugin"，导致 codegenie 排在 opencode 之后且不显示 "recommended" |
+
 ### 5.3 功能依赖关系
 
 ```
@@ -380,13 +403,17 @@ FR-001 (OAuth 登录)
   ├── FR-002 (Token 存储)
   │     └── FR-011 (Token 刷新)
   ├── FR-003 (CLI 入口)
+  │     └── FR-014 (统一排序)
   ├── FR-004 (推荐提示)
   ├── FR-005 (优先排序)
+  │     └── FR-014 (统一排序)
   ├── FR-006 (模型显示)
   │     ├── FR-007 (免费标记)
   │     ├── FR-008 (硬编码配置)
   │     └── FR-009 (未登录隐藏)
-  └── FR-010 (TUI 引导)
+  ├── FR-010 (TUI 引导)
+  │     └── FR-013 (路径一致性)
+  └── FR-013 (路径一致性)
 
 FR-012 (多区域支持) ── FR-001
 ```
@@ -400,6 +427,8 @@ FR-012 (多区域支持) ── FR-001
 | FR-010 | FR-001 | 强依赖 | 引导登录依赖 OAuth 插件 |
 | FR-011 | FR-002 | 强依赖 | 刷新依赖存储的 Token |
 | FR-012 | FR-001 | 弱依赖 | 多区域是登录的扩展配置 |
+| FR-013 | FR-001, FR-010 | 强依赖 | 路径一致性是登录和引导登录正常工作的前提 |
+| FR-014 | FR-003, FR-005 | 强依赖 | 统一排序是 CLI 入口和优先排序正确展示的前提 |
 
 ---
 
@@ -559,3 +588,4 @@ const DEFAULT_CONFIG = {
 | 2.1 | 2026-04-02 | 添加 CodeGenie 模型列表集成需求（FR-006~FR-009） |
 | 3.0 | 2026-04-21 | 按 SDD 格式重构：修正 appId、补充 DEFAULT_CONFIG、新增 FR-010~FR-012 |
 | 4.0 | 2026-04-22 | 按 SDD 模板完整重构：补充系统上下文、需求场景分析、非功能需求、系统影响分析等章节 |
+| 4.1 | 2026-04-25 | 补充 FR-013（auth.json 路径一致性）和 FR-014（Plugin Provider 统一排序）需求，修正 US-002 前置条件路径 |
