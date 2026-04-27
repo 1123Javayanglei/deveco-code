@@ -119,7 +119,7 @@ export const HdcLogTool = Tool.define("hdc_log", Effect.gen(function* () {
         if (out.exitCode !== 0) {
           throw new Error(`hdc hilog -x failed (code=${out.exitCode}): ${out.stderr || out.stdout}`)
         }
-        const logs = pick(out.stdout, args.log_prefix, args.lines)
+        const logs = pick(out.stdout, args.log_prefix ?? "", args.lines ?? 2000)
         if (!logs.length) {
           return {
             title: "No Matching Logs",

@@ -129,7 +129,7 @@ export function tui(input: {
     }
 
     const renderer = await createCliRenderer(rendererConfig(input.config))
-    const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
+    const mode = (await (renderer as any).waitForThemeMode?.(1000)) ?? "dark"
 
     await render(() => {
       return (

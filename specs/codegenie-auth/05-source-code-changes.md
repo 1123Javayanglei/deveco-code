@@ -235,7 +235,17 @@ if (codegenieAuth) {
 }
 ```
 
-**修改位置 2**: `custom(dep)` 函数末尾，添加 `codegenie` custom loader
+**修改位置 2**: `getSmallModel` 函数中，为 codegenie provider 指定小模型优先级
+
+```typescript
+if (providerID.startsWith("codegenie")) {
+  priority = ["deepseek-v3.2"]
+}
+```
+
+> **说明**: codegenie provider 目前提供 `glm-5`（大模型）和 `deepseek-v3.2`（轻量模型），选择 `deepseek-v3.2` 作为 small model 用于摘要、标题生成等辅助任务。
+
+**修改位置 3**: `custom(dep)` 函数末尾，添加 `codegenie` custom loader
 
 ```typescript
 codegenie: Effect.fnUntraced(function* () {

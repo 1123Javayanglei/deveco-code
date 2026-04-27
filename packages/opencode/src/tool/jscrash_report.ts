@@ -420,7 +420,7 @@ export const JscrashReportTool = Tool.define("jscrash_report", Effect.gen(functi
         }
 
         const logLines = cleanLines(out.stdout)
-        const recent = logLines.slice(Math.max(0, logLines.length - args.lines)).join("\n")
+        const recent = logLines.slice(Math.max(0, logLines.length - (args.lines ?? 4000))).join("\n")
         const report = buildReport(recent, "device_hilog", args.device_id || "default", args.bundle_name || "", args.process_hint || "")
         return {
           title: "Crash Report (from device hilog)",

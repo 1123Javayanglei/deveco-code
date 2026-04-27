@@ -3,7 +3,7 @@ import { Resource as ResourceBase } from "sst"
 import Cloudflare from "cloudflare"
 
 type KVNamespaceBulkGetResult = {
-  values?: Record<string, string> | null
+  values?: Record<string, string | number | boolean | object | null> | null
 } | null
 
 type KVNamespaceKeysListResult = {

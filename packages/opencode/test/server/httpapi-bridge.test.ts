@@ -11,17 +11,17 @@ import { tmpdir } from "../fixture/fixture"
 void Log.init({ print: false })
 
 const original = {
-  OPENCODE_EXPERIMENTAL_HTTPAPI: Flag.OPENCODE_EXPERIMENTAL_HTTPAPI,
-  OPENCODE_SERVER_PASSWORD: Flag.OPENCODE_SERVER_PASSWORD,
-  OPENCODE_SERVER_USERNAME: Flag.OPENCODE_SERVER_USERNAME,
+  CODEGENIE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
+  CODEGENIE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
+  CODEGENIE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
 }
 
 const websocket = (() => () => new Response(null, { status: 501 })) as unknown as UpgradeWebSocket
 
 function app(input?: { password?: string; username?: string }) {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = true
-  Flag.OPENCODE_SERVER_PASSWORD = input?.password
-  Flag.OPENCODE_SERVER_USERNAME = input?.username
+  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = true
+  Flag.CODEGENIE_SERVER_PASSWORD = input?.password
+  Flag.CODEGENIE_SERVER_USERNAME = input?.username
   return InstanceRoutes(websocket)
 }
 
@@ -38,9 +38,9 @@ function fileUrl(input?: { directory?: string; token?: string }) {
 }
 
 afterEach(async () => {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = original.OPENCODE_EXPERIMENTAL_HTTPAPI
-  Flag.OPENCODE_SERVER_PASSWORD = original.OPENCODE_SERVER_PASSWORD
-  Flag.OPENCODE_SERVER_USERNAME = original.OPENCODE_SERVER_USERNAME
+  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.CODEGENIE_EXPERIMENTAL_HTTPAPI
+  Flag.CODEGENIE_SERVER_PASSWORD = original.CODEGENIE_SERVER_PASSWORD
+  Flag.CODEGENIE_SERVER_USERNAME = original.CODEGENIE_SERVER_USERNAME
   await Instance.disposeAll()
   await resetDatabase()
 })

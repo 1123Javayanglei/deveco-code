@@ -1654,6 +1654,9 @@ const layer: Layer.Layer<
       if (providerID.startsWith("opencode")) {
         priority = ["gpt-5-nano"]
       }
+      if (providerID.startsWith("codegenie")) {
+        priority = ["deepseek-v3.2"]
+      }
       if (providerID.startsWith("github-copilot")) {
         priority = ["gpt-5-mini", "claude-haiku-4.5", ...priority]
       }

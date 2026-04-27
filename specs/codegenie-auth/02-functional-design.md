@@ -740,6 +740,24 @@ sortBy(
 footer: model.cost?.input === 0 && (provider.id === "opencode" || provider.id === "codegenie") ? "Free" : undefined,
 ```
 
+### 10.6 Small Model 选择设计
+
+`getSmallModel` 函数根据 provider 类型选择轻量模型，用于摘要、标题生成等辅助任务：
+
+| Provider | Small Model | 说明 |
+|----------|------------|------|
+| opencode | `gpt-5-nano` | 默认轻量模型 |
+| **codegenie** | **`deepseek-v3.2`** | codegenie provider 的轻量模型 |
+| github-copilot | `gpt-5-mini` → `claude-haiku-4.5` | 优先 copilot 提供的轻量模型 |
+
+```typescript
+if (providerID.startsWith("codegenie")) {
+  priority = ["deepseek-v3.2"]
+}
+```
+
+> **设计决策**: codegenie provider 目前提供 `glm-5`（主力模型，支持推理）和 `deepseek-v3.2`（轻量模型），选择 `deepseek-v3.2` 作为 small model 以降低辅助任务的 token 消耗。
+
 ---
 
 ## 附录
