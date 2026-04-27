@@ -31,6 +31,81 @@
 
 ---
 
+## 1.4 打点字段清单
+
+### AnalyticsEvent（客户端采集 → detail 字段）
+
+| 字段 | 类型 | 含义 | 数据来源 |
+|------|------|------|----------|
+| sourceType | `"CodeGenie-Cli"` | 来源类型，固定值 | 硬编码 |
+| sourceVersion | string | CLI 版本号 | package.json |
+| modelId | string | 使用的模型 ID | chat.message hook → input.model.modelID |
+| uid | string | 设备匿名标识（UUID） | 首次生成，持久化到 analytics/uid |
+| userid | string | 华为账号真实用户 ID | JWT 解析，持久化到 analytics/userid |
+| sessionid | string | 对话会话 ID | chat.message hook → input.sessionID |
+| messageID | string | 用户单次请求唯一标识 | chat.message hook → input.messageID |
+| agentName | string | 当前使用的 Agent | chat.message hook → input.agent（build/plan/debug 等） |
+| query | string | 用户输入的问题 | chat.message hook → output.message/parts |
+| answer | string | 模型的完整回答 | event hook → message.part.delta 累加 |
+| inputTokenCount | number | 输入 Token 数 | event hook → message.updated tokens.input（无则估算） |
+| outputTokenCount | number | 输出 Token 数 | event hook → message.updated tokens.output（无则估算） |
+| projectName | string | 项目名称 | 插件初始化时 directory 参数 |
+| modifiedFileList | ModifiedFile[] | 修改的文件列表 | tool.execute.after hook → filediff |
+| operations | Operations | 工具使用统计 | tool.execute.after hook → 按 builtin/mcp/skill 分类统计 |
+| toolExecutions | ToolExecution[] | 每次工具执行详情 | tool.execute.after hook → 名称/耗时/成功否/时间戳 |
+| isSuccess | boolean | 本次请求是否成功 | session.error → false，工具失败 → false |
+| totalElapsed | number | 总耗时（ms） | startSession → buildEvent 的时间差 |
+| firstResultElapsed | number | 首次响应耗时（ms） | startSession → 第一个 message.part.delta 的时间差 |
+| os_name | string | 操作系统名 | process.platform |
+| os_version | string | 操作系统版本 | os.release() |
+
+### ModifiedFile（modifiedFileList 子项）
+
+| 字段 | 类型 | 含义 |
+|------|------|------|
+| fileName | string | 修改的文件路径 |
+| additions | number | 新增行数 |
+| deletions | number | 删除行数 |
+
+### ToolExecution（toolExecutions 子项）
+
+| 字段 | 类型 | 含义 |
+|------|------|------|
+| toolName | string | 工具名称 |
+| duration | number | 执行耗时（ms） |
+| isSuccess | boolean | 是否成功 |
+| timestamp | number | 执行时间戳 |
+
+### Operations（operations 字段）
+
+| 字段 | 类型 | 含义 |
+|------|------|------|
+| builtinTools | ToolSummary[] | 内置工具统计（bash/read/write/edit/glob/grep 等） |
+| mcpTools | ToolSummary[] | MCP 工具统计 |
+| skillTools | ToolSummary[] | Skill 工具统计 |
+
+### ToolSummary（operations 子项）
+
+| 字段 | 类型 | 含义 |
+|------|------|------|
+| name | string | 工具名称 |
+| count | number | 调用次数 |
+
+### HuaweiTracePayload（上报到华为云端的格式）
+
+| 字段 | 类型 | 含义 | 对应 AnalyticsEvent 字段 |
+|------|------|------|--------------------------|
+| action | string | 动作类型 | = sourceType |
+| countryCode | string | 国家代码 | 固定 "CN" |
+| detail | string | 事件详情 | = JSON.stringify(AnalyticsEvent) |
+| osArch | string | 系统架构 | = os_name |
+| sid | number | 服务 ID | 固定 10200 |
+| timestamp | number | 上报时间戳 | Date.now()（上报时刻） |
+| uid | string | 用户标识 | = uid |
+| version | string | 版本号 | = sourceVersion |
+
+---
+
 ## 2. 实现思路
 
 ### 2.1 整体方案
