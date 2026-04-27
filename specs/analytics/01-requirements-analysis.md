@@ -229,10 +229,36 @@ session.idle → buildEvent(打包) → upload(入队) → flush(上报)
 
 | 项目 | 描述 |
 |------|------|
-| 需求描述 | 采集用户每次请求（messageID）的完整交互数据，包括 query、answer、inputTokenCount、outputTokenCount、toolExecutions、modifiedFileList、operations、isSuccess、totalElapsed、firstResultElapsed、os_name、os_version |
+| 需求描述 | 采集用户每次请求（messageID）的完整交互数据 |
 | 验收标准 | 1. 每次用户请求产生一条完整的 AnalyticsEvent<br>2. 所有字段均有有效值<br>3. 数据按 messageID 隔离 |
 | 关联场景 | US-001 |
 | 依赖需求 | FR-002, FR-004, FR-005, FR-006 |
+
+**打点字段清单（AnalyticsEvent）**：
+
+| 字段 | 类型 | 含义 |
+|------|------|------|
+| sourceType | `"CodeGenie-Cli"` | 来源类型，固定值 |
+| sourceVersion | string | CLI 版本号 |
+| modelId | string | 使用的模型 ID |
+| uid | string | 设备匿名标识（UUID） |
+| userid | string | 华为账号真实用户 ID |
+| sessionid | string | 对话会话 ID |
+| messageID | string | 用户单次请求唯一标识 |
+| agentName | string | 当前使用的 Agent（build/plan/debug 等） |
+| query | string | 用户输入的问题 |
+| answer | string | 模型的完整回答 |
+| inputTokenCount | number | 输入 Token 数 |
+| outputTokenCount | number | 输出 Token 数 |
+| projectName | string | 项目名称 |
+| modifiedFileList | ModifiedFile[] | 修改的文件列表（fileName/additions/deletions） |
+| operations | Operations | 工具使用统计（builtinTools/mcpTools/skillTools，各含 name+count） |
+| toolExecutions | ToolExecution[] | 每次工具执行详情（toolName/duration/isSuccess/timestamp） |
+| isSuccess | boolean | 本次请求是否成功 |
+| totalElapsed | number | 总耗时（ms） |
+| firstResultElapsed | number | 首次响应耗时（ms） |
+| os_name | string | 操作系统名 |
+| os_version | string | 操作系统版本 |
 
 #### FR-002: 打点条件校验
 
