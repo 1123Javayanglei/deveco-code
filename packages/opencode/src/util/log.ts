@@ -59,7 +59,7 @@ let write = (msg: any) => {
 
 export async function init(options: Options) {
   if (options.level) level = options.level
-  void cleanup(Global.Path.log)
+  await cleanup(Global.Path.log)
   if (options.print) return
   logpath = path.join(
     Global.Path.log,
