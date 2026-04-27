@@ -7,6 +7,30 @@
 
 ---
 
+## v1.14.24 → v1.14.25
+
+### httpapi/server.ts 认证代码已被上游提取到独立文件
+
+上游 v1.14.25 将 HTTP API 认证逻辑从 `server.ts` 提取到独立文件 `auth.ts`，功能更完整（支持 basic + authToken 双模式）。本地 `server.ts` 中的旧内联认证代码（仅 basic、normalize hack）已完全冗余，冲突时应直接接受上游版本移除。但需同步修正 `auth.ts` 中上游的 `Flag.OPENCODE_SERVER_PASSWORD`/`OPENCODE_SERVER_USERNAME` 为 `CODEGENIE_*`。
+
+**教训：遇到本地自有特性代码与上游同功能代码冲突时，先检查上游是否已做了更好的实现。如果上游版本功能覆盖更全，应接受上游再补品牌标识，而非机械保留本地版本。**
+
+### ripgrep.ts 冲突中的误导性导入
+
+`ripgrep.ts` 冲突区块包含 `import { fileURLToPath } from "url"` 和 `import z from "zod"` 两行。直观判断是 zod→Effect 迁移残留，但实际上 `fileURLToPath` 是 CodeGenie 自有的 vendor/dev-mode 二进制查找逻辑所使用的导入。接受上游（删除这两行）会导致 CodeGenie 的 ripgrep 二进制查找路径丢失。
+
+**教训：删除看似无用的导入前，必须搜索该符号在文件中的所有使用。`fileURLToPath` 在 zod 迁移上下文中容易被误判为残留，但它实际服务于本地的产品化改造（vendor 目录查找、.build-cache 开发模式查找）。**
+
+### lsp/server.ts 自动合并后需验证品牌标识
+
+`lsp/server.ts` 自动合并成功（无冲突标记），但上游新增的 `installRoslynLanguageServer()` 等提取函数中使用了 `Flag.OPENCODE_DISABLE_LSP_DOWNLOAD`。Git 将这些新增函数视为"来自上游的新代码"直接合入，不会触发冲突。必须全局搜索确认所有 `OPENCODE_` 已改为 `CODEGENIE_`。
+
+### 再次出现 workspace 依赖名称问题
+
+`packages/web/package.json` 的 `"opencode": "workspace:*"` 在每次版本号冲突被解决时都可能被覆盖回上游值。这是**反复出现的问题**，同步后务必检查。
+
+---
+
 ## v1.14.20 → v1.14.21
 
 ### package.json 冲突套路
