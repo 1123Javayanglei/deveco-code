@@ -4,7 +4,7 @@ import type { AnalyticsEvent, AnalyticsConfig, HuaweiTracePayload } from "./type
 import { DEFAULT_CONFIG } from "./types"
 import { appendPendingEvent, clearPendingEvents, getPendingEvents } from "./storage"
 import { codegenieAuth, ACCESS_TOKEN_EXPIRES_MS, saveAuthToDisk } from "../codegenie"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 
 const ANALYTICS_DIR = path.join(Global.Path.data, "analytics", "log")
 const LOG_FILE = path.join(ANALYTICS_DIR, "analytics.log")

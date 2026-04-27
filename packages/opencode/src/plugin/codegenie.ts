@@ -9,7 +9,7 @@ import crypto from "crypto"
 import http, { IncomingMessage, ServerResponse } from "http"
 import https from "https"
 import { OAUTH_DUMMY_KEY } from "@/auth"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 import { URL } from "url"
 
 const execAsync = promisify(exec)

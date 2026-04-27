@@ -1,7 +1,7 @@
 import path from "path"
 import { Effect } from "effect"
-import type { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { Global } from "@/global"
+import type { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Global } from "@opencode-ai/core/global"
 import { Log } from "@/util"
 
 declare const CODEGENIE_DEFAULT_SKILLS: Record<string, Record<string, string>> | undefined

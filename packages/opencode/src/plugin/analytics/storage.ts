@@ -2,7 +2,7 @@ import fs from "fs/promises"
 import path from "path"
 import os from "os"
 import { randomUUID } from "crypto"
-import { Global } from "../../global"
+import { Global } from "@opencode-ai/core/global"
 
 const ANALYTICS_FILE = "analytics.json"
 const UID_FILE = "uid"

@@ -2,6 +2,37 @@
 
 > 同步规则和流程见 [UPSTREAM-SYNC-GUIDE.md](./UPSTREAM-SYNC-GUIDE.md)
 
+## 2026-04-27 | v1.14.25 → v1.14.26
+
+- **分支**: upstream-tracking-develop
+- **上游提交数**: 63
+- **冲突**: 29 个文件。15 个 package.json 纯版本号冲突（接受上游）；packages/opencode/package.json 保留 name="codegenie"、升级版本号；packages/extensions/zed/extension.toml 版本号+下载 URL；bun.lock 重新生成。
+- **结构性变更**: 上游将 `packages/shared/` 重命名为 `packages/core/`（`@opencode-ai/shared` → `@opencode-ai/core`）。所有本地 `@opencode-ai/shared` 引用已更新为 `@opencode-ai/core`。`packages/opencode/src/global/index.ts` 上游已删除（Global 移入 core 包），本地跟随删除。
+- **品牌冲突**:
+  - `global.ts`: 保留 `app = "codegenie"` 和 `CODEGENIE_TEST_HOME`
+  - `llm.ts`: 保留 `x-codegenie-*` headers，合并上游新增的 `User-Agent` header
+  - `ui.ts`: 保留 CodeGenie logo/mark 系统，import 路径更新为 `@opencode-ai/core`
+  - `server/routes/ui.ts`: import 路径更新为 `@opencode-ai/core/flag/flag`，保留 `CODEGENIE_` flag 引用
+- **权限冲突**:
+  - `agent.ts`: 保留 HarmonyOS 工具权限（bash/build_project/check_ets_files 等 deny），合并上游 `external_directory` 和 `plan_exit` 配置
+- **import 路径修复**: 全局搜索修复遗漏的 `@/global` → `@opencode-ai/core/global` 和 `@/installation/version` → `@opencode-ai/core/installation/version` 引用（涉及 skill/defaults.ts、plugin/analytics/storage.ts、skill/index.ts、tui/routes/home.tsx 等文件）
+- **auto-merge 陷阱修复**: packages/web/package.json workspace 依赖被覆盖为 opencode，手动改回 codegenie
+- **主要变更**:
+  - refactor: rename shared package to core (#24309)
+  - refactor: remove lazy cross-spawn runtime (#24305)
+  - core: consolidate shared infrastructure into core package
+  - core: move Global module to @opencode-ai/core for centralized path management
+  - core: Add User-Agent header to identify client version in HTTP requests
+  - feat(httpapi): bridge workspace mutations, session lifecycle/message/read routes, MCP oauth/control endpoints, file search, catalog, config update, worktree mutations, instance dispose, project git init/update, experimental tool/session routes (#24356-#24510)
+  - feat(go): add Go model listing endpoint (#24304)
+  - feat(tui): show /connect tip when user has no models configured (#24014)
+  - feat(tui): read Zed editor context from state db (#24352)
+  - feat: add startup debug command (#24310)
+  - upgrade opentui to 0.1.104 (#24531)
+  - fix(editor): reject lock files with no workspace match for cwd (#24323)
+  - fix(config): preserve permission order with Effect decode (#24308)
+  - fix: bump openrouter sdk version to resolve deepseek reasoning issue (#24435)
+
 ## 2026-04-27 | v1.14.24 → v1.14.25
 
 - **分支**: upstream-tracking-develop

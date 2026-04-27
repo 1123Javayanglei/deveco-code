@@ -5,7 +5,7 @@ import { getVersion, saveUserid } from "./storage"
 import { codegenieAuth } from "../codegenie"
 import fs from "fs"
 import path from "path"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 
 const ANALYTICS_DIR = path.join(Global.Path.data, "analytics", "log")
 const LOG_FILE = path.join(ANALYTICS_DIR, "analytics.log")
