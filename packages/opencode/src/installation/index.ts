@@ -67,6 +67,7 @@ export class UpgradeFailedError extends Schema.TaggedErrorClass<UpgradeFailedErr
   stderr: Schema.String,
 }) {}
 
+// Response schemas for external version APIs
 const NpmPackage = Schema.Struct({ version: Schema.String })
 
 export interface Interface {
@@ -121,6 +122,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
         Effect.catch(() => Effect.succeed({ code: ChildProcessSpawner.ExitCode(1), stdout: "", stderr: "" })),
       )
 
+      // Use the package manager's resolver so registries, mirrors, auth, proxies, and dist-tags match upgrade behavior.
       const viewVersion = Effect.fnUntraced(function* (method: "npm" | "pnpm" | "bun", spec: string) {
         const args = method === "bun" ? ["pm", "view", spec, "version", "--json"] : ["view", spec, "version", "--json"]
         const result = yield* run([method, ...args])
@@ -132,91 +134,88 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
         return yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.String))(result.stdout)
       })
 
-
-      const methodImpl = Effect.fn("Installation.method")(function* () {
-        const exec = process.execPath.toLowerCase()
-
-        const checks: Array<{ name: Method; command: () => Effect.Effect<string> }> = [
-          { name: "npm", command: () => text(["npm", "list", "-g", "--depth=0"]) },
-          { name: "pnpm", command: () => text(["pnpm", "list", "-g", "--depth=0"]) },
-          { name: "bun", command: () => text(["bun", "pm", "ls", "-g"]) },
-        ]
-
-        checks.sort((a, b) => {
-          const aMatches = exec.includes(a.name)
-          const bMatches = exec.includes(b.name)
-          if (aMatches && !bMatches) return -1
-          if (!aMatches && bMatches) return 1
-          return 0
-        })
-
-        for (const check of checks) {
-          const output = yield* check.command()
-          if (output.includes("@codegenie-ai/codegenie-cli")) {
-            return check.name
-          }
-        }
-
-        return "unknown" as Method
-      })
-
-      const latestImpl = Effect.fn("Installation.latest")(function* (installMethod?: Method) {
-        const detectedMethod = installMethod || (yield* methodImpl())
-
-        if (detectedMethod === "npm" || detectedMethod === "bun" || detectedMethod === "pnpm") {
-          return yield* viewVersion(detectedMethod, `@codegenie-ai/codegenie-cli@${InstallationChannel}`)
-        }
-
-        const r = (yield* text(["npm", "config", "get", "registry"])).trim()
-        const reg = r || "https://registry.npmjs.org"
-        const registry = reg.endsWith("/") ? reg.slice(0, -1) : reg
-        const channel = InstallationChannel
-        const response = yield* httpOk.execute(
-          HttpClientRequest.get(`${registry}/@codegenie-ai%2Fcodegenie-cli/${channel}`).pipe(HttpClientRequest.acceptJson),
-        )
-        const data = yield* HttpClientResponse.schemaBodyJson(NpmPackage)(response)
-        return data.version
-      }, Effect.orDie)
-
-      const upgradeImpl = Effect.fn("Installation.upgrade")(function* (m: Method, target: string) {
-        let result: { code: ChildProcessSpawner.ExitCode; stdout: string; stderr: string } | undefined
-        switch (m) {
-          case "npm":
-            result = yield* run(["npm", "install", "-g", `@codegenie-ai/codegenie-cli@${target}`])
-            break
-          case "pnpm":
-            result = yield* run(["pnpm", "install", "-g", `@codegenie-ai/codegenie-cli@${target}`])
-            break
-          case "bun":
-            result = yield* run(["bun", "install", "-g", `@codegenie-ai/codegenie-cli@${target}`])
-            break
-          default:
-            result = yield* run(["npm", "install", "-g", `@codegenie-ai/codegenie-cli@${target}`])
-            break
-        }
-        if (!result || result.code !== 0) {
-          return yield* new UpgradeFailedError({ stderr: result?.stderr || "" })
-        }
-        log.info("upgraded", {
-          method: m,
-          target,
-          stdout: result.stdout,
-          stderr: result.stderr,
-        })
-        yield* text([process.execPath, "--version"])
-      })
-
-      return Service.of({
+      const result: Interface = {
         info: Effect.fn("Installation.info")(function* () {
           return {
             version: InstallationVersion,
-            latest: yield* latestImpl(),
+            latest: yield* result.latest(),
           }
         }),
-        method: methodImpl,
-        latest: latestImpl,
-        upgrade: upgradeImpl,
-      })
+        method: Effect.fn("Installation.method")(function* () {
+          const exec = process.execPath.toLowerCase()
+
+          const checks: Array<{ name: Method; command: () => Effect.Effect<string> }> = [
+            { name: "npm", command: () => text(["npm", "list", "-g", "--depth=0"]) },
+            { name: "pnpm", command: () => text(["pnpm", "list", "-g", "--depth=0"]) },
+            { name: "bun", command: () => text(["bun", "pm", "ls", "-g"]) },
+          ]
+
+          checks.sort((a, b) => {
+            const aMatches = exec.includes(a.name)
+            const bMatches = exec.includes(b.name)
+            if (aMatches && !bMatches) return -1
+            if (!aMatches && bMatches) return 1
+            return 0
+          })
+
+          for (const check of checks) {
+            const output = yield* check.command()
+            if (output.includes("@codegenie-ai/codegenie-cli")) {
+              return check.name
+            }
+          }
+
+          return "unknown" as Method
+        }),
+        latest: Effect.fn("Installation.latest")(function* (installMethod?: Method) {
+          const detectedMethod = installMethod || (yield* result.method())
+
+          if (detectedMethod === "npm" || detectedMethod === "bun" || detectedMethod === "pnpm") {
+            return yield* viewVersion(detectedMethod, `@codegenie-ai/codegenie-cli@${InstallationChannel}`)
+          }
+
+          const r = (yield* text(["npm", "config", "get", "registry"])).trim()
+          const reg = r || "https://registry.npmjs.org"
+          const registry = reg.endsWith("/") ? reg.slice(0, -1) : reg
+          const channel = InstallationChannel
+          const response = yield* httpOk.execute(
+            HttpClientRequest.get(`${registry}/@codegenie-ai%2Fcodegenie-cli/${channel}`).pipe(
+              HttpClientRequest.acceptJson,
+            ),
+          )
+          const data = yield* HttpClientResponse.schemaBodyJson(NpmPackage)(response)
+          return data.version
+        }, Effect.orDie),
+        upgrade: Effect.fn("Installation.upgrade")(function* (m: Method, target: string) {
+          let upgradeResult: { code: ChildProcessSpawner.ExitCode; stdout: string; stderr: string } | undefined
+          switch (m) {
+            case "npm":
+              upgradeResult = yield* run(["npm", "install", "-g", `@codegenie-ai/codegenie-cli@${target}`])
+              break
+            case "pnpm":
+              upgradeResult = yield* run(["pnpm", "install", "-g", `@codegenie-ai/codegenie-cli@${target}`])
+              break
+            case "bun":
+              upgradeResult = yield* run(["bun", "install", "-g", `@codegenie-ai/codegenie-cli@${target}`])
+              break
+            default:
+              upgradeResult = yield* run(["npm", "install", "-g", `@codegenie-ai/codegenie-cli@${target}`])
+              break
+          }
+          if (!upgradeResult || upgradeResult.code !== 0) {
+            return yield* new UpgradeFailedError({ stderr: upgradeResult?.stderr || "" })
+          }
+          log.info("upgraded", {
+            method: m,
+            target,
+            stdout: upgradeResult.stdout,
+            stderr: upgradeResult.stderr,
+          })
+          yield* text([process.execPath, "--version"])
+        }),
+      }
+
+      return Service.of(result)
     }),
   )
 

@@ -12,12 +12,12 @@ import { tmpdir } from "../fixture/fixture"
 
 void Log.init({ print: false })
 
-const originalHttpApi = Flag.OPENCODE_EXPERIMENTAL_HTTPAPI
-const originalWorkspaces = Flag.OPENCODE_EXPERIMENTAL_WORKSPACES
+const originalHttpApi = Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI
+const originalWorkspaces = Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES
 const websocket = (() => () => new Response(null, { status: 501 })) as unknown as UpgradeWebSocket
 
 function app() {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = true
+  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = true
   return InstanceRoutes(websocket)
 }
 
@@ -26,15 +26,15 @@ function runSession<A, E>(fx: Effect.Effect<A, E, Session.Service>) {
 }
 
 afterEach(async () => {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = originalHttpApi
-  Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
+  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = originalHttpApi
+  Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
   await Instance.disposeAll()
   await resetDatabase()
 })
 
 describe("sync HttpApi", () => {
   test("serves sync routes through Hono bridge", async () => {
-    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = true
+    Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = true
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
     const headers = { "x-opencode-directory": tmp.path, "content-type": "application/json" }
 

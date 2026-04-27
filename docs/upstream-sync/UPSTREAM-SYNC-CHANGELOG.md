@@ -2,6 +2,27 @@
 
 > 同步规则和流程见 [UPSTREAM-SYNC-GUIDE.md](./UPSTREAM-SYNC-GUIDE.md)
 
+## 2026-04-27 | v1.14.26 → v1.14.27
+
+- **分支**: upstream-tracking-develop
+- **上游提交数**: 12
+- **冲突**: 22 个文件。15 个 package.json 纯版本号冲突（接受上游）；packages/opencode/package.json 保留 name="codegenie"、升级版本号；packages/extensions/zed/extension.toml 版本号；bun.lock 重新生成。
+- **功能性冲突**:
+  - `installation/index.ts`: 上游重构为自引用 `result` 对象模式，新增 brew/curl/choco/scoop 等完整安装方法支持。CodeGenie 保留精简版 Method 类型（npm/pnpm/bun/unknown）、自有品牌标识（`@codegenie-ai/codegenie-cli`、`codegenie/` USER_AGENT），适配上游新结构，移除不再需要的 `import path`。
+  - `shell/shell.ts`: 上游大幅重构 — BLACKLIST/LOGIN/POSIX Set 替换为 META record 表，新增 `ps()`/`args()`/`list()` 函数，`preferred/acceptable` 从常量改为支持 configShell 参数的函数。移除本地 `redirectKind()`/`adaptWindowsRedirects()` 函数。`gitbash()` 保留 `Flag.CODEGENIE_GIT_BASH_PATH`。
+  - `tool/bash.ts`: 移除本地 PS Set 和 `Shell.adaptWindowsRedirects` 调用（上游已通过 shell 重构解决），`DEFAULT_TIMEOUT` 保留 `Flag.CODEGENIE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS`。
+- **auto-merge 陷阱修复**:
+  - 8 个测试文件（httpapi-config/event/pty/sync/tui/session/instance/experimental/workspace）中 `Flag.OPENCODE_EXPERIMENTAL_HTTPAPI` 和 `Flag.OPENCODE_EXPERIMENTAL_WORKSPACES` 被上游新测试引入，需改为 `CODEGENIE_*`。
+  - `test/util/shell-redirect.test.ts` 引用已删除的 `redirectKind`/`adaptWindowsRedirects`，删除该测试文件。
+  - `packages/web/package.json` 和 `packages/plugin/package.json` 出现重复 version 行（sed 替换冲突标记时产生），手动修复。
+- **主要变更**:
+  - feat: configurable shell selection + desktop settings UI (#20602)
+  - feat(httpapi): bridge event stream/pty/tui routes (#24518/#24547/#24548)
+  - core: refactor Installation service to use a single consolidated result object
+  - fix(tui): hide provider checks before onboarding (#24551)
+  - fix(tui): update toast duration handling to use default value (#23395)
+  - upgrade opentui to 0.1.105 (#24555)
+
 ## 2026-04-27 | v1.14.25 → v1.14.26
 
 - **分支**: upstream-tracking-develop

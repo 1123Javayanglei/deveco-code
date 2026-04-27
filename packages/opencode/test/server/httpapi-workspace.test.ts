@@ -17,7 +17,7 @@ import { Instance } from "../../src/project/instance"
 void Log.init({ print: false })
 
 const context = Context.empty() as Context.Context<unknown>
-const originalWorkspaces = Flag.OPENCODE_EXPERIMENTAL_WORKSPACES
+const originalWorkspaces = Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES
 
 function request(path: string, directory: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers)
@@ -60,7 +60,7 @@ function localAdaptor(directory: string): WorkspaceAdaptor {
 }
 
 afterEach(async () => {
-  Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
+  Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
   await Instance.disposeAll()
   await resetDatabase()
 })
@@ -92,7 +92,7 @@ describe("workspace HttpApi", () => {
   })
 
   test("serves mutation endpoints", async () => {
-    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = true
+    Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = true
     await using tmp = await tmpdir({ git: true })
     await Instance.provide({
       directory: tmp.path,
