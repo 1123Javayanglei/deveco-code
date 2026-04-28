@@ -8,6 +8,7 @@ import { UI } from "../ui"
 import * as prompts from "@clack/prompts"
 import { EOL } from "os"
 import { AppRuntime } from "@/effect/app-runtime"
+import { formatTranscript } from "./tui/util/transcript"
 
 function redact(kind: string, id: string, value: string) {
   return value.trim() ? `[redacted:${kind}:${id}]` : value
@@ -161,6 +162,42 @@ function part(part: MessageV2.Part): MessageV2.Part {
 
 const partFn = part
 
+function runtime(
+  messageID: string,
+  value:
+    | {
+        system: string[]
+        tools: Record<string, { description?: string; inputSchema?: unknown }>
+      }
+    | undefined,
+) {
+  if (!value) return value
+  return {
+    system: value.system.map((item, index) => redact("runtime-system", `${messageID}-${index}`, item)),
+    tools: Object.fromEntries(
+      Object.entries(value.tools).map(([name, tool]) => [
+        name,
+        {
+          description:
+            tool.description === undefined ? undefined : redact("runtime-tool-description", `${messageID}-${name}`, tool.description),
+          inputSchema: tool.inputSchema === undefined ? undefined : { redacted: `runtime-tool-schema:${messageID}-${name}` },
+        },
+      ]),
+    ),
+  }
+}
+
+function withoutRuntime(data: { info: Session.Info; messages: MessageV2.WithParts[] }) {
+  return {
+    info: data.info,
+    messages: data.messages.map((msg) => {
+      if (msg.info.role === "user") return msg
+      const { runtime: _, ...info } = msg.info
+      return { ...msg, info }
+    }),
+  }
+}
+
 function sanitize(data: { info: Session.Info; messages: MessageV2.WithParts[] }) {
   return {
     info: {
@@ -210,6 +247,7 @@ function sanitize(data: { info: Session.Info; messages: MessageV2.WithParts[] })
             }
           : {
               ...msg.info,
+              runtime: runtime(msg.info.id, msg.info.runtime),
               path: {
                 cwd: redact("cwd", msg.info.id, msg.info.path.cwd),
                 root: redact("root", msg.info.id, msg.info.path.root),
@@ -222,7 +260,7 @@ function sanitize(data: { info: Session.Info; messages: MessageV2.WithParts[] })
 
 export const ExportCommand = cmd({
   command: "export [sessionID]",
-  describe: "export session data as JSON",
+  describe: "export session data",
   builder: (yargs: Argv) => {
     return yargs
       .positional("sessionID", {
@@ -232,6 +270,17 @@ export const ExportCommand = cmd({
       .option("sanitize", {
         describe: "redact sensitive transcript and file data",
         type: "boolean",
+      })
+      .option("format", {
+        describe: "output format",
+        type: "string",
+        choices: ["json", "md"],
+        default: "json",
+      })
+      .option("include-runtime-context", {
+        describe: "include captured final system prompt and tool definitions",
+        type: "boolean",
+        default: false,
       })
   },
   handler: async (args) => {
@@ -294,8 +343,21 @@ export const ExportCommand = cmd({
           info: sessionInfo,
           messages,
         }
+        const outputData = args.includeRuntimeContext ? exportData : withoutRuntime(exportData)
 
-        process.stdout.write(JSON.stringify(args.sanitize ? sanitize(exportData) : exportData, null, 2))
+        if (args.format === "md") {
+          process.stdout.write(
+            formatTranscript(sessionInfo, outputData.messages, {
+              thinking: false,
+              toolDetails: true,
+              assistantMetadata: false,
+              includeRuntimeContext: args.includeRuntimeContext,
+            }),
+          )
+          return
+        }
+
+        process.stdout.write(JSON.stringify(args.sanitize ? sanitize(outputData) : outputData, null, 2))
         process.stdout.write(EOL)
       } catch {
         UI.error(`Session not found: ${sessionID!}`)
