@@ -15,6 +15,7 @@
 | 文件 | 修改类型 | 行数 | 说明 |
 |------|----------|------|------|
 | `packages/opencode/src/plugin/codegenie.ts` | 新增 | ~1000 | CodeGenie OAuth 认证插件实现 |
+| `packages/opencode/src/security/local-crypto.ts` | 新增 | ~200 | 本地 KEK/DEK 分层密钥与通用加解密 |
 | `packages/opencode/src/plugin/codegenie-models.ts` | 新增 | ~25 | CodeGenie 模型资源定义 |
 | `packages/opencode/src/plugin/index.ts` | 修改 | 2 | 导入并注册 CodegenieAuthPlugin |
 | `packages/opencode/src/cli/cmd/providers.ts` | 修改 | ~20 | 添加 codegenie 配置、优先级、排序 |
@@ -43,7 +44,8 @@
 | 类型定义 | 定义 UserInfo, LoginResult, JwtPayload, CallbackData, LoginConfig 等类型 |
 | 常量定义 | DEFAULT_CONFIG, CountryCode, LanguageCode, SiteId 多区域配置 |
 | HttpClient | HTTP 请求封装，支持 GET/POST |
-| TokenStorage | AES-128-GCM 加密存储 JWT Token |
+| TokenStorage | KEK/DEK 分层密钥管理 + AES-256-GCM 加密存储 JWT Token |
+| LocalCrypto | 通用本地加解密模块（供 token/auth/analytics 复用） |
 | LocalAuthServer | 本地 OAuth 回调服务器，多端口支持（10101, 34567-34570） |
 | LoginService | 华为 OAuth 登录核心逻辑，含区域化 URL 生成 |
 | CodeGenieAuth | 公共 API: login(), logout(), isLoggedIn(), refreshToken(), isTokenExpired(), getSession() |
@@ -68,8 +70,16 @@ const DEFAULT_CONFIG: LoginConfig = {
 ```
 
 **存储位置**:
-- Token: `~/.config/codegenie/token.enc` (AES-128-GCM 加密)
-- 密钥: `~/.config/codegenie/.token_key`
+- Token: `~/.config/codegenie/token.enc`（AES-256-GCM 加密）
+- 工作密钥封装: `~/.config/codegenie/token.dek`（DEK 由 KEK 加密后存储）
+- 根密钥组: `~/.config/codegenie/keys/kek-v1.bin`、`kek-v2.bin`、`kek-v3.bin`
+
+**密钥管理升级（2026-04-28）**:
+- 首次启动自动生成 3 个根密钥（KEK，256-bit）和 1 个工作密钥（DEK，256-bit）
+- DEK 不落盘明文，使用 KEK 包裹后保存到 `token.dek`
+- JWT Token 使用 DEK 进行 AES-256-GCM 加密，密文保存到 `token.enc`
+- 若本地密钥材料（KEK/DEK）意外丢失，读取流程会自动重建密钥材料，并清理不可解密的旧 token，保证系统可恢复运行
+- `auth.json` 中敏感字段（`access`/`refresh`/`key`/`token`）写盘前加密，读取时自动解密
 
 **关键设计决策 — saveAuthToDisk**:
 
@@ -337,3 +347,4 @@ footer: model.cost?.input === 0 && (provider.id === "opencode" || provider.id ==
 | 2.0 | 2026-04-21 | 适配新工程 Effect 框架：saveAuthToDisk 替代 Auth.set、sync.data.provider 替代 Auth.all |
 | 2.1 | 2026-04-21 | 按 SDD 格式更新：修正 app.tsx 为未修改、补充 DEFAULT_CONFIG 完整字段、补充 CodeGenieAuth API、修正核心模块描述 |
 | 3.0 | 2026-04-25 | Bug 修复：saveAuthToDisk 路径改用 Global.Path.data、providers.ts 统一排序 + PLUGIN_HINT |
+| 3.1 | 2026-04-28 | 本地加密增强：新增 `security/local-crypto.ts`，`auth.json` 敏感字段（access/refresh/key/token）落盘加密并读取自动解密；JWT token.enc 接入统一模块 |

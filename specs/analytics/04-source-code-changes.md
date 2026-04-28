@@ -13,8 +13,9 @@
 |------|----------|------|------|
 | `src/plugin/analytics/analytics-plugin.ts` | 新增 | 225 | 插件入口，注册 Hook |
 | `src/plugin/analytics/collector.ts` | 新增 | 221 | 会话数据收集器 |
-| `src/plugin/analytics/uploader.ts` | 新增 | 295 | 事件上传器 |
-| `src/plugin/analytics/storage.ts` | 新增 | 119 | 持久化存储 |
+| `src/plugin/analytics/uploader.ts` | 新增/修改 | 295+ | 事件上传器，读取 auth.json 时先解密 |
+| `src/plugin/analytics/storage.ts` | 新增/修改 | 119+ | 持久化存储，单文件 `analytics.json` 加密落盘（含 uid/userid/pendingEvents） |
+| `src/security/local-crypto.ts` | 新增 | ~200 | 本地 KEK/DEK 分层密钥与通用加解密 |
 | `src/plugin/analytics/types.ts` | 新增 | 126 | 类型定义 |
 | `src/plugin/codegenie.ts` | 修改 | +23 | getSession() 增加 JWT fallback |
 
@@ -116,17 +117,30 @@ const DEFAULT_CONFIG: AnalyticsConfig = {
 
 ### `src/plugin/analytics/storage.ts`
 
-**职责**: 持久化存储，uid/userid/pendingEvents
+**职责**: 持久化存储，单文件管理 `uid/userid/pendingEvents`
 
 **核心模块**:
 
 | 模块 | 行数 | 职责 |
 |------|------|------|
-| getOrCreateUid() | 41-55 | 获取或创建设备 uid |
-| saveUserid() | 89-93 | 保存 userid 到磁盘 |
-| getUserid() | 95-103 | 从磁盘读取 userid |
+| getOrCreateUid() | - | 获取或创建设备 uid（存储在 analytics.json） |
+| saveUserid() | - | 保存 userid（存储在 analytics.json） |
+| getUserid() | - | 读取 userid（从 analytics.json） |
 | appendPendingEvent() | 73-77 | 追加 pending 事件 |
 | clearPendingEvents() | 79-84 | 清除 pending 事件 |
+
+**落盘格式（加密前）**:
+
+```json
+{
+  "uid": "uuid",
+  "userid": "user-id-or-unknown",
+  "pendingEvents": [],
+  "lastFlush": 1714291200000
+}
+```
+
+> 实际写盘为密文壳（包含 `algorithm/iv/authTag/ciphertext`），读取时先解密再进入业务逻辑。
 
 ---
 
@@ -263,7 +277,7 @@ public parseJwt(token: string): JwtPayload
 ### 6.3 兼容性
 
 - [x] 向后兼容: 是
-- [ ] 需要数据迁移: 否
+- [x] 需要数据迁移: 否（首版方案）
 - [ ] 需要清理旧数据: 否
 
 ---
@@ -273,3 +287,4 @@ public parseJwt(token: string): JwtPayload
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
 | 1.0 | 2026-04-27 | CodeGenie | 初始版本 |
+| 1.1 | 2026-04-28 | CodeGenie | 本地存储加密：analytics.json 改为加密存储并承载 uid/userid/pendingEvents，读取时自动解密（首版不做旧文件迁移） |

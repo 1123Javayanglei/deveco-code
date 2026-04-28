@@ -2,7 +2,6 @@ import type { Hooks, PluginInput } from "@opencode-ai/plugin"
 import * as prompts from "@clack/prompts"
 import { exec } from "child_process"
 import { promisify } from "util"
-import { homedir } from "os"
 import path from "path"
 import fs from "fs"
 import crypto from "crypto"
@@ -10,22 +9,25 @@ import http, { IncomingMessage, ServerResponse } from "http"
 import https from "https"
 import { OAUTH_DUMMY_KEY } from "@/auth"
 import { Global } from "@opencode-ai/core/global"
+import { LocalCrypto } from "@/security/local-crypto"
 import { URL } from "url"
 
 const execAsync = promisify(exec)
 const PROVIDER_ID = "codegenie"
 
 const authFilePath = path.join(Global.Path.data, "auth.json")
+
 export async function saveAuthToDisk(key: string, info: Record<string, unknown>) {
   try {
     let data: Record<string, unknown> = {}
     if (fs.existsSync(authFilePath)) {
-      data = JSON.parse(fs.readFileSync(authFilePath, "utf8"))
+      data = LocalCrypto.decryptAuthData(JSON.parse(fs.readFileSync(authFilePath, "utf8")) as Record<string, unknown>)
     }
     data[key] = info
     const dir = path.dirname(authFilePath)
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(authFilePath, JSON.stringify(data, null, 2), { mode: 0o600 })
+    const encrypted = LocalCrypto.encryptAuthData(data)
+    fs.writeFileSync(authFilePath, JSON.stringify(encrypted, null, 2), { mode: 0o600 })
   } catch {}
 }
 
@@ -205,98 +207,26 @@ class HttpClient {
 
 const httpClient = new HttpClient()
 
-// ============ TokenStorage ============
 class TokenStorage {
-  private keyFilePath: string
-  private algorithm: string = "aes-128-gcm"
-  private keyLength: number = 16
-  private ivLength: number = 12
+  private tokenFilePath: string
 
   constructor(configDir?: string) {
-    const configPath = configDir || path.join(homedir(), ".config", "codegenie")
-    this.keyFilePath = path.join(configPath, ".token_key")
-  }
-
-  private getKey(): Buffer {
-    try {
-      const keyData = fs.readFileSync(this.keyFilePath)
-      return keyData
-    } catch {
-      const key = crypto.randomBytes(this.keyLength)
-
-      const dir = path.dirname(this.keyFilePath)
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
-      }
-
-      fs.writeFileSync(this.keyFilePath, key, { mode: 0o600 })
-      return key
-    }
-  }
-
-  private encrypt(plaintext: string): { encrypted: string; iv: string; authTag: string } {
-    const key = this.getKey()
-    const iv = crypto.randomBytes(this.ivLength)
-
-    const cipher = crypto.createCipheriv(this.algorithm, key, iv) as crypto.CipherGCM
-
-    let encrypted = cipher.update(plaintext, "utf8", "hex")
-    encrypted += cipher.final("hex")
-
-    const authTag = cipher.getAuthTag()
-
-    return {
-      encrypted,
-      iv: iv.toString("hex"),
-      authTag: authTag.toString("hex"),
-    }
-  }
-
-  private decrypt(encrypted: string, ivHex: string, authTagHex: string): string {
-    const key = this.getKey()
-    const iv = Buffer.from(ivHex, "hex")
-    const authTag = Buffer.from(authTagHex, "hex")
-
-    const decipher = crypto.createDecipheriv(this.algorithm, key, iv) as crypto.DecipherGCM
-    decipher.setAuthTag(authTag)
-
-    let decrypted = decipher.update(encrypted, "hex", "utf8")
-    decrypted += decipher.final("utf8")
-    return decrypted
+    const configPath = configDir || Global.Path.config
+    this.tokenFilePath = path.join(configPath, "token.enc")
   }
 
   public async saveToken(token: string): Promise<void> {
-    if (!token) {
-      throw new Error("Token is empty")
-    }
-
-    const { encrypted, iv, authTag } = this.encrypt(token)
-
-    const configPath = path.dirname(this.keyFilePath)
-    const tokenFilePath = path.join(configPath, "token.enc")
-    const tokenData = {
-      encrypted,
-      iv,
-      authTag,
-      timeStamp: Date.now(),
-    }
-
-    fs.writeFileSync(tokenFilePath, JSON.stringify(tokenData, null, 2), { mode: 0o600 })
+    if (!token) throw new Error("Token is empty")
+    const tokenData = LocalCrypto.encryptForLocalStorage(token)
+    fs.writeFileSync(this.tokenFilePath, JSON.stringify(tokenData, null, 2), { mode: 0o600 })
   }
 
   public async loadToken(): Promise<string | null> {
     try {
-      const tokenFilePath = this.getTokenFilePath()
-
-      if (!fs.existsSync(tokenFilePath)) {
-        return null
-      }
-
-      const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, "utf8"))
-      const { encrypted, iv, authTag } = tokenData
-
-      const token = this.decrypt(encrypted, iv, authTag)
-      return token
+      if (!fs.existsSync(this.tokenFilePath)) return null
+      const tokenData = JSON.parse(fs.readFileSync(this.tokenFilePath, "utf8"))
+      if (!LocalCrypto.isEncryptedBlob(tokenData)) return null
+      return LocalCrypto.decryptForLocalStorage(tokenData)
     } catch {
       void this.clearToken()
       return null
@@ -305,18 +235,10 @@ class TokenStorage {
 
   public async clearToken(): Promise<void> {
     try {
-      const tokenFilePath = this.getTokenFilePath()
-      if (fs.existsSync(tokenFilePath)) {
-        fs.unlinkSync(tokenFilePath)
-      }
+      if (fs.existsSync(this.tokenFilePath)) fs.unlinkSync(this.tokenFilePath)
     } catch (err) {
       throw new Error("Failed to clear token", { cause: err })
     }
-  }
-
-  private getTokenFilePath(): string {
-    const configPath = path.dirname(this.keyFilePath)
-    return path.join(configPath, "token.enc")
   }
 }
 

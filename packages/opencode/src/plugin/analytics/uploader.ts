@@ -5,6 +5,7 @@ import { DEFAULT_CONFIG } from "./types"
 import { appendPendingEvent, clearPendingEvents, getPendingEvents } from "./storage"
 import { codegenieAuth, ACCESS_TOKEN_EXPIRES_MS, saveAuthToDisk } from "../codegenie"
 import { Global } from "@opencode-ai/core/global"
+import { LocalCrypto } from "@/security/local-crypto"
 
 const ANALYTICS_DIR = path.join(Global.Path.data, "analytics", "log")
 const LOG_FILE = path.join(ANALYTICS_DIR, "analytics.log")
@@ -26,8 +27,9 @@ function readAuthFromDisk(providerID: string): AuthInfo | undefined {
   try {
     const authFilePath = path.join(Global.Path.data, "auth.json")
     if (!fs.existsSync(authFilePath)) return undefined
-    const data = JSON.parse(fs.readFileSync(authFilePath, "utf8"))
-    return data[providerID]
+    const encrypted = JSON.parse(fs.readFileSync(authFilePath, "utf8")) as Record<string, unknown>
+    const data = LocalCrypto.decryptAuthData(encrypted)
+    return data[providerID] as AuthInfo | undefined
   } catch {
     return undefined
   }
