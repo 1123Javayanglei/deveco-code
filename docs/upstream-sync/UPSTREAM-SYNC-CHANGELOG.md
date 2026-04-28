@@ -2,6 +2,23 @@
 
 > 同步规则和流程见 [UPSTREAM-SYNC-GUIDE.md](./UPSTREAM-SYNC-GUIDE.md)
 
+## 2026-04-28 | v1.14.27 → v1.14.28
+
+- **分支**: upstream-tracking-develop
+- **上游提交数**: 7
+- **冲突**: 23 个文件。16 个 package.json 纯版本号冲突（接受上游）；packages/opencode/package.json 保留 name="codegenie"、升级版本号；packages/extensions/zed/extension.toml 版本号+下载 URL；bun.lock 重新生成。
+- **功能性冲突**:
+  - `cli/upgrade.ts`: 保留 `Flag.CODEGENIE_DISABLE_AUTOUPDATE`，采用上游简化调用方式（`Installation.method()` 直接调用替代 `AppRuntime.runPromise` 包装）。
+  - `installation/index.ts`: 保留 CodeGenie `viewVersion` 方案（包管理器子进程查询），拒绝上游 Homebrew/Chocolatey/Scoop/curl 等不适用于 CodeGenie 的分发渠道。移除不再使用的 `NpmConfig` 导入。
+  - `test/installation/installation.test.ts`: 重写 npm/bun/pnpm 测试为 subprocess mock 方式，与 `viewVersion` 源码方案一致。
+  - `test/npm.test.ts`: 上游删除此文件（测试重构到 `packages/core/test/`），接受删除。
+- **auto-merge 陷阱修复**:
+  - `packages/web/package.json` workspace 依赖被覆盖为 `"opencode": "workspace:*"`，手动改回 `"codegenie": "workspace:*"`。
+- **主要变更**:
+  - Refactor npm config handling (#24565)
+  - feat(go): models endpoint
+  - fix: ignore GitHub Actions changelog contributor (#24567)
+
 ## 2026-04-27 | v1.14.26 → v1.14.27
 
 - **分支**: upstream-tracking-develop

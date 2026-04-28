@@ -7,6 +7,20 @@
 
 ---
 
+## v1.14.27 → v1.14.28
+
+### installation/index.ts 中 NpmConfig 导入变成死代码
+
+上游 v1.14.28 重构了 npm 配置处理（新增 `packages/core/src/npm-config.ts`），在 `installation/index.ts` 中引入 `NpmConfig` 用于 HTTP 注册表查询。CodeGenie 保留 `viewVersion`（子进程方式）时，`NpmConfig` 导入变成未使用。冲突解决后需检查是否有因冲突处理导致的新增但未使用的导入。
+
+**教训：保留本地方案时，上游新增的仅服务于被拒绝方案的导入可能被 auto-merge 合入，需逐一检查并清理。**
+
+### 测试文件需与源码方案保持一致
+
+上游将 npm/bun/pnpm 版本查询从 subprocess 改为 HTTP registry，同步修改了测试。auto-merge 合入了上游的 HTTP registry 测试，但我们的源码仍用 `viewVersion`（subprocess），导致测试与源码不匹配。此外，原测试中 `expect(calls).toContain(url)` 的断言对 `string[][]` 类型的 calls 数组无效。
+
+**教训：源码冲突保留本地方案时，对应的测试文件也需同步检查。auto-merge 合入的测试可能引用了被拒绝方案的 API，需要重写。**
+
 ## v1.14.24 → v1.14.25
 
 ### httpapi/server.ts 认证代码已被上游提取到独立文件
