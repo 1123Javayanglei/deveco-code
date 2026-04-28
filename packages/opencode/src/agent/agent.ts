@@ -10,7 +10,6 @@ import { ProviderTransform } from "../provider"
 import PROMPT_GENERATE from "./generate.txt"
 import PROMPT_BUILD from "./prompt/build.txt"
 import PROMPT_PLAN from "./prompt/plan.txt"
-import PROMPT_ASK from "./prompt/ask.txt"
 import PROMPT_DEBUG from "./prompt/debug.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
@@ -157,28 +156,6 @@ export const layer = Layer.effect(
             mode: "primary",
             native: true,
             prompt: PROMPT_PLAN,
-          },
-          ask: {
-            name: "ask",
-            description: "Help developers analyze local project code and support engineering Q&A.",
-            options: {},
-            permission: Permission.merge(
-              defaults,
-              Permission.fromConfig({
-                "*": "deny",
-                read: "allow",
-                glob: "allow",
-                grep: "allow",
-                lsp: "allow",
-                list: "allow",
-                codesearch: "allow",
-                arkts_knowledge_search: "allow",
-                todoread: "allow",
-              }),
-              user,
-            ),
-            mode: "primary",
-            prompt: PROMPT_ASK,
           },
           debug: {
             name: "debug",

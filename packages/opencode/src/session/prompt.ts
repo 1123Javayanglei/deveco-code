@@ -52,8 +52,6 @@ import { InstanceState } from "@/effect"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
 import { EffectBridge } from "@/effect"
-import { OhKnowledgeAsync } from "@/session/oh-knowledge-async.ts"
-import { KNOWLEDGE_TOOL_ID } from "@/tool/oh_knowledge.ts"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -1406,32 +1404,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               messages: msgs,
             })
 
-            // HarmonyASK: 立即异步触发知识库查询
-            if (agent.name === "ask" && step === 1) {
-              const lastUserMsg = msgs.findLast((m) => m.info.role === "user")
-              if (lastUserMsg) {
-                const userInput = lastUserMsg.parts
-                  .filter((p) => p.type === "text")
-                  .map((p) => p.text)
-                  .join("\n")
-
-                const ohTool = tools[KNOWLEDGE_TOOL_ID]
-                if (ohTool?.execute) {
-                  const  callId = `oh_${crypto.randomUUID().replace(/-/g, "")}`;
-                  OhKnowledgeAsync.trigger(userInput, callId, async () => {
-                    return ohTool.execute!(
-                      { question: userInput },
-                      {
-                        toolCallId: callId,
-                        messages: [],
-                        abortSignal: new AbortController().signal,
-                      }
-                    )
-                  })
-                }
-              }
-            }
-
             if (lastUser.format?.type === "json_schema") {
               tools["StructuredOutput"] = createStructuredOutputTool({
                 schema: lastUser.format.schema,
@@ -1514,11 +1486,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 auto: true,
                 overflow: !handle.message.finish,
               })
-            }
-
-            // HarmonyASK: 注入异步知识库结果到当前 assistant message
-            if (agent.name === "ask" && handle.message.finish === "tool-calls") {
-              yield* OhKnowledgeAsync.inject(sessions, session.id, handle.message.id)
             }
 
             return "continue" as const
