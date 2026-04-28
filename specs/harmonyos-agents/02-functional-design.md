@@ -173,46 +173,7 @@ plan: {
 - plan_write: "allow"、plan_exit: "ask"
 - description 更新
 
-#### 3.2.3 Ask Agent（新增）
-
-```typescript
-Ask: {
-  name: "Ask",
-  description: "Help developers analyze local project code and support engineering Q&A.",
-  options: {},
-  permission: Permission.merge(defaults, Permission.fromConfig({
-    question: "deny",
-    read: "allow",
-    glob: "allow",
-    grep: "allow",
-    lsp: "allow",
-    ls: "allow",
-    codesearch: "allow",
-    arkts_knowledge_search: "allow",
-    todoread: "allow",
-    bash: "deny",
-    build_project: "deny",
-    check_ets_files: "deny",
-    perform_ui_action: "deny",
-    get_app_ui_tree: "deny",
-    start_app: "deny",
-    hdc_log: "deny",
-    edit: "deny",
-    write: "deny",
-    multiedit: "deny",
-    apply_patch: "deny",
-    skill: "deny",
-    todowrite: "deny",
-    plan_write: "deny",
-  }), user),
-  mode: "primary",
-  prompt: PROMPT_ASK,
-}
-```
-
-**特点**: 纯只读 Agent，只允许搜索和读取工具，拒绝所有修改操作。
-
-#### 3.2.4 debug Agent（新增）
+#### 3.2.3 debug Agent（新增）
 
 ```typescript
 debug: {

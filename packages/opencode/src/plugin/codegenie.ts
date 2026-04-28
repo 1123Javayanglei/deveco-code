@@ -14,6 +14,7 @@ import { URL } from "url"
 
 const execAsync = promisify(exec)
 const PROVIDER_ID = "codegenie"
+export const sessionChatIdMap = new Map<string, string>()
 
 const authFilePath = path.join(Global.Path.data, "auth.json")
 
@@ -903,7 +904,9 @@ export async function CodegenieAuthPlugin(_input: PluginInput): Promise<Hooks> {
               headers.set("authorization", `Bearer ${currentAuth.access}`)
             }
 
-            headers.set("Chat-Id", crypto.randomUUID().replace(/-/g, ""))
+            const sessionId = headers.get("x-codegenie-session") || headers.get("x-session-affinity")
+            const chatId = (sessionId && sessionChatIdMap.get(sessionId)) || crypto.randomUUID().replace(/-/g, "")
+            headers.set("Chat-Id", chatId)
 
             return fetch(requestInput, {
               ...init,

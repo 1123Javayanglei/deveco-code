@@ -43,6 +43,7 @@
 | uid | string | 设备匿名标识（UUID） | 首次生成，持久化到 analytics/uid |
 | userid | string | 华为账号真实用户 ID | JWT 解析，持久化到 analytics/userid |
 | sessionid | string | 对话会话 ID | chat.message hook → input.sessionID |
+| chatId | string | 会话级对话标识，同一 session 内保持不变 | LLM 层按 sessionID 生成并缓存在 sessionChatIdMap |
 | messageID | string | 用户单次请求唯一标识 | chat.message hook → input.messageID |
 | agentName | string | 当前使用的 Agent | chat.message hook → input.agent（build/plan/debug 等） |
 | query | string | 用户输入的问题 | chat.message hook → output.message/parts |
@@ -163,6 +164,7 @@
 
 | 技术点 | 描述 | 解决方案 |
 |--------|------|----------|
+| chatId 会话级稳定性 | 同一 session 内多轮请求需使用相同 chatId，便于后端关联对话 | LLM 层按 sessionID 生成 chatId 并缓存在 sessionChatIdMap（Map<string, string>）；plugin fetch 拦截时通过 session 标识查找复用 |
 | userid 跨进程持久化 | 进程重启后内存 userInfo 丢失 | getSession() 增加 JWT 磁盘 fallback；登录时 saveUserid() 写入磁盘 |
 | 事件不丢失 | 进程异常退出导致内存队列丢失 | appendPendingEvent() 先写磁盘；shutdown 时 flush |
 | Token 过期上报 | 上报时 Token 已过期 | flush() 中检测过期并自动 refreshToken |
@@ -371,6 +373,7 @@ flush():
 | 决策ID | 决策内容 | 决策原因 | 决策日期 |
 |--------|----------|----------|----------|
 | D-001 | userid 从 JWT 解析并持久化到磁盘 | 进程重启后内存 userInfo 丢失，需从磁盘读取 | 2026-04-27 |
+| D-004 | chatId 按 sessionID 稳定生成并缓存 | 同一 session 内多轮请求需使用相同 Chat-Id，后端据此关联对话历史；由 LLM 层统一生成，plugin 层复用 | 2026-04-28 |
 | D-002 | getSession() 增加 JWT fallback | 确保进程重启后仍可获取 userId | 2026-04-27 |
 | D-003 | 日志精简，仅保留关键信息 | 减少 DEBUG 日志干扰 | 2026-04-27 |
 
@@ -379,3 +382,4 @@ flush():
 | 版本 | 日期 | 作者 | 变更描述 |
 |------|------|------|----------|
 | 1.0 | 2026-04-27 | CodeGenie | 初始版本 |
+| 1.1 | 2026-04-28 | CodeGenie | 新增 chatId 会话级对话标识字段及 sessionChatIdMap 缓存机制 |

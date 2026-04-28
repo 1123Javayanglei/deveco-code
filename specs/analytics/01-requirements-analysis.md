@@ -43,6 +43,7 @@
 | userid | User ID | 华为账号登录后的真实用户 ID |
 | messageID | Message ID | 用户单次请求的唯一标识 |
 | sessionID | Session ID | 对话会话标识 |
+| chatId | Chat ID | 同一 session 内稳定的对话标识，用于后端关联多轮请求 |
 | JWT | JSON Web Token | 华为账号认证令牌 |
 
 ---
@@ -218,7 +219,7 @@ session.idle → buildEvent(打包) → upload(入队) → flush(上报)
 | FR-002 | 打点条件校验 | 仅登录且使用 codegenie provider 时采集 | P1 | 产品需求 |
 | FR-003 | 打点数据上报 | 批量上报至华为云端，支持重试 | P1 | 产品需求 |
 | FR-004 | 用户标识 | uid 设备标识 + userid 华为账号标识 | P1 | 产品需求 |
-| FR-005 | 请求标识 | sessionID 会话标识 + messageID 请求标识 | P1 | 产品需求 |
+| FR-005 | 请求标识 | sessionID 会话标识 + messageID 请求标识 + chatId 会话级对话标识 | P1 | 产品需求 |
 | FR-006 | Agent 标识 | 记录当前使用的 Agent 类型 | P1 | 产品需求 |
 | FR-007 | 进程生命周期 | 启动恢复 pending 事件，退出执行最终 flush | P2 | 可靠性需求 |
 | FR-008 | Token 自动刷新 | 上报时 Token 过期自动刷新 | P2 | 可靠性需求 |
@@ -291,8 +292,8 @@ session.idle → buildEvent(打包) → upload(入队) → flush(上报)
 
 | 项目 | 描述 |
 |------|------|
-| 需求描述 | sessionID 标识整个对话，messageID 标识用户单次请求 |
-| 验收标准 | 1. sessionID 从 chat.message hook 的 input 获取<br>2. messageID 从 chat.message hook 的 input 获取 |
+| 需求描述 | sessionID 标识整个对话，messageID 标识用户单次请求，chatId 标识同一 session 内的对话一致性 |
+| 验收标准 | 1. sessionID 从 chat.message hook 的 input 获取<br>2. messageID 从 chat.message hook 的 input 获取<br>3. chatId 在同一 session 内保持不变，用于后端关联同一会话的多轮请求 |
 | 关联场景 | US-001 |
 | 依赖需求 | 无 |
 
@@ -405,3 +406,4 @@ FR-003(数据上报) ──→ FR-008(Token刷新)
 | 版本 | 日期 | 作者 | 变更描述 |
 |------|------|------|----------|
 | 1.0 | 2026-04-27 | CodeGenie | 初始版本 |
+| 1.1 | 2026-04-28 | CodeGenie | 新增 chatId 会话级对话标识 (FR-005) |
