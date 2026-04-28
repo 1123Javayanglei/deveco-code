@@ -71,6 +71,32 @@ const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `IMPORTANT: The user has requested struc
 const log = Log.create({ service: "session.prompt" })
 const elog = EffectLogger.create({ service: "session.prompt" })
 
+function jsonSafe(value: unknown) {
+  try {
+    return JSON.parse(JSON.stringify(value)) as unknown
+  } catch {
+    return undefined
+  }
+}
+
+function runtimeContext(system: string[], tools: Record<string, AITool>) {
+  return {
+    system,
+    tools: Object.fromEntries(
+      Object.entries(tools).map(([name, tool]) => {
+        const snapshot = tool as { description?: unknown; inputSchema?: unknown }
+        return [
+          name,
+          {
+            ...(typeof snapshot.description === "string" ? { description: snapshot.description } : {}),
+            ...(snapshot.inputSchema === undefined ? {} : { inputSchema: jsonSafe(snapshot.inputSchema) }),
+          },
+        ]
+      }),
+    ),
+  }
+}
+
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
   readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts>
@@ -1473,6 +1499,10 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             const system = [...env, ...(skills ? [skills] : []), ...instructions]
             const format = lastUser.format ?? { type: "text" as const }
             if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
+            if (process.env.CODEGENIE_CAPTURE_RUNTIME_CONTEXT === "1" && step === 1) {
+              handle.message.runtime = runtimeContext(system, tools)
+              yield* sessions.updateMessage(handle.message)
+            }
             const result = yield* handle.process({
               user: lastUser,
               agent,
