@@ -65,15 +65,20 @@ async function walk(directory: string): Promise<string[]> {
 }
 
 const defaultSkillsDir = path.join(dir, "resources/skills")
-const defaultSkillsData: Record<string, Record<string, string>> = {}
+type EmbeddedSkillFile = string | { encoding: "base64"; content: string }
+
+const binaryExtensions = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bin"])
+const defaultSkillsData: Record<string, Record<string, EmbeddedSkillFile>> = {}
 if (fs.existsSync(defaultSkillsDir)) {
   for (const entry of await fs.promises.readdir(defaultSkillsDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue
-    const files: Record<string, string> = {}
+    const files: Record<string, EmbeddedSkillFile> = {}
     const skillPath = path.join(defaultSkillsDir, entry.name)
     for (const file of await walk(skillPath)) {
       const rel = path.relative(skillPath, file)
-      files[rel] = await Bun.file(file).text()
+      files[rel] = binaryExtensions.has(path.extname(file).toLowerCase())
+        ? { encoding: "base64", content: Buffer.from(await Bun.file(file).arrayBuffer()).toString("base64") }
+        : await Bun.file(file).text()
     }
     defaultSkillsData[entry.name] = files
   }

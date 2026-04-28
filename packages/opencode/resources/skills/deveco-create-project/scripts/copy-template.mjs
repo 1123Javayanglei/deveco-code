@@ -17,31 +17,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { detectApiLevel } from './detect-sdk';
+import { detectApiLevel } from './detect-sdk.mjs';
 
-type Args = {
-  projectPath: string;
-  appName: string;
-  bundleName: string;
-  apiLevel?: number;
-  templateDir: string;
-};
-
-type ApiConfig = {
-  sdkVersion: string;
-  modelVersion: string;
-};
-
-type Source = 'user_input' | 'sdk_pkg' | 'oh_uni_package' | 'fallback';
-
-type Resolved = {
-  apiLevel: number;
-  source: Source;
-  detectedFrom?: string;
-  devecoHome?: string;
-};
-
-const API_CONFIGS: Record<number, ApiConfig> = {
+const API_CONFIGS = {
   17: { sdkVersion: '5.0.5(17)', modelVersion: '5.0.5' },
   18: { sdkVersion: '5.0.6(18)', modelVersion: '5.0.6' },
   19: { sdkVersion: '5.0.7(19)', modelVersion: '5.0.7' },
@@ -60,8 +38,8 @@ const REQUIRED_FILES = [
   'entry/src/main/resources/base/media/foreground.png',
 ];
 
-function parseArgs(argv: string[]): Args {
-  const values = new Map<string, string>();
+function parseArgs(argv) {
+  const values = new Map();
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (!token.startsWith('--')) {
@@ -109,7 +87,7 @@ function parseArgs(argv: string[]): Args {
   };
 }
 
-async function resolve(args: Args): Promise<Resolved> {
+async function resolve(args) {
   if (args.apiLevel) {
     return {
       apiLevel: args.apiLevel,
@@ -119,7 +97,7 @@ async function resolve(args: Args): Promise<Resolved> {
   return detectApiLevel();
 }
 
-function copyDirectoryContents(sourceDir: string, targetDir: string): void {
+function copyDirectoryContents(sourceDir, targetDir) {
   fs.mkdirSync(targetDir, { recursive: true });
   for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
     const sourcePath = path.join(sourceDir, entry.name);
@@ -136,7 +114,7 @@ function copyDirectoryContents(sourceDir: string, targetDir: string): void {
   }
 }
 
-function replaceInFile(filePath: string, pairs: Array<[string, string]>): void {
+function replaceInFile(filePath, pairs) {
   const original = fs.readFileSync(filePath, 'utf-8');
   let next = original;
   for (const [from, to] of pairs) {
@@ -147,7 +125,7 @@ function replaceInFile(filePath: string, pairs: Array<[string, string]>): void {
   }
 }
 
-function updateApiLevel(targetRoot: string, apiLevel: number): void {
+function updateApiLevel(targetRoot, apiLevel) {
   if (apiLevel === 22) {
     return;
   }
@@ -160,11 +138,11 @@ function updateApiLevel(targetRoot: string, apiLevel: number): void {
   ]);
 }
 
-function verifyFiles(targetRoot: string): string[] {
+function verifyFiles(targetRoot) {
   return REQUIRED_FILES.filter((relativePath) => !fs.existsSync(path.join(targetRoot, relativePath)));
 }
 
-async function main(): Promise<void> {
+async function main() {
   const args = parseArgs(process.argv.slice(2));
   const resolved = await resolve(args);
   if (!fs.existsSync(args.templateDir)) {

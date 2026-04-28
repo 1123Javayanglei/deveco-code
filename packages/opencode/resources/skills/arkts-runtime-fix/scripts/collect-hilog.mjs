@@ -14,20 +14,21 @@
  */
 
 import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc';
-import { printKv, toErrorMessage } from './shared/utils';
+import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
+import { printKv, toErrorMessage } from './shared/utils.mjs';
 
-function cleanLines(input: string) {
+function cleanLines(input) {
   return input
     .split(/\r?\n/)
     .map((line) => line.trimEnd())
     .filter((line) => line.trim().length > 0);
 }
 
-function parseArgs(argv: string[]) {
-  const map = new Map<string, string>();
+function parseArgs(argv) {
+  const map = new Map();
   const optionalKeys = new Set(['device-id']);
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -61,7 +62,7 @@ function parseArgs(argv: string[]) {
   };
 }
 
-function printCollectFailed(nextAction: string) {
+function printCollectFailed(nextAction) {
   printKv({
     status: 'collect_failed',
     source: 'device_hilog',
@@ -71,7 +72,7 @@ function printCollectFailed(nextAction: string) {
   });
 }
 
-async function collectHilogText(hdc: string, deviceId: string, lines: number) {
+async function collectHilogText(hdc, deviceId, lines) {
   const out = await runHdc([hdc, ...targetArgs(deviceId), 'shell', 'hilog', '-x']);
   if (out.exitCode !== 0) {
     throw new Error(out.stderr || out.stdout || `hdc hilog -x failed (code=${out.exitCode})`);
@@ -81,20 +82,20 @@ async function collectHilogText(hdc: string, deviceId: string, lines: number) {
   return all.slice(Math.max(0, all.length - lines)).join('\n');
 }
 
-async function writeHilogSnapshot(outputDir: string, recent: string) {
+async function writeHilogSnapshot(outputDir, recent) {
   fs.mkdirSync(outputDir, { recursive: true });
   const logFile = path.join(outputDir, `hilog-${Date.now()}.txt`);
-  await Bun.write(logFile, recent);
+  await fsp.writeFile(logFile, recent, 'utf8');
   return logFile;
 }
 
-function printCollected(logFile: string, recent: string) {
+function printCollected(logFile, recent) {
   printKv({
     status: 'collected',
     source: 'device_hilog',
     log_file: logFile,
     log_excerpt: recent.slice(0, 800),
-    next_action: `A hilog snapshot is available. Parse it with parse-jscrash-log.ts --log-file "${logFile}" --source hilog if you want more crash detail.`,
+    next_action: `A hilog snapshot is available. Parse it with parse-jscrash-log.mjs --log-file "${logFile}" --source hilog if you want more crash detail.`,
   });
 }
 

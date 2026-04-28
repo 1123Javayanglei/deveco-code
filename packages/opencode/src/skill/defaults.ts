@@ -4,7 +4,9 @@ import type { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Global } from "@opencode-ai/core/global"
 import { Log } from "@/util"
 
-declare const CODEGENIE_DEFAULT_SKILLS: Record<string, Record<string, string>> | undefined
+type EmbeddedSkillFile = string | { encoding: "base64"; content: string }
+
+declare const CODEGENIE_DEFAULT_SKILLS: Record<string, Record<string, EmbeddedSkillFile>> | undefined
 
 export namespace Defaults {
   const log = Log.create({ service: "skill-defaults" })
@@ -35,7 +37,10 @@ export namespace Defaults {
     const data = typeof CODEGENIE_DEFAULT_SKILLS !== "undefined" ? CODEGENIE_DEFAULT_SKILLS : {}
     for (const [skillName, files] of Object.entries(data)) {
       for (const [fileName, content] of Object.entries(files)) {
-        yield* fsys.writeWithDirs(path.join(dir, skillName, fileName), content)
+        yield* fsys.writeWithDirs(
+          path.join(dir, skillName, fileName),
+          typeof content === "string" ? content : Uint8Array.from(Buffer.from(content.content, content.encoding)),
+        )
       }
     }
 

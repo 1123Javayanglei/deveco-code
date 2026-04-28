@@ -20,12 +20,12 @@ import {
   parseFaultlogEntry,
   selectWithinMaxAge,
   sortFaultlogsByRecency,
-} from './shared/jscrash-faultlogger';
-import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc';
-import { printKv, toErrorMessage } from './shared/utils';
+} from './shared/jscrash-faultlogger.mjs';
+import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
+import { printKv, toErrorMessage } from './shared/utils.mjs';
 
-function parseArgs(argv: string[]) {
-  const map = new Map<string, string>();
+function parseArgs(argv) {
+  const map = new Map();
   const optionalKeys = new Set(['bundle-name', 'device-id']);
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -55,7 +55,7 @@ function parseArgs(argv: string[]) {
   };
 }
 
-async function readFaultloggerViaHidumper(hdc: string, deviceId: string) {
+async function readFaultloggerViaHidumper(hdc, deviceId) {
   const args = [
     hdc,
     ...targetArgs(deviceId),
@@ -70,18 +70,18 @@ async function readFaultloggerViaHidumper(hdc: string, deviceId: string) {
   return runHdc(args);
 }
 
-async function readFaultloggerViaLs(hdc: string, deviceId: string) {
+async function readFaultloggerViaLs(hdc, deviceId) {
   const remote = '/data/log/faultlog/faultlogger';
   const args = [hdc, ...targetArgs(deviceId), 'shell', 'ls', '-1', remote];
 
   return runHdc(args);
 }
 
-function formatCandidates(names: string[], limit: number) {
+function formatCandidates(names, limit) {
   return names.slice(0, limit).join('|');
 }
 
-function printProbeFailed(bundleName: string, nextAction: string) {
+function printProbeFailed(bundleName, nextAction) {
   printKv({
     status: 'probe_failed',
     bundle_name: bundleName,
@@ -93,7 +93,7 @@ function printProbeFailed(bundleName: string, nextAction: string) {
   });
 }
 
-function printProbeNotFound(bundleName: string) {
+function printProbeNotFound(bundleName) {
   printKv({
     status: 'not_found',
     bundle_name: bundleName,
@@ -105,7 +105,7 @@ function printProbeNotFound(bundleName: string) {
   });
 }
 
-function printProbeFound(bundleName: string, names: string[], limit: number) {
+function printProbeFound(bundleName, names, limit) {
   const latest = names[0];
   const ts = parseFaultlogEntry(latest).timestampMs;
   printKv({
@@ -115,11 +115,11 @@ function printProbeFound(bundleName: string, names: string[], limit: number) {
     latest_timestamp: ts === null ? '' : String(ts),
     matched_count: String(names.length),
     candidates: formatCandidates(names, limit),
-    next_action: `A recent faultlog is available. Fetch it with fetch-faultlog.ts --faultlog-name "${latest}" if you want a cleaner crash anchor.`,
+    next_action: `A recent faultlog is available. Fetch it with fetch-faultlog.mjs --faultlog-name "${latest}" if you want a cleaner crash anchor.`,
   });
 }
 
-async function loadCandidateNames(hdc: string, deviceId: string, bundleName: string, maxAgeMinutes: number) {
+async function loadCandidateNames(hdc, deviceId, bundleName, maxAgeMinutes) {
   const hidumper = await readFaultloggerViaHidumper(hdc, deviceId);
   let combined = hidumper.exitCode === 0 ? hidumper.stdout : '';
 

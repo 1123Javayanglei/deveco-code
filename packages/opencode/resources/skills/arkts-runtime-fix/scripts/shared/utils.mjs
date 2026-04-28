@@ -13,12 +13,12 @@
  * limitations under the License.
  */
 
-export function toErrorMessage(error: unknown) {
+export function toErrorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function printKv(lines: Record<string, string>) {
-  const out: string[] = [];
+export function printKv(lines) {
+  const out = [];
   for (const [key, value] of Object.entries(lines)) {
     out.push(`${key}: ${value}`);
   }

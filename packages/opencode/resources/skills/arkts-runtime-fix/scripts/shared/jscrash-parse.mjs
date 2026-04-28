@@ -13,26 +13,6 @@
  * limitations under the License.
  */
 
-export type CrashReport = {
-  status: 'detected' | 'no_crash_signature';
-  source: string;
-  device: string;
-  bundle: string;
-  process: string;
-  errorType: string;
-  errorMessage: string;
-  suspectedFile: string;
-  keywords: string[];
-  topStack: string[];
-  excerpt: string[];
-};
-
-type ScoredLine = {
-  line: string;
-  index: number;
-  score: number;
-};
-
 const ERROR_TYPE_RE =
   /(TypeError|ReferenceError|RangeError|SyntaxError|BusinessError|ParameterError|ResourceError|SystemError|EvalError|URIError)/i;
 const CRASH_SIGNAL_RE = /(jscrash|uncaught|exception|fatal|abort|crash|error)/i;
@@ -40,26 +20,26 @@ const STRONG_CRASH_SIGNAL_RE =
   /(jscrash|uncaught|fatal|abort|crash|TypeError|ReferenceError|RangeError|SyntaxError|BusinessError|ParameterError|ResourceError|SystemError|EvalError|URIError)/i;
 const FILE_RE = /([A-Za-z0-9_./\\-]+\.(ets|ts|js)(?::\d+:\d+)?)/i;
 
-function trim(input: string) {
+function trim(input) {
   return input.trim();
 }
 
-function cleanLines(input: string) {
+function cleanLines(input) {
   return input
     .split(/\r?\n/)
     .map((line) => line.trimEnd())
     .filter((line) => line.trim().length > 0);
 }
 
-function unique(items: string[]) {
+function unique(items) {
   return [...new Set(items)];
 }
 
-function containsIgnoreCase(input: string, token: string) {
+function containsIgnoreCase(input, token) {
   return input.toLowerCase().includes(token.toLowerCase());
 }
 
-function firstMatch(input: string, patterns: RegExp[]) {
+function firstMatch(input, patterns) {
   for (const pattern of patterns) {
     const match = pattern.exec(input);
     if (match?.[1]) {
@@ -70,7 +50,7 @@ function firstMatch(input: string, patterns: RegExp[]) {
   return '';
 }
 
-function detectErrorType(input: string) {
+function detectErrorType(input) {
   const matches = input.match(new RegExp(ERROR_TYPE_RE.source, 'ig'));
   if (!matches?.length) {
     return 'UnknownError';
@@ -79,7 +59,7 @@ function detectErrorType(input: string) {
   return matches[matches.length - 1];
 }
 
-function detectBundle(input: string, bundleName: string) {
+function detectBundle(input, bundleName) {
   if (bundleName) {
     return bundleName;
   }
@@ -93,7 +73,7 @@ function detectBundle(input: string, bundleName: string) {
   );
 }
 
-function detectProcess(input: string, processHint: string) {
+function detectProcess(input, processHint) {
   if (processHint) {
     return processHint;
   }
@@ -106,7 +86,7 @@ function detectProcess(input: string, processHint: string) {
   );
 }
 
-function stackLike(line: string) {
+function stackLike(line) {
   return (
     /at\s+.+:\d+:\d+/i.test(line) ||
     /at\s+.+\(.+:\d+:\d+\)/i.test(line) ||
@@ -114,7 +94,7 @@ function stackLike(line: string) {
   );
 }
 
-function applicationFrameScore(line: string, bundle: string) {
+function applicationFrameScore(line, bundle) {
   let score = 0;
   if (/entry[\\/].*\.ets/i.test(line)) {
     score += 8;
@@ -135,7 +115,7 @@ function applicationFrameScore(line: string, bundle: string) {
   return score;
 }
 
-function scoreCrashLine(line: string, bundle: string, processHint: string) {
+function scoreCrashLine(line, bundle, processHint) {
   let score = 0;
   if (CRASH_SIGNAL_RE.test(line)) {
     score += 5;
@@ -159,7 +139,7 @@ function scoreCrashLine(line: string, bundle: string, processHint: string) {
   return score;
 }
 
-function findCrashAnchor(lines: string[], bundle: string, processHint: string) {
+function findCrashAnchor(lines, bundle, processHint) {
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     const score = scoreCrashLine(lines[index], bundle, processHint);
     if (score >= 7) {
@@ -177,7 +157,7 @@ function findCrashAnchor(lines: string[], bundle: string, processHint: string) {
   return -1;
 }
 
-function sliceWindow(lines: string[], anchor: number, before: number, after: number) {
+function sliceWindow(lines, anchor, before, after) {
   if (anchor < 0) {
     return [];
   }
@@ -188,7 +168,7 @@ function sliceWindow(lines: string[], anchor: number, before: number, after: num
   return lines.slice(start, end);
 }
 
-function findCrashSignal(lines: string[], start: number, end: number, step: 1 | -1) {
+function findCrashSignal(lines, start, end, step) {
   for (let index = start; step > 0 ? index < end : index >= end; index += step) {
     if (CRASH_SIGNAL_RE.test(lines[index])) {
       return lines[index].trim();
@@ -198,7 +178,7 @@ function findCrashSignal(lines: string[], start: number, end: number, step: 1 | 
   return '';
 }
 
-function detectErrorMessage(lines: string[], anchor: number) {
+function detectErrorMessage(lines, anchor) {
   if (anchor >= 0) {
     const forwardMatch = findCrashSignal(lines, anchor, Math.min(lines.length, anchor + 6), 1);
     if (forwardMatch) {
@@ -222,15 +202,15 @@ function detectErrorMessage(lines: string[], anchor: number) {
   return lines[lines.length - 1] || '(not found)';
 }
 
-function detectTopStack(lines: string[], anchor: number) {
+function detectTopStack(lines, anchor) {
   const around = anchor >= 0 ? sliceWindow(lines, anchor, 4, 18) : lines.slice(Math.max(0, lines.length - 24));
   const frames = around.filter((line) => stackLike(line));
 
   return unique(frames).slice(0, 8);
 }
 
-function detectSuspectedFile(topStack: string[], bundle: string) {
-  const candidates: ScoredLine[] = [];
+function detectSuspectedFile(topStack, bundle) {
+  const candidates = [];
   for (let index = 0; index < topStack.length; index += 1) {
     const line = topStack[index];
     const match = FILE_RE.exec(line);
@@ -254,7 +234,7 @@ function detectSuspectedFile(topStack: string[], bundle: string) {
   return candidates[0].line;
 }
 
-function detectKeywords(input: string) {
+function detectKeywords(input) {
   const candidates = [
     'jscrash',
     'uncaught',
@@ -275,7 +255,7 @@ function detectKeywords(input: string) {
   return candidates.filter((item) => containsIgnoreCase(input, item));
 }
 
-function looksLikeCrash(input: string, anchor: number, errorType: string) {
+function looksLikeCrash(input, anchor, errorType) {
   if (errorType !== 'UnknownError') {
     return true;
   }
@@ -286,7 +266,7 @@ function looksLikeCrash(input: string, anchor: number, errorType: string) {
   return /(jscrash|uncaught|fatal|abort|crash)/i.test(input);
 }
 
-function pickExcerpt(lines: string[], anchor: number, bundle: string, processHint: string, limit: number) {
+function pickExcerpt(lines, anchor, bundle, processHint, limit) {
   if (anchor >= 0) {
     const around = sliceWindow(lines, anchor, 5, 18);
     if (around.length) {
@@ -306,7 +286,7 @@ function pickExcerpt(lines: string[], anchor: number, bundle: string, processHin
     return lines.slice(Math.max(0, lines.length - limit));
   }
 
-  const out: string[] = [];
+  const out = [];
   for (const item of scored.slice(Math.max(0, scored.length - limit))) {
     out.push(item.line);
   }
@@ -314,7 +294,7 @@ function pickExcerpt(lines: string[], anchor: number, bundle: string, processHin
   return unique(out).slice(0, limit);
 }
 
-export function buildNextActionText(report: CrashReport) {
+export function buildNextActionText(report) {
   if (report.status === 'no_crash_signature') {
     return 'Ask for a fuller crash log, a clearer repro, or optionally collect recent faultlogger or hilog evidence if needed.';
   }
@@ -325,7 +305,7 @@ export function buildNextActionText(report: CrashReport) {
   return 'Inspect the top stack frames first and make a minimal fix. If the stack is too weak, optionally collect more runtime evidence before broader code reading.';
 }
 
-export function formatCrashReportText(report: CrashReport) {
+export function formatCrashReportText(report) {
   return [
     report.status === 'detected' ? 'Crash signature detected.' : 'No clear crash signature detected.',
     `source: ${report.source}`,
@@ -348,12 +328,12 @@ export function formatCrashReportText(report: CrashReport) {
 }
 
 export function buildCrashReport(
-  input: string,
-  source: string,
-  device: string,
-  bundleName: string,
-  processHint: string,
-): CrashReport {
+  input,
+  source,
+  device,
+  bundleName,
+  processHint,
+) {
   const normalized = trim(input);
   const lines = cleanLines(normalized);
   const bundle = detectBundle(normalized, bundleName);

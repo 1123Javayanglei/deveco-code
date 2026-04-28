@@ -16,11 +16,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc';
-import { printKv, toErrorMessage } from './shared/utils';
+import fsp from 'node:fs/promises';
+import { resolveHdcOrThrow, runHdc, targetArgs } from './shared/hdc.mjs';
+import { printKv, toErrorMessage } from './shared/utils.mjs';
 
-function parseArgs(argv: string[]) {
-  const map = new Map<string, string>();
+function parseArgs(argv) {
+  const map = new Map();
   const optionalKeys = new Set(['device-id']);
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -55,11 +56,11 @@ function parseArgs(argv: string[]) {
   };
 }
 
-function normalizeRemoteName(name: string) {
+function normalizeRemoteName(name) {
   return name.endsWith('.log') ? name : `${name}.log`;
 }
 
-function printFetchFailed(faultlogName: string, remotePath: string, nextAction: string) {
+function printFetchFailed(faultlogName, remotePath, nextAction) {
   printKv({
     status: 'fetch_failed',
     faultlog_name: faultlogName,
@@ -69,25 +70,25 @@ function printFetchFailed(faultlogName: string, remotePath: string, nextAction: 
   });
 }
 
-async function recvFaultlog(hdc: string, deviceId: string, remotePath: string, localPath: string) {
+async function recvFaultlog(hdc, deviceId, remotePath, localPath) {
   const args = [hdc, ...targetArgs(deviceId), 'file', 'recv', remotePath, localPath];
   const out = await runHdc(args);
   if (out.exitCode !== 0) {
     throw new Error(out.stderr || out.stdout || `hdc file recv failed (code=${out.exitCode})`);
   }
 
-  if (!(await Bun.file(localPath).exists())) {
+  await fsp.access(localPath).catch(() => {
     throw new Error('Local file missing after recv.');
-  }
+  });
 }
 
-function printFetched(faultlogName: string, remotePath: string, localPath: string) {
+function printFetched(faultlogName, remotePath, localPath) {
   printKv({
     status: 'fetched',
     faultlog_name: faultlogName,
     remote_path: remotePath,
     local_path: localPath,
-    next_action: `parse-jscrash-log.ts --log-file "${localPath}"`,
+    next_action: `parse-jscrash-log.mjs --log-file "${localPath}"`,
   });
 }
 

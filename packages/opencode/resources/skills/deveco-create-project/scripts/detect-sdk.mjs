@@ -1,31 +1,15 @@
 import path from 'node:path';
-
-type Source = 'sdk_pkg' | 'oh_uni_package' | 'fallback';
-
-type Result = {
-  apiLevel: number;
-  source: Source;
-  detectedFrom?: string;
-  devecoHome?: string;
-};
-
-type Pkg = {
-  data?: {
-    apiVersion?: unknown;
-  };
-  apiVersion?: unknown;
-};
+import fs from 'node:fs/promises';
 
 function envPath() {
   return String(process.env.DEVECO_HOME || '').trim();
 }
 
-async function isDir(file: string) {
+async function isDir(file) {
   if (!file) {
     return false;
   }
-  return Bun.file(file)
-    .stat()
+  return fs.stat(file)
     .then((info) => info.isDirectory())
     .catch(() => false);
 }
@@ -50,7 +34,7 @@ function defaults() {
   ].filter(Boolean);
 }
 
-function nodePath(home: string) {
+function nodePath(home) {
   return process.platform === 'win32'
     ? path.join(home, 'tools', 'node', 'node.exe')
     : path.join(home, 'tools', 'node', 'bin', 'node');
@@ -58,24 +42,24 @@ function nodePath(home: string) {
 
 async function findDevEcoHome() {
   const env = envPath();
-  if (env && (await isDir(env)) && (await Bun.file(nodePath(env)).exists())) {
+  if (env && (await isDir(env)) && (await exists(nodePath(env)))) {
     return env;
   }
   for (const item of defaults()) {
     if (!(await isDir(item))) {
       continue;
     }
-    if (await Bun.file(nodePath(item)).exists()) {
+    if (await exists(nodePath(item))) {
       return item;
     }
   }
 }
 
-function ok(apiLevel: number) {
+function ok(apiLevel) {
   return Number.isInteger(apiLevel) && apiLevel >= 17 && apiLevel <= 22;
 }
 
-function parse(raw: unknown) {
+function parse(raw) {
   if (typeof raw !== 'string') {
     return;
   }
@@ -86,15 +70,18 @@ function parse(raw: unknown) {
   return apiLevel;
 }
 
-async function json(file: string) {
-  const item = Bun.file(file);
-  if (!(await item.exists())) {
+async function json(file) {
+  if (!(await exists(file))) {
     return;
   }
-  return item.json() as Promise<Pkg>;
+  return JSON.parse(await fs.readFile(file, 'utf8'));
 }
 
-export async function detectApiLevel(): Promise<Result> {
+async function exists(file) {
+  return fs.access(file).then(() => true).catch(() => false);
+}
+
+export async function detectApiLevel() {
   const home = await findDevEcoHome().catch(() => undefined);
   if (!home) {
     return {

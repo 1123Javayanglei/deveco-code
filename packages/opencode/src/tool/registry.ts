@@ -13,7 +13,6 @@ import { WriteTool } from "./write"
 import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
 import { HdcLogTool } from "./hdc_log"
-import { JscrashReportTool } from "./jscrash_report"
 import { SwitchCwdTool } from "./switch-cwd"
 import { OhKnowledgeTool } from "./oh_knowledge"
 import { Auth } from "@/auth"
@@ -124,7 +123,6 @@ export const layer: Layer.Layer<
     const patchtool = yield* ApplyPatchTool
     const skilltool = yield* SkillTool
     const hdclog = yield* HdcLogTool
-    const jscrash = yield* JscrashReportTool
     const switchcwd = yield* SwitchCwdTool
     const ohknowledge = yield* OhKnowledgeTool
     const agent = yield* Agent.Service
@@ -219,7 +217,6 @@ export const layer: Layer.Layer<
           planwrite: Tool.init(planwrite),
           planenter: Tool.init(planenter),
           hdclog: Tool.init(hdclog),
-          jscrash: Tool.init(jscrash),
           switchcwd: Tool.init(switchcwd),
           ohknowledge: Tool.init(ohknowledge),
         })
@@ -244,7 +241,6 @@ export const layer: Layer.Layer<
             tool.patch,
             // HarmonyOS tools
             tool.hdclog,
-            tool.jscrash,
             tool.switchcwd,
             tool.ohknowledge,
             ...(Flag.CODEGENIE_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),

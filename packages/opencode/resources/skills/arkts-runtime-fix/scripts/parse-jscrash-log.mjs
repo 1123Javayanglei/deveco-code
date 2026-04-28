@@ -14,16 +14,17 @@
  */
 
 import process from 'node:process';
+import fs from 'node:fs/promises';
 import {
   buildCrashReport,
   buildNextActionText,
   formatCrashReportText,
-} from './shared/jscrash-parse';
-import { printKv, toErrorMessage } from './shared/utils';
+} from './shared/jscrash-parse.mjs';
+import { printKv, toErrorMessage } from './shared/utils.mjs';
 
-function parseArgs(argv: string[]) {
-  const map = new Map<string, string>();
-  const flags = new Set<string>();
+function parseArgs(argv) {
+  const map = new Map();
+  const flags = new Set();
   const optionalKeys = new Set(['bundle-name', 'process-hint', 'device', 'source']);
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -66,13 +67,12 @@ function parseArgs(argv: string[]) {
   };
 }
 
-async function readLogText(logFile: string) {
-  const file = Bun.file(logFile);
-  if (!(await file.exists())) {
+async function readLogText(logFile) {
+  try {
+    return await fs.readFile(logFile, 'utf8');
+  } catch {
     throw new Error(`log file not found: ${logFile}`);
   }
-
-  return file.text();
 }
 
 async function main() {

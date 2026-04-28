@@ -13,14 +13,9 @@
  * limitations under the License.
  */
 
-export type JscrashFaultlogEntry = {
-  name: string;
-  timestampMs: number | null;
-};
-
 const JSCRASH_FILE_RE = /\bjscrash-[A-Za-z0-9._-]+\.log\b/g;
 
-export function extractJscrashFaultlogNames(text: string): string[] {
+export function extractJscrashFaultlogNames(text) {
   const matches = text.match(JSCRASH_FILE_RE);
   if (!matches?.length) {
     return [];
@@ -29,7 +24,7 @@ export function extractJscrashFaultlogNames(text: string): string[] {
   return [...new Set(matches.map((item) => item.trim()))];
 }
 
-function parseTrailingTimestampMs(name: string): number | null {
+function parseTrailingTimestampMs(name) {
   const match = /^jscrash-(.+)-(\d{10,16})\.log$/i.exec(name);
   if (!match?.[2]) {
     return null;
@@ -48,18 +43,18 @@ function parseTrailingTimestampMs(name: string): number | null {
   return n;
 }
 
-export function parseFaultlogEntry(name: string): JscrashFaultlogEntry {
+export function parseFaultlogEntry(name) {
   return {
     name,
     timestampMs: parseTrailingTimestampMs(name),
   };
 }
 
-function normalizeBundleToken(bundleName: string) {
+function normalizeBundleToken(bundleName) {
   return bundleName.trim().toLowerCase();
 }
 
-export function faultlogMatchesBundle(name: string, bundleName: string) {
+export function faultlogMatchesBundle(name, bundleName) {
   const token = normalizeBundleToken(bundleName);
   if (!token) {
     return true;
@@ -73,7 +68,7 @@ export function faultlogMatchesBundle(name: string, bundleName: string) {
   return lower.includes(token);
 }
 
-export function filterFaultlogsByBundle(names: string[], bundleName: string) {
+export function filterFaultlogsByBundle(names, bundleName) {
   if (!bundleName.trim()) {
     return names;
   }
@@ -82,7 +77,7 @@ export function filterFaultlogsByBundle(names: string[], bundleName: string) {
   return filtered.length ? filtered : names;
 }
 
-export function sortFaultlogsByRecency(names: string[]) {
+export function sortFaultlogsByRecency(names) {
   const withMeta = names.map((name) => {
     const entry = parseFaultlogEntry(name);
     return { name, timestampMs: entry.timestampMs };
@@ -107,7 +102,7 @@ export function sortFaultlogsByRecency(names: string[]) {
   return withMeta.map((item) => item.name);
 }
 
-export function selectWithinMaxAge(names: string[], maxAgeMinutes: number, nowMs: number) {
+export function selectWithinMaxAge(names, maxAgeMinutes, nowMs) {
   if (!Number.isFinite(maxAgeMinutes) || maxAgeMinutes <= 0) {
     return names;
   }
