@@ -14,8 +14,9 @@
 | `packages/opencode/src/agent/prompt/debug.txt` | 新增 | 假设驱动调试 prompt（直接复制） |
 | `packages/opencode/src/agent/prompt/explore.txt` | 替换 | 通用搜索 → HarmonyOS/ArkTS 专业搜索（直接覆盖） |
 | `packages/opencode/src/agent/agent.ts` | 修改 | 新增 4 个 prompt import + 修改/新增 4 个 Agent 定义 |
+| `packages/opencode/src/cli/cmd/tui/component/dialog-agent.tsx` | 修改 | `/agents` 列表优先展示 `description`，不再对 `native` Agent 固定显示 `"native"` |
 
-**总计**: 新增 4 个文件 + 替换 1 个文件 + 修改 1 个文件。
+**总计**: 新增 4 个文件 + 替换 1 个文件 + 修改 2 个文件（含后续 TUI 修正）。
 
 ---
 
@@ -225,3 +226,31 @@ debug: {
 1. **类型检查**: `bun run typecheck` 无新增错误
 2. **构建验证**: `bun run build --single` 成功
 3. **运行时验证**: 启动 opencode，`/agent list` 包含 build、plan、Ask、debug
+
+---
+
+## 6. TUI：`/agents` 与内置 Agent 说明文案（后续修正）
+
+### 6.1 背景
+
+TUI 中通过斜杠命令 **`/agents`**（或等价入口 **Switch agent**）打开 `DialogAgent`，列出可选 primary Agent。  
+原先实现为：若 `Agent.Info.native === true`，则选项的副标题**固定为字符串** `"native"`，**忽略** `description` 字段。
+
+HarmonyOS 迁移后在 `agent.ts` 中为 `build`、`plan` 等填写了 ArkTS 相关 `description`，但对话框仍只显示 `"native"`，用户无法从列表中区分用途。
+
+### 6.2 行为变更
+
+| 项目 | 修改前 | 修改后 |
+|------|--------|--------|
+| 副标题（`DialogSelect` 的 `description`） | `native ? "native" : description` | `description` 非空则展示 `description`；**仅当**无描述且为内置时回退 `"native"` |
+
+实现逻辑（要点）：`item.description?.trim() || (item.native ? "native" : undefined)`。
+
+### 6.3 涉及文件
+
+- `packages/opencode/src/cli/cmd/tui/component/dialog-agent.tsx` — `DialogAgent` 内 `options` 的 `description` 映射。
+
+### 6.4 验证建议（手动）
+
+1. 启动 CLI/TUI，输入 `/agents`。
+2. 确认 `build`、`plan` 等行的副标题为 `agent.ts` 中配置的英文描述（例如 *ArkTS build-focused primary agent.*），而非固定 `"native"`。
