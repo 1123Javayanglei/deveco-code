@@ -27,7 +27,6 @@ import { BashTool } from "../../tool/bash"
 import { TodoWriteTool } from "../../tool/todo"
 import { Locale } from "../../util"
 import { AppRuntime } from "@/effect/app-runtime"
-import { formatTranscript, type MessageWithParts } from "./tui/util/transcript"
 
 type ToolProps<T> = {
   input: Tool.InferParameters<T>
@@ -300,19 +299,8 @@ export const RunCommand = cmd({
         describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
         default: false,
       })
-      .option("export-md", {
-        type: "string",
-        describe: "export the completed session transcript to a Markdown file",
-      })
-      .option("export-include-runtime-context", {
-        type: "boolean",
-        describe: "include captured final system prompt and tool definitions in --export-md output",
-        default: false,
-      })
   },
   handler: async (args) => {
-    if (args.exportIncludeRuntimeContext && !args.attach) process.env.CODEGENIE_CAPTURE_RUNTIME_CONTEXT = "1"
-
     let message = [...args.message, ...(args["--"] || [])]
       .map((arg) => (arg.includes(" ") ? `"${arg.replace(/"/g, '\\"')}"` : arg))
       .join(" ")
@@ -415,38 +403,6 @@ export const RunCommand = cmd({
       if (!res.error && "data" in res && res.data?.share?.url) {
         UI.println(UI.Style.TEXT_INFO_BOLD + "~  " + res.data.share.url)
       }
-    }
-
-    function messagesForExport(messages: MessageWithParts[]) {
-      if (args.exportIncludeRuntimeContext) return messages
-      return messages.map((msg) => {
-        if (msg.info.role === "user") return msg
-        const { runtime: _, ...info } = msg.info
-        return { ...msg, info }
-      })
-    }
-
-    async function exportMarkdown(sdk: OpencodeClient, sessionID: string) {
-      if (!args.exportMd) return
-
-      const sessionInfo = await sdk.session.get({ sessionID }, { throwOnError: true }).then((result) => result.data)
-      const messages = await sdk.session.messages({ sessionID }, { throwOnError: true }).then((result) => result.data ?? [])
-      if (!sessionInfo) {
-        UI.error(`Session not found: ${sessionID}`)
-        process.exit(1)
-      }
-
-      const output = path.resolve(process.cwd(), args.exportMd)
-      await Bun.write(
-        output,
-        formatTranscript(sessionInfo, messagesForExport(messages), {
-          thinking: false,
-          toolDetails: true,
-          assistantMetadata: false,
-          includeRuntimeContext: args.exportIncludeRuntimeContext,
-        }),
-      )
-      if (args.format !== "json") UI.println(UI.Style.TEXT_SUCCESS_BOLD + `Exported session transcript to ${output}` + UI.Style.TEXT_NORMAL)
     }
 
     async function execute(sdk: OpencodeClient) {
@@ -675,7 +631,7 @@ export const RunCommand = cmd({
       }
       await share(sdk, sessionID)
 
-      const loopPromise = loop().catch((e) => {
+      loop().catch((e) => {
         console.error(e)
         process.exit(1)
       })
@@ -699,8 +655,6 @@ export const RunCommand = cmd({
           parts: [...files, { type: "text", text: message }],
         })
       }
-      await loopPromise
-      await exportMarkdown(sdk, sessionID)
     }
 
     if (args.attach) {

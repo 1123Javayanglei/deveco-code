@@ -526,16 +526,6 @@ export const SubtaskPartInput = Schema.Struct({
   .pipe(withStatics((s) => ({ zod: zod(s) })))
 export type SubtaskPartInput = Types.DeepMutable<Schema.Schema.Type<typeof SubtaskPartInput>>
 
-const RuntimeTool = Schema.Struct({
-  description: Schema.optional(Schema.String),
-  inputSchema: Schema.optional(Schema.Any),
-})
-
-const RuntimeContext = Schema.Struct({
-  system: Schema.Array(Schema.String),
-  tools: Schema.Record(Schema.String, RuntimeTool),
-})
-
 export const Assistant = Schema.Struct({
   ...messageBase,
   role: Schema.Literal("assistant"),
@@ -569,7 +559,6 @@ export const Assistant = Schema.Struct({
     }),
   }),
   structured: Schema.optional(Schema.Any),
-  runtime: Schema.optional(RuntimeContext),
   variant: Schema.optional(Schema.String),
   finish: Schema.optional(Schema.String),
 })

@@ -6,7 +6,6 @@ export type TranscriptOptions = {
   thinking: boolean
   toolDetails: boolean
   assistantMetadata: boolean
-  includeRuntimeContext?: boolean
   providers?: Provider[]
 }
 
@@ -20,14 +19,7 @@ export type SessionInfo = {
 }
 
 export type MessageWithParts = {
-  info:
-    | UserMessage
-    | (AssistantMessage & {
-        runtime?: {
-          system: string[]
-          tools: Record<string, { description?: string; inputSchema?: unknown }>
-        }
-      })
+  info: UserMessage | AssistantMessage
   parts: Part[]
 }
 
@@ -52,7 +44,7 @@ export function formatTranscript(
 }
 
 export function formatMessage(
-  msg: MessageWithParts["info"],
+  msg: UserMessage | AssistantMessage,
   parts: Part[],
   options: TranscriptOptions,
   providers?: Provider[] | ReadonlyMap<string, Provider>,
@@ -63,7 +55,6 @@ export function formatMessage(
     result += `## User\n\n`
   } else {
     result += formatAssistantHeader(msg, options.assistantMetadata, providers ?? options.providers)
-    if (options.includeRuntimeContext && msg.runtime) result += formatRuntimeContext(msg.runtime)
   }
 
   for (const part of parts) {
@@ -71,25 +62,6 @@ export function formatMessage(
   }
 
   return result
-}
-
-function formatRuntimeContext(runtime: NonNullable<Extract<MessageWithParts["info"], { role: "assistant" }>["runtime"]>) {
-  return [
-    `### Runtime Context`,
-    ``,
-    `#### Final System Prompt`,
-    ``,
-    "```text",
-    runtime.system.join("\n\n"),
-    "```",
-    ``,
-    `#### Tools`,
-    ``,
-    "```json",
-    JSON.stringify(runtime.tools, null, 2),
-    "```",
-    ``,
-  ].join("\n")
 }
 
 export function formatAssistantHeader(
