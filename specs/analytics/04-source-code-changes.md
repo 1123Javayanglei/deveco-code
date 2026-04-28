@@ -17,10 +17,9 @@
 | `src/plugin/analytics/storage.ts` | 新增/修改 | 119+ | 持久化存储，单文件 `analytics.json` 加密落盘（含 uid/userid/pendingEvents） |
 | `src/security/local-crypto.ts` | 新增 | ~200 | 本地 KEK/DEK 分层密钥与通用加解密 |
 | `src/plugin/analytics/types.ts` | 新增 | 126 | 类型定义 |
-| `src/plugin/codegenie.ts` | 修改 | +23 | getSession() 增加 JWT fallback；导出 sessionChatIdMap 用于 chatId 稳定化 |
-| `src/session/llm.ts` | 修改 | +12 | 按 sessionID 生成稳定 chatId，写入 sessionChatIdMap 并记录日志 |
+| `src/plugin/codegenie.ts` | 修改 | +23 | getSession() 增加 JWT fallback |
 
-**总计**: 新增 5 个文件，修改 2 个文件。
+**总计**: 新增 5 个文件，修改 1 个文件。
 
 ---
 
@@ -208,75 +207,6 @@ async getSession(): Promise<CodeGenieSession | null> {
 ```
 
 **修改原因**: 进程重启后内存 userInfo 为 null，需要从磁盘加载 JWT 并解析 userId
-
----
-
-### 3.3 codegenie.ts 导出 sessionChatIdMap
-
-**文件**: `src/plugin/codegenie.ts`
-
-**修改类型**: 新增导出
-
-**修改内容**:
-
-```typescript
-export const sessionChatIdMap = new Map<string, string>()
-```
-
-**修改原因**: LLM 层需要将 sessionID 到 chatId 的映射缓存于此，plugin fetch 拦截时可按 session 标识查找复用同一 chatId
-
-**影响范围**: session/llm.ts 和 plugin fetch 拦截中的 Chat-Id header
-
----
-
-### 3.4 codegenie.ts Chat-Id 稳定化
-
-**文件**: `src/plugin/codegenie.ts`
-
-**修改类型**: 修改
-
-**修改内容**:
-
-```typescript
-// 修改前
-headers.set("Chat-Id", crypto.randomUUID().replace(/-/g, ""))
-
-// 修改后
-const sessionId = headers.get("x-codegenie-session") || headers.get("x-session-affinity")
-const chatId = (sessionId && sessionChatIdMap.get(sessionId)) || crypto.randomUUID().replace(/-/g, "")
-headers.set("Chat-Id", chatId)
-```
-
-**修改原因**: 原实现每次请求生成随机 Chat-Id，后端无法关联同一 session 的多轮请求。改为优先从 sessionChatIdMap 查找已生成的 chatId，实现会话级稳定
-
-**影响范围**: 所有发往后端的 API 请求
-
----
-
-### 3.5 llm.ts 按 sessionID 生成并缓存 chatId
-
-**文件**: `src/session/llm.ts`
-
-**修改类型**: 修改
-
-**修改内容**:
-
-```typescript
-import crypto from "crypto"
-import { sessionChatIdMap } from "@/plugin/codegenie"
-
-// 在 run 函数内：
-let chatId = sessionChatIdMap.get(input.sessionID)
-if (!chatId) {
-  chatId = crypto.randomUUID().replace(/-/g, "")
-  sessionChatIdMap.set(input.sessionID, chatId)
-}
-// log.tag("chatId", chatId) 并在 info 中输出 chatId
-```
-
-**修改原因**: LLM 层作为 session 的入口，统一生成 chatId 并写入 sessionChatIdMap，确保 plugin 层 fetch 拦截时可复用
-
-**影响范围**: 每次 LLM stream 请求
 
 **影响范围**: 打点系统获取 userid
 
