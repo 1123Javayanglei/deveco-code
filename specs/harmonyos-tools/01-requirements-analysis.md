@@ -11,12 +11,12 @@
 
 ### 1.1 目的
 
-本文档描述将 codegenie-old 仓库中 HarmonyOS 开发辅助工具和 Plan 工具迁移到 codegenie-cli 的需求。迁移核心挑战在于框架适配：codegenie-old 使用 async/await 模式，codegenie-cli 使用 Effect-TS 函数式框架。
+本文档描述将 codegenie-old 仓库中 HarmonyOS 开发辅助工具和 Plan 工具迁移到 codegenie-cli 的需求。迁移核心挑战在于框架适配：codegenie-old 使用 async/await 模式，codegenie-cli 使用 Effect-TS 函数式框架。2026-04-28 起，原全局 `jscrash_report` 不再作为内置工具保留，其能力下沉到 `arkts-runtime-fix` Skill 私有脚本。
 
 ### 1.2 范围
 
 **包含**:
-- 4 个 HarmonyOS 工具：`hdc_log`、`jscrash_report`、`oh_knowledge`、`switch_cwd`
+- 当前保留 3 个 HarmonyOS 全局工具：`hdc_log`、`oh_knowledge`、`switch_cwd`
 - 2 个 Plan 工具：`plan_enter`、`plan_write`（`plan_exit` 已存在，统一管理在 plan.ts）
 - lib 工具库：`env.ts`、`harmony_napi.ts`、`session-cwd.ts`、`mcp-bridge.d.ts`、`emulator_tools.json`
 - 工具描述文件（*.txt）
@@ -27,6 +27,7 @@
 - MCP-bridge 原生模块编译
 - DevEco Studio 集成测试
 - `check_env_variable` 工具迁移
+- `jscrash_report` 全局工具保留或重新引入（已下沉到 `arkts-runtime-fix/scripts/jscrash-report.mjs`）
 
 ### 1.3 假设和约束
 
@@ -55,7 +56,7 @@
 
 ### 2.1 系统定位
 
-HarmonyOS 工具集是 codegenie-cli 面向 HarmonyOS 开发者的核心功能，提供设备日志采集、崩溃分析、知识检索、项目切换等能力。Plan 工具支持规划-构建双模式开发流程。
+HarmonyOS 工具集是 codegenie-cli 面向 HarmonyOS 开发者的核心功能，提供设备日志采集、知识检索、项目切换等通用能力。崩溃分析属于 `arkts-runtime-fix` Skill 私有 workflow。Plan 工具支持规划-构建双模式开发流程。
 
 ### 2.2 系统边界
 
@@ -65,7 +66,6 @@ codegenie-cli
 │   ├── 内置工具 (bash, read, edit, write, ...)
 │   ├── HarmonyOS 工具
 │   │   ├── hdc_log         (设备日志采集)
-│   │   ├── jscrash_report  (崩溃日志分析)
 │   │   ├── oh_knowledge    (知识库检索) → Auth.Service
 │   │   └── switch_cwd      (项目目录切换)
 │   ├── Plan 工具
@@ -135,16 +135,16 @@ codegenie-old 已有成熟的 HarmonyOS 开发工具集，codegenie-cli 作为�
                        │
           ┌────────────┼────────────┐
           ▼            ▼            ▼
-     设备交互      日志分析      知识检索
-     (hdc_log,     (jscrash     (oh_knowledge
-      switch_cwd)   _report)     → OAuth 认证)
+     设备交互      Skill 私有分析      知识检索
+     (hdc_log,     (arkts-runtime     (oh_knowledge
+      switch_cwd)   -fix script)       → OAuth 认证)
 ```
 
 #### 4.1.2 业务规则
 
 | 规则编号 | 规则名称 | 规则描述 | 优先级 |
 |----------|----------|----------|--------|
-| BR-001 | DevEco 路径检测 | hdc_log/jscrash_report 执行前需定位 DevEco 安装路径 | 高 |
+| BR-001 | DevEco 路径检测 | hdc_log 执行前需定位 DevEco 安装路径；runtime-fix 私有脚本自行定位 hdc | 高 |
 | BR-002 | OAuth 认证 | oh_knowledge 需有效 OAuth token 才能调用知识库 API | 高 |
 | BR-003 | Harmony 项目识别 | switch_cwd 校验目标目录包含 AppScope/app.json5 或 build-profile.json5 + oh-package.json5 | 中 |
 | BR-004 | Plan 模式切换 | plan_enter/plan_exit 需用户确认后才切换 agent | 中 |
@@ -174,9 +174,9 @@ codegenie-old 已有成熟的 HarmonyOS 开发工具集，codegenie-cli 作为�
 
 | 项目 | 描述 |
 |------|------|
-| 场景描述 | 应用运行时崩溃，开发者使用 jscrash_report 分析原因 |
+| 场景描述 | 应用运行时崩溃，开发者通过 `arkts-runtime-fix` Skill 私有脚本分析原因 |
 | 前置条件 | 崩溃日志可用（crash_log 参数直接提供，或从设备自动采集） |
-| 操作步骤 | 1. AI 调用 jscrash_report(crash_log="..." 或 device_id="...")<br>2. 工具分析错误类型、定位 crash anchor<br>3. 提取 top stack、suspected file<br>4. 生成结构化报告（含 next_action） |
+| 操作步骤 | 1. AI 加载 `arkts-runtime-fix` Skill<br>2. 调用 `scripts/jscrash-report.mjs` 或 `parse-jscrash-log.mjs` 解析日志<br>3. 脚本分析错误类型、定位 crash anchor<br>4. 提取 top stack、suspected file 并生成结构化报告（含 next_action） |
 | 预期结果 | 返回崩溃分析报告：错误类型、堆栈、疑似文件、下一步建议 |
 | 异常处理 | 无 crash signature → 建议用 hdc_log 获取更完整日志 |
 
@@ -212,7 +212,7 @@ codegenie-old 已有成熟的 HarmonyOS 开发工具集，codegenie-cli 作为�
 
 | 路径编号 | 路径描述 | 关键节点 | 风险点 |
 |----------|----------|----------|--------|
-| KP-001 | 设备日志 → 崩溃分析 | hdc_log → jscrash_report | DevEco 路径未找到 |
+| KP-001 | 设备日志 → 崩溃分析 | hdc_log 或 runtime-fix 私有脚本采集 → arkts-runtime-fix 解析 | DevEco/hdc 路径未找到 |
 | KP-002 | 知识检索 → 问题解决 | oh_knowledge → OAuth → API | OAuth token 过期 |
 | KP-003 | 项目创建 → 切换 → 构建 | create-project skill → switch_cwd → NAPI 工具 | 项目结构不合规 |
 
@@ -260,7 +260,7 @@ codegenie-old 已有成熟的 HarmonyOS 开发工具集，codegenie-cli 作为�
 | 需求编号 | 需求名称 | 需求描述 | 优先级 | 来源 |
 |----------|----------|----------|--------|------|
 | FR-001 | hdc_log 工具迁移 | Effect 适配，支持 collect/clear/list_devices 三种操作 | P1 | codegenie-old |
-| FR-002 | jscrash_report 工具迁移 | Effect 适配，支持崩溃日志分析（直接提供或从设备采集） | P1 | codegenie-old |
+| FR-002 | jscrash_report 能力下沉 | 不保留全局工具；崩溃日志分析由 `arkts-runtime-fix` 私有 Node 脚本提供 | P1 | 默认 Skill 重构 |
 | FR-003 | oh_knowledge 工具迁移 | Effect + Auth.Service 适配，支持鸿蒙知识库检索 | P1 | codegenie-old |
 | FR-004 | switch_cwd 工具迁移 | Effect + external-directory 适配，支持项目目录切换 | P1 | codegenie-old |
 | FR-005 | plan_write 工具迁移 | Effect 适配，支持写入计划文件到 .opencode/plans/ | P2 | codegenie-old |
@@ -313,7 +313,6 @@ codegenie-old 已有成熟的 HarmonyOS 开发工具集，codegenie-cli 作为�
 ```
 FR-007 (lib 工具库)
   ├── FR-001 (hdc_log) ──┐
-  ├── FR-002 (jscrash)  ──┤
   └── FR-008 (napi)     ──┤
                           ├── FR-009 (注册)
 FR-003 (oh_knowledge) ───┤
@@ -328,13 +327,13 @@ FR-006 (plan_enter)  ────┘
 
 ### 6.1 系统定位
 
-面向 HarmonyOS 应用开发者，通过 AI 助手提供设备调试、崩溃分析、知识检索等能力。
+面向 HarmonyOS 应用开发者，通过 AI 助手提供设备调试、知识检索、项目切换等通用工具能力；崩溃分析由默认 Skill 私有脚本承接。
 
 ### 6.2 系统可靠性
 
 | 指标 | 要求 | 说明 |
 |------|------|------|
-| 容错 | DevEco 未安装时优雅降级 | hdc_log/jscrash_report 给出明确错误提示 |
+| 容错 | DevEco 未安装时优雅降级 | hdc_log 和 runtime-fix 私有脚本给出明确错误提示 |
 | 认证 | OAuth token 失效时明确提示 | oh_knowledge 返回授权失败信息 |
 
 ### 6.3 安全隐私
@@ -361,7 +360,6 @@ FR-006 (plan_enter)  ────┘
 | 影响模块 | 影响类型 | 影响程度 | 影响描述 |
 |----------|----------|----------|----------|
 | `src/tool/hdc_log.ts` | 新增 | 高 | HarmonyOS 设备日志工具 |
-| `src/tool/jscrash_report.ts` | 新增 | 高 | 崩溃分析工具 |
 | `src/tool/oh_knowledge.ts` | 新增 | 高 | 知识库检索工具 |
 | `src/tool/switch-cwd.ts` | 新增 | 中 | 项目目录切换工具 |
 | `src/tool/plan.ts` | 修改 | 中 | 新增 PlanWriteTool、PlanEnterTool |
@@ -408,3 +406,4 @@ FR-006 (plan_enter)  ────┘
 |------|------|------|----------|
 | 1.0 | 2026-04-22 | zhangyuchen | 初始版本 |
 | 1.1 | 2026-04-23 | zhangyuchen | 完善用户场景、功能依赖、系统影响分析 |
+| 1.2 | 2026-04-28 | Codex | 同步 `jscrash_report` 从全局工具下沉到 `arkts-runtime-fix` 私有脚本 |

@@ -11,13 +11,13 @@
 
 ### 1.1 功能简介
 
-将 codegenie-old 中的 7 个工具（4 个 HarmonyOS + 3 个 Plan）迁移到 codegenie-cli，核心工作是 async/await → Effect-TS 框架适配。
+将 codegenie-old 中的 HarmonyOS/Plan 工具迁移到 codegenie-cli，核心工作是 async/await → Effect-TS 框架适配。2026-04-28 后，全局 `jscrash_report` 工具被删除，崩溃分析能力下沉到 `arkts-runtime-fix` 私有脚本。
 
 ### 1.2 设计目标
 
 | 目标类型 | 目标描述 | 衡量标准 |
 |----------|----------|----------|
-| 功能目标 | 工具功能与 codegenie-old 完全对等 | 所有 action 正常工作 |
+| 功能目标 | 保留通用工具能力；专用崩溃分析转入对应 Skill 私有 workflow | 当前保留工具正常工作，tool registry 不再包含 `jscrash_report` |
 | 质量目标 | 类型安全，tsc --noEmit 零新增错误 | 类型检查通过 |
 | 架构目标 | 遵循 codegenie-cli 现有 Tool 模式 | 代码风格与内置工具一致 |
 
@@ -38,7 +38,7 @@
 迁移分为三类处理：
 
 1. **纯工具函数**（直接复制）：`lib/env.ts`、`lib/session-cwd.ts`、`lib/mcp-bridge.d.ts`、`lib/emulator_tools.json`
-2. **Effect 适配工具**（重写 execute）：`hdc_log`、`jscrash_report`、`oh_knowledge`、`switch_cwd`、`plan_write`、`plan_enter`
+2. **Effect 适配工具**（重写 execute）：`hdc_log`、`oh_knowledge`、`switch_cwd`、`plan_write`、`plan_enter`
 3. **注册与依赖**（修改）：`registry.ts` 添加工具注册 + `Auth.Service` Layer
 
 ### 2.2 技术架构
@@ -162,15 +162,16 @@ export const defaultLayer = layer.pipe(
 | Effect 模式 | `Effect.tryPromise(() => findDevEcoHome())` + `Effect.tryPromise(() => Bun.file(hdc).exists())` |
 | 错误处理 | DevEco 未找到 → throw Error；hdc 命令失败 → throw Error |
 
-### 4.2 jscrash_report
+### 4.2 jscrash_report（已下沉）
 
 | 项目 | 设计 |
 |------|------|
-| 工具 ID | `jscrash_report` |
-| 参数 | `crash_log?: string`, `device_id?: string`, `bundle_name?: string`, `process_hint?: string`, `lines: number` |
-| 依赖 | `lib/env.ts` |
-| 核心逻辑 | 纯函数分析器（detectErrorType、findCrashAnchor 等）直接复制 + execute Effect 包装 |
-| 特殊点 | 纯分析函数（~300 行）不依赖 Effect，仅 execute 包装层需适配 |
+| 工具 ID | 不再注册全局工具 |
+| 入口 | `packages/opencode/resources/skills/arkts-runtime-fix/scripts/jscrash-report.mjs` |
+| 参数 | `--log-text`、`--log-file`、`--bundle-name`、`--process-hint`、`--device-id`、`--lines`、`--include-text` |
+| 依赖 | Node 标准库；需要设备日志时由私有脚本自行查找 DevEco/hdc |
+| 核心逻辑 | 作为 `arkts-runtime-fix` 私有 workflow 解析文本/文件日志，或自动采集 hilog 后解析 |
+| 特殊点 | 不再扩大公共工具面；只在 runtime-fix Skill 指令中被调用 |
 
 ### 4.3 oh_knowledge
 
@@ -218,13 +219,11 @@ export const defaultLayer = layer.pipe(
 | 文件路径 | 操作 | 说明 |
 |----------|------|------|
 | `src/tool/hdc_log.ts` | 新增 | Effect 重写 |
-| `src/tool/jscrash_report.ts` | 新增 | Effect 重写 |
 | `src/tool/oh_knowledge.ts` | 新增 | Effect 重写 + Auth |
 | `src/tool/switch-cwd.ts` | 新增 | Effect 重写 |
 | `src/tool/plan.ts` | 修改 | 添加 PlanWriteTool + PlanEnterTool |
 | `src/tool/plan-write.txt` | 新增 | 描述文件 |
 | `src/tool/hdc-log.txt` | 新增 | 描述文件 |
-| `src/tool/jscrash-report.txt` | 新增 | 描述文件 |
 | `src/tool/switch-cwd.txt` | 新增 | 描述文件 |
 | `src/tool/lib/env.ts` | 新增 | 直接复制 |
 | `src/tool/lib/session-cwd.ts` | 新增 | 直接复制 |
@@ -245,3 +244,4 @@ export const defaultLayer = layer.pipe(
 | 版本 | 日期 | 作者 | 变更描述 |
 |------|------|------|----------|
 | 1.0 | 2026-04-22 | zhangyuchen | 初始版本 |
+| 1.1 | 2026-04-28 | Codex | 同步删除全局 `jscrash_report`，崩溃分析改由 runtime-fix 私有脚本提供 |

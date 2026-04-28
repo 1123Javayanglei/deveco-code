@@ -1,6 +1,6 @@
 # 特性文档索引
 
-**最后更新时间**: 2026-04-25
+**最后更新时间**: 2026-04-28
 
 ---
 
@@ -26,8 +26,8 @@
 | 002 | /feedback 与 /privacy 斜杠命令 | `feedback-privacy-commands` | ✅ | ✅ | - | - | ✅ | - | 2026-04-22 |
 | 003 | 配置迁移 (Config Migration) | `config-migration` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 2026-04-22 |
 | 004 | 发布系统改造 | `publish-system` | ✅ | ✅ | - | - | ✅ | - | 2026-04-22 |
-| 005 | Skills 迁移 | `skills-migration` | ✅ | ✅ | - | - | ✅ | - | 2026-04-22 |
-| 006 | HarmonyOS 工具迁移 | `harmonyos-tools` | ✅ | ✅ | - | - | ✅ | - | 2026-04-22 |
+| 005 | Skills 迁移 | `skills-migration` | ✅ | ✅ | - | - | ✅ | - | 2026-04-28 |
+| 006 | HarmonyOS 工具迁移 | `harmonyos-tools` | ✅ | ✅ | - | - | ✅ | - | 2026-04-28 |
 | 007 | HarmonyOS Agents 迁移 | `harmonyos-agents` | ✅ | ✅ | - | - | ✅ | - | 2026-04-22 |
 | 008 | 品牌增强 (Brand Enhancement) | `codegenie-brand-enhancement` | ✅ | ✅ | - | - | ✅ | - | 2026-04-22 |
 
@@ -39,6 +39,7 @@
 
 | 日期 | 操作 | 特性 | 描述 |
 |------|------|------|------|
+| 2026-04-28 | 更新 | 005-skills-migration, 006-harmonyos-tools | 同步默认 Skill 私有脚本 Node 化、`jscrash_report` 下沉与二进制资源嵌入修复 |
 | 2026-04-25 | 新增 | 008-codegenie-brand-enhancement | 补充遗漏的品牌增强特性索引 |
 | 2026-04-25 | 规范 | - | 重构文档体系：放弃数字编号，采用语义化文件名 |
 | 2026-04-25 | 更新 | - | 增加文档规范、教训记录列、补充 005-007 特性 |

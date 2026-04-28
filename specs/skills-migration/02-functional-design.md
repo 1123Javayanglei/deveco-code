@@ -27,7 +27,7 @@
 |------|------|----------|
 | 一致性 | 采用与 codegenie-old 相同的嵌入+提取机制 | defaults.ts 设计参照 codegenie-old |
 | 幂等性 | 版本未变时跳过提取 | 缓存版本检查 |
-| 最小侵入 | 仅新增文件，不修改已有 Skill Discovery 逻辑 | src/skill/index.ts 不变 |
+| 最小侵入 | 默认 Skill 接入阶段尽量复用已有 Skill Discovery；后续脚本运行时改造仅触达默认 Skill 资源、构建嵌入和提取逻辑 | src/skill/index.ts 不因脚本 Node 化继续修改 |
 
 ---
 
@@ -35,10 +35,11 @@
 
 ### 2.1 整体方案
 
-采用与 codegenie-old 完全一致的两阶段方案：
+采用与 codegenie-old 一致的两阶段方案，并在默认 Skill 脚本 Node 化后补充二进制资源处理：
 
-1. **构建时嵌入**：`build.ts` 读取 `resources/skills/` 下所有文件，序列化为 `Record<string, Record<string, string>>`，通过 Bun 的 `define` 选项嵌入为 `CODEGENIE_DEFAULT_SKILLS` 常量
-2. **运行时提取**：新增 `src/skill/defaults.ts`，首次运行时将嵌入的 Skill 文件提取到 `Global.Path.data/skills/`，Skill Discovery 扫描该目录
+1. **构建时嵌入**：`build.ts` 读取 `resources/skills/` 下所有文件，文本资源按 UTF-8 字符串嵌入，`.png` 等二进制资源按 base64 对象嵌入，通过 Bun 的 `define` 选项嵌入为 `CODEGENIE_DEFAULT_SKILLS` 常量。
+2. **运行时提取**：`src/skill/defaults.ts` 首次运行时将嵌入的 Skill 文件提取到 `Global.Path.data/skills/`；文本资源写字符串，base64 资源解码为 `Uint8Array` 写出，Skill Discovery 扫描该目录。
+3. **脚本执行**：默认 Skill 私有脚本发布为 Node ESM `.mjs`，用户侧只依赖 `node` 命令，不依赖 Bun、tsx、ts-node 或 TypeScript 运行能力。
 
 ### 2.2 技术架构
 
@@ -111,6 +112,8 @@ loadSkills() → 解析所有 SKILL.md → 注册到 state
 | Skill 版本缓存 | 避免每次启动都重新提取 | .version 文件比对，版本未变则跳过 |
 | Skill Discovery 集成 | 让 Skill Discovery 扫描提取目录 | 在 discoverSkills() 中新增 defaults.ensure() + scan() |
 | 构建时文件读取 | 递归读取 Skill 目录下所有文件 | walk() 函数遍历目录树 |
+| 二进制资源嵌入 | 模板图片等资源不可按文本嵌入 | 按扩展名识别二进制资源，使用 base64 嵌入并在提取时解码 |
+| 私有脚本运行时 | 默认 Skill 脚本需要在用户提取目录中独立执行 | 发布 `.mjs`，脚本内部只使用 Node 标准库和 Skill 目录内文件 |
 
 ---
 
@@ -118,7 +121,7 @@ loadSkills() → 解析所有 SKILL.md → 注册到 state
 
 ### 3.1 `resources/skills/`（新增）
 
-从 codegenie-old 复制 4 个 Skill 目录，文件内容完全一致：
+从 codegenie-old 复制 4 个 Skill 目录；当前实现已对脚本运行时和部分资源说明做产品化调整：
 
 ```
 resources/skills/
@@ -129,21 +132,23 @@ resources/skills/
 ├── arkts-runtime-fix/
 │   ├── SKILL.md
 │   └── scripts/
-│       ├── collect-hilog.ts
-│       ├── fetch-faultlog.ts
-│       ├── parse-jscrash-log.ts
-│       ├── probe-faultlogger.ts
+│       ├── jscrash-report.mjs
+│       ├── collect-hilog.mjs
+│       ├── fetch-faultlog.mjs
+│       ├── parse-jscrash-log.mjs
+│       ├── probe-faultlogger.mjs
 │       └── shared/
-│           ├── hdc.ts
-│           ├── jscrash-faultlogger.ts
-│           ├── jscrash-parse.ts
-│           └── utils.ts
+│           ├── hdc.mjs
+│           ├── jscrash-faultlogger.mjs
+│           ├── jscrash-parse.mjs
+│           └── utils.mjs
 ├── arkui-knowledge/
 │   └── SKILL.md
 └── deveco-create-project/
     ├── SKILL.md
     ├── scripts/
-    │   └── copy-template.ts
+    │   ├── copy-template.mjs
+    │   └── detect-sdk.mjs
     └── application/
         ├── AppScope/
         ├── entry/
@@ -162,7 +167,8 @@ import { Global } from "@/global"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { Log } from "@/util"
 
-declare const CODEGENIE_DEFAULT_SKILLS: Record<string, Record<string, string>> | undefined
+type EmbeddedSkillFile = string | { encoding: "base64"; content: string }
+declare const CODEGENIE_DEFAULT_SKILLS: Record<string, Record<string, EmbeddedSkillFile>> | undefined
 
 export namespace Defaults {
   const log = Log.create({ service: "skill-defaults" })
@@ -189,7 +195,12 @@ export namespace Defaults {
     const data = typeof CODEGENIE_DEFAULT_SKILLS !== "undefined" ? CODEGENIE_DEFAULT_SKILLS : {}
     for (const [skillName, files] of Object.entries(data)) {
       for (const [fileName, content] of Object.entries(files)) {
-        yield* fsys.writeWithDirs(path.join(dir, skillName, fileName), content)
+        const target = path.join(dir, skillName, fileName)
+        if (typeof content === "string") {
+          yield* fsys.writeWithDirs(target, content)
+        } else {
+          yield* fsys.writeWithDirs(target, Uint8Array.from(Buffer.from(content.content, "base64")))
+        }
       }
     }
 
@@ -225,7 +236,9 @@ yield* scan(state, defaultDir, SKILL_PATTERN)
 ```typescript
 // 新增：读取默认 Skills
 const defaultSkillsDir = path.join(dir, "resources/skills")
-const defaultSkillsData: Record<string, Record<string, string>> = {}
+type EmbeddedSkillFile = string | { encoding: "base64"; content: string }
+const binaryExtensions = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bin"])
+const defaultSkillsData: Record<string, Record<string, EmbeddedSkillFile>> = {}
 if (fs.existsSync(defaultSkillsDir)) {
   for (const entry of await fs.promises.readdir(defaultSkillsDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue
@@ -233,7 +246,9 @@ if (fs.existsSync(defaultSkillsDir)) {
     const skillPath = path.join(defaultSkillsDir, entry.name)
     for (const file of await walk(skillPath)) {
       const rel = path.relative(skillPath, file)
-      files[rel] = await Bun.file(file).text()
+      files[rel] = binaryExtensions.has(path.extname(file).toLowerCase())
+        ? { encoding: "base64", content: Buffer.from(await Bun.file(file).arrayBuffer()).toString("base64") }
+        : await Bun.file(file).text()
     }
     defaultSkillsData[entry.name] = files
   }
@@ -273,6 +288,8 @@ export const OPENCODE_DISABLE_DEFAULT_SKILLS = truthy("OPENCODE_DISABLE_DEFAULT_
 | defaults.ts 使用 Effect 框架 | 与 codegenie-cli 整体架构一致 |
 | 版本缓存机制 | 避免每次启动都重新提取，提升启动性能 |
 | .version 文件比对 | 简单可靠，与 codegenie-old 行为一致 |
+| 默认 Skill 私有脚本发布为 `.mjs` | 用户侧只依赖 Node，不要求安装 Bun 或 TypeScript 运行器 |
+| 构建嵌入区分文本和二进制 | 避免模板图片等二进制资源在默认 Skill 提取后损坏 |
 
 ---
 
@@ -286,7 +303,7 @@ export const OPENCODE_DISABLE_DEFAULT_SKILLS = truthy("OPENCODE_DISABLE_DEFAULT_
 | `resources/skills/deveco-create-project/` | 新增目录 | 从 codegenie-old 复制，含 SKILL.md + scripts/ + application/ |
 | `src/skill/defaults.ts` | 新增 | Effect 版默认 Skill 提取逻辑 |
 | `src/skill/index.ts` | 修改 | 在 discoverSkills 中新增 defaults.ensure() + scan() |
-| `script/build.ts` | 修改 | 读取 resources/skills/ 并嵌入到 CODEGENIE_DEFAULT_SKILLS |
+| `script/build.ts` | 修改 | 读取 resources/skills/ 并嵌入到 CODEGENIE_DEFAULT_SKILLS，二进制资源使用 base64 |
 
 ---
 
@@ -298,6 +315,9 @@ export const OPENCODE_DISABLE_DEFAULT_SKILLS = truthy("OPENCODE_DISABLE_DEFAULT_
 |--------|----------|----------|----------|
 | D-001 | 采用嵌入+提取而非直接扫描 resources/ | codegenie-cli 的 Skill Discovery 不扫描 resources/ 目录，需要提取到 data 目录 | 2026-04-22 |
 | D-002 | defaults.ts 使用 Effect 框架 | 与 codegenie-cli 整体架构一致，可访问 AppFileSystem 服务 | 2026-04-22 |
+| D-003 | 默认 Skill 私有脚本从 Bun/TS 改为 Node/.mjs | 降低用户空白环境依赖，不让默认 Skill 隐式依赖 Bun 或 TS 运行器 | 2026-04-28 |
+| D-004 | `jscrash_report` 下沉到 `arkts-runtime-fix` 私有脚本 | 崩溃分析能力只服务 runtime-fix Skill，作为全局内置工具会扩大公共工具面 | 2026-04-28 |
+| D-005 | 默认 Skill 嵌入支持 base64 二进制资源 | `deveco-create-project` 模板包含 `.png` 等二进制资源，文本嵌入会损坏文件 | 2026-04-28 |
 
 ### B. 参考文档
 
@@ -312,3 +332,4 @@ export const OPENCODE_DISABLE_DEFAULT_SKILLS = truthy("OPENCODE_DISABLE_DEFAULT_
 | 版本 | 日期 | 作者 | 变更描述 |
 |------|------|------|----------|
 | 1.0 | 2026-04-22 | zhangyuchen | 初始版本 |
+| 1.1 | 2026-04-28 | Codex | 同步 Node `.mjs` 私有脚本、`jscrash_report` 下沉与二进制资源嵌入设计 |

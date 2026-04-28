@@ -1,6 +1,6 @@
 # HarmonyOS 工具迁移 - 源码修改清单
 
-> **设计原则**: 将 codegenie-old 的 7 个工具（4 个 HarmonyOS + 3 个 Plan）迁移到 codegenie-cli，核心工作是 async/await → Effect-TS 框架适配。
+> **设计原则**: 将 codegenie-old 的 HarmonyOS/Plan 工具迁移到 codegenie-cli，核心工作是 async/await → Effect-TS 框架适配；2026-04-28 后 `jscrash_report` 已从全局工具下沉为 `arkts-runtime-fix` 私有脚本。
 
 ---
 
@@ -9,12 +9,10 @@
 | 文件 | 修改类型 | 说明 |
 |------|----------|------|
 | `packages/opencode/src/tool/hdc_log.ts` | 新增 | Effect 重写设备日志采集工具 |
-| `packages/opencode/src/tool/jscrash_report.ts` | 新增 | Effect 重写崩溃日志分析工具 |
 | `packages/opencode/src/tool/oh_knowledge.ts` | 新增 | Effect 重写鸿蒙知识检索工具（含 Auth） |
 | `packages/opencode/src/tool/switch-cwd.ts` | 新增 | Effect 重写项目目录切换工具 |
 | `packages/opencode/src/tool/plan.ts` | 修改 | 新增 PlanWriteTool + PlanEnterTool |
 | `packages/opencode/src/tool/hdc-log.txt` | 新增 | hdc_log 工具描述文件 |
-| `packages/opencode/src/tool/jscrash-report.txt` | 新增 | jscrash_report 工具描述文件 |
 | `packages/opencode/src/tool/switch-cwd.txt` | 新增 | switch_cwd 工具描述文件 |
 | `packages/opencode/src/tool/plan-write.txt` | 新增 | plan_write 工具描述文件 |
 | `packages/opencode/src/tool/lib/env.ts` | 新增 | DevEco 环境工具函数（直接复制） |
@@ -22,11 +20,11 @@
 | `packages/opencode/src/tool/lib/harmony_napi.ts` | 新增 | NAPI 桥接入口（直接复制） |
 | `packages/opencode/src/tool/lib/mcp-bridge.d.ts` | 新增 | MCP 桥接类型声明（直接复制） |
 | `packages/opencode/src/tool/lib/emulator_tools.json` | 新增 | 模拟器工具配置（直接复制） |
-| `packages/opencode/src/tool/registry.ts` | 修改 | 注册 7 个工具 + 添加 Auth.Service Layer |
+| `packages/opencode/src/tool/registry.ts` | 修改 | 注册 HarmonyOS/Plan 工具 + 添加 Auth.Service Layer；2026-04-28 后移除全局 `jscrash_report` |
 | `test/session/prompt-effect.test.ts` | 修改 | 添加 Auth.defaultLayer |
 | `test/session/snapshot-tool-race.test.ts` | 修改 | 添加 Auth.defaultLayer |
 
-**总计**: 新增 14 个文件 + 修改 3 个文件。
+**总计**: 初始迁移新增 14 个文件 + 修改 3 个文件；2026-04-28 起 `jscrash_report` 不再作为全局内置工具保留。
 
 ---
 
@@ -34,7 +32,6 @@
 
 ```
 hdc_log           设备日志采集（collect/clear/list_devices）
-jscrash_report    ArkTS/JS 崩溃日志分析
 oh_knowledge      鸿蒙知识库检索（OAuth 认证）
 switch_cwd        会话项目目录切换 + Harmony 项目校验
 plan_enter        进入 Plan 模式（确认 → 创建 plan agent）
@@ -123,11 +120,11 @@ export const ToolName = Tool.define("tool_id", Effect.gen(function* () {
 - Effect 模式: `Effect.tryPromise(() => findDevEcoHome())`
 - 参数: `action: Schema.Literals(["collect","clear","list_devices"])`, `device_id?: Schema.String`, `log_prefix: Schema.String`（默认 `"[VCODER_DEBUG]"`）, `lines: Schema.Int`（1–5000，默认 2000）
 
-#### jscrash_report（`src/tool/jscrash_report.ts`）
+#### jscrash_report（已下沉）
 
-- 依赖: `lib/env.ts`
-- 纯分析函数（~300 行 detectErrorType、findCrashAnchor 等）直接复制
-- 仅 execute 包装层 Effect 适配
+- 2026-04-28 后不再提供全局 `jscrash_report` 工具。
+- ArkTS/JS 崩溃分析能力改由 `packages/opencode/resources/skills/arkts-runtime-fix/scripts/jscrash-report.mjs` 提供。
+- 该能力属于 `arkts-runtime-fix` 的私有 workflow，不再扩大为所有 agent 可见的公共工具面。
 
 #### oh_knowledge（`src/tool/oh_knowledge.ts`）
 
@@ -153,7 +150,6 @@ export const ToolName = Tool.define("tool_id", Effect.gen(function* () {
 ```typescript
 // 新增 import
 import { HdcLogTool } from "./hdc_log"
-import { JscrashReportTool } from "./jscrash_report"
 import { SwitchCwdTool } from "./switch-cwd"
 import { OhKnowledgeTool } from "./oh_knowledge"
 import { PlanWriteTool, PlanEnterTool } from "./plan"
@@ -172,7 +168,6 @@ export const defaultLayer = layer.pipe(
 // Effect.all + builtin 数组添加新工具
 const tool = yield* Effect.all({
   hdcLog: Tool.init(yield* HdcLogTool),
-  jscrashReport: Tool.init(yield* JscrashReportTool),
   switchCwd: Tool.init(yield* SwitchCwdTool),
   ohKnowledge: Tool.init(yield* OhKnowledgeTool),
   // ...
@@ -197,5 +192,5 @@ Layer.provide(Auth.defaultLayer)
 ## 5. 验证
 
 1. **类型检查**: `npx tsc --noEmit --project packages/opencode/tsconfig.json` 无新增错误
-2. **工具注册**: 启动 opencode，确认 tool 列表中包含 7 个新工具
+2. **工具注册**: 启动 opencode，确认 tool 列表中包含当前保留的 HarmonyOS/Plan 工具，且不再包含 `jscrash_report`
 3. **功能验证**: 各工具 action 正常工作（hdc collect/clear/list_devices、crash 分析、知识检索、目录切换、plan 流程）

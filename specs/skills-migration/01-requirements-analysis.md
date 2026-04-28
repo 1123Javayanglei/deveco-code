@@ -33,9 +33,9 @@
 | 类型 | 描述 |
 |------|------|
 | 假设 | codegenie-cli 的 Skill 发现机制（src/skill/index.ts）已支持 resources/skills/ 目录扫描 |
-| 假设 | Skills 中的 Bun 脚本可在目标环境正常执行 |
+| 假设 | 目标环境可执行 `node` 命令，默认 Skill 私有脚本以 Node ESM `.mjs` 形式运行 |
 | 约束 | SKILL.md 格式必须符合 codegenie-cli 的 frontmatter 解析要求（name + description） |
-| 约束 | Skill 内脚本仅支持 Bun 运行时 |
+| 约束 | 默认 Skill 内脚本仅支持 Node 运行时，不再依赖外部 Bun 命令或 TypeScript 运行器 |
 | 约束 | Skill 资源文件必须通过 skill tool 加载后才能被 AI 使用 |
 
 ### 1.4 术语与缩写
@@ -68,18 +68,18 @@ codegenie-cli 仓库
 │   │   └── reference/         <- .md 错误参考文档
 │   ├── arkts-runtime-fix/     <- 运行时崩溃诊断知识
 │   │   ├── SKILL.md
-│   │   └── scripts/           <- Bun 分析脚本
+│   │   └── scripts/           <- Node ESM 分析脚本
 │   ├── arkui-knowledge/       <- ArkUI 最佳实践
 │   │   └── SKILL.md
 │   └── deveco-create-project/ <- 项目创建模板
 │       ├── SKILL.md
-│       ├── scripts/           <- copy-template.ts
+│       ├── scripts/           <- copy-template.mjs / detect-sdk.mjs
 │       └── application/       <- 完整 ArkTS 项目模板
 ├── src/skill/index.ts         <- Skill 发现（已有，无需修改）
 └── src/skill/discovery.ts     <- Skill 远程拉取（已有，无需修改）
 
 外部依赖：
-├── Bun 运行时（Skill 脚本执行：arkts-runtime-fix、deveco-create-project）
+├── Node.js 运行时（Skill 脚本执行：arkts-runtime-fix、deveco-create-project）
 ├── DevEco Studio（hdc 命令：arkts-runtime-fix 脚本依赖）
 └── skill tool（AI 加载 Skill 的入口）
 ```
@@ -188,9 +188,11 @@ AI 获得 Skill 指令，按 Skill 指导执行任务
 | 规则编号 | 规则名称 | 规则描述 | 优先级 |
 |----------|----------|----------|--------|
 | BR-001 | 资源完整性 | 每个 Skill 的所有文件必须完整迁移，不可遗漏 | 高 |
-| BR-002 | 内容一致性 | 迁移后的文件内容与 codegenie-old 完全一致 | 高 |
+| BR-002 | 内容一致性 | 初始迁移与 codegenie-old 对齐；后续产品化调整需在 specs 和 Skill 文档中同步记录 | 高 |
 | BR-003 | 格式兼容 | SKILL.md 的 frontmatter 必须包含 name 和 description 字段 | 高 |
 | BR-004 | 目录结构 | Skill 目录名必须与 SKILL.md 中的 name 字段匹配 | 中 |
+| BR-005 | 脚本自包含 | 默认 Skill 私有脚本不得 import 仓库源码或依赖 Bun/TS 运行能力，发布后必须能在提取目录独立执行 | 高 |
+| BR-006 | 二进制资源保真 | 默认 Skill 打包时 `.png` 等二进制资源必须按二进制方式嵌入和写出，不得按 UTF-8 文本处理 | 高 |
 
 ### 4.2 用户操作场景与关键路径
 
@@ -218,18 +220,18 @@ AI 获得 Skill 指令，按 Skill 指导执行任务
 | 项目 | 描述 |
 |------|------|
 | 场景描述 | 应用运行时崩溃，开发者提供崩溃日志，AI 加载 arkts-runtime-fix Skill 进行诊断 |
-| 前置条件 | Bun 运行时已安装（用于运行分析脚本） |
+| 前置条件 | Node.js 运行时可用；如需从设备采集日志，DevEco Studio/hdc 可用 |
 | 操作步骤 | 1. 开发者提供 jscrash 日志或描述崩溃现象<br>2. AI 加载 arkts-runtime-fix Skill<br>3. 按照 Skill 指令调用内置脚本解析崩溃日志<br>4. 根据分析结果定位和修复问题 |
 | 预期结果 | 获得包含 error_type、suspected_file、top_stack 的结构化崩溃分析 |
-| 异常处理 | Bun 不可用时提示用户安装 Bun；日志不足时请求更多证据 |
+| 异常处理 | Node 不可用时停止并提示用户；日志不足时请求更多证据或使用 hdc 采集 |
 
 **场景 US-003: 开发者创建新项目** (优先级: P1)
 
 | 项目 | 描述 |
 |------|------|
 | 场景描述 | 开发者使用 deveco-create-project Skill 创建新的 ArkTS 项目 |
-| 前置条件 | Bun 运行时已安装 |
-| 操作步骤 | 1. 开发者请求创建项目，指定路径和应用名称<br>2. AI 加载 deveco-create-project Skill<br>3. 运行 copy-template.ts 脚本从 application/ 模板创建项目<br>4. 验证项目结构完整性 |
+| 前置条件 | Node.js 运行时可用 |
+| 操作步骤 | 1. 开发者请求创建项目，指定路径和应用名称<br>2. AI 加载 deveco-create-project Skill<br>3. 运行 copy-template.mjs 脚本从 application/ 模板创建项目<br>4. 验证项目结构完整性 |
 | 预期结果 | 在指定路径生成包含 AppScope、entry、build-profile.json5 的完整 ArkTS 项目 |
 | 异常处理 | 脚本执行失败时报告错误并停止 |
 
@@ -252,8 +254,8 @@ AI 获得 Skill 指令，按 Skill 指导执行任务
 | 路径编号 | 路径描述 | 关键节点 | 风险点 |
 |----------|----------|----------|--------|
 | KP-001 | 编译错误修复 | 错误识别 -> skill tool -> arkts-error-fixes -> 查找匹配的错误类型 | 错误类型不在 Skill 覆盖范围 |
-| KP-002 | 崩溃诊断 | 日志收集 -> skill tool -> arkts-runtime-fix -> Bun 脚本执行 | Bun 不可用、hdc 不可用 |
-| KP-003 | 项目创建 | 参数确认 -> skill tool -> deveco-create-project -> copy-template.ts -> 项目验证 | Bun 不可用、模板文件缺失 |
+| KP-002 | 崩溃诊断 | 日志收集 -> skill tool -> arkts-runtime-fix -> Node 脚本执行 | Node 不可用、hdc 不可用 |
+| KP-003 | 项目创建 | 参数确认 -> skill tool -> deveco-create-project -> copy-template.mjs -> 项目验证 | Node 不可用、模板文件缺失 |
 | KP-004 | ArkUI 指导 | 问题识别 -> skill tool -> arkui-knowledge -> 最佳实践输出 | 无特殊风险 |
 
 ### 4.3 研发与维护阶段场景
@@ -271,7 +273,7 @@ AI 获得 Skill 指令，按 Skill 指导执行任务
 |------|------|----------|
 | SKILL.md 解析 | 验证每个 SKILL.md 的 frontmatter 可被正确解析 | name、description 字段 |
 | Skill 加载 | 验证每个 Skill 可通过 skill tool 加载 | 返回完整 content |
-| 脚本执行 | 验证 arkts-runtime-fix 脚本可运行 | Bun 环境下正常执行 |
+| 脚本执行 | 验证 arkts-runtime-fix 脚本可运行 | Node 环境下正常执行 |
 | 项目创建 | 验证 deveco-create-project 可创建完整项目 | 输出项目结构完整 |
 
 ### 4.4 兼容性分析
@@ -299,9 +301,9 @@ AI 获得 Skill 指令，按 Skill 指导执行任务
 | 需求编号 | 需求名称 | 需求描述 | 优先级 | 来源 |
 |----------|----------|----------|--------|------|
 | FR-001 | arkts-error-fixes Skill 迁移 | 迁移 ArkTS 编译错误修复 Skill（SKILL.md + 32 .ets 示例 + 28 .md 参考） | P1 | 功能对齐 |
-| FR-002 | arkts-runtime-fix Skill 迁移 | 迁移运行时崩溃诊断 Skill（SKILL.md + 4 脚本 + 3 共享模块） | P1 | 功能对齐 |
+| FR-002 | arkts-runtime-fix Skill 迁移 | 迁移运行时崩溃诊断 Skill（SKILL.md + Node 私有脚本 + 共享模块） | P1 | 功能对齐 |
 | FR-003 | arkui-knowledge Skill 迁移 | 迁移 ArkUI 最佳实践 Skill（SKILL.md） | P1 | 功能对齐 |
-| FR-004 | deveco-create-project Skill 迁移 | 迁移项目创建 Skill（SKILL.md + copy-template.ts + 项目模板） | P1 | 功能对齐 |
+| FR-004 | deveco-create-project Skill 迁移 | 迁移项目创建 Skill（SKILL.md + copy-template.mjs/detect-sdk.mjs + 项目模板） | P1 | 功能对齐 |
 | FR-005 | Skill 可发现性验证 | 确保 Skill Discovery 机制能扫描到迁移的 4 个 Skill | P1 | 功能验证 |
 
 ### 5.2 功能需求详细说明
@@ -325,20 +327,21 @@ AI 获得 Skill 指令，按 Skill 指导执行任务
 | 项目 | 描述 |
 |------|------|
 | 需求描述 | 将 arkts-runtime-fix Skill 完整复制到 codegenie-cli 的 resources/skills/ 目录 |
-| 验收标准 | 1. SKILL.md 文件存在且 frontmatter 包含 name: arkts-runtime-fix<br>2. scripts/ 目录包含 4 个分析脚本和 3 个共享模块<br>3. 通过 skill tool 可加载该 Skill<br>4. Bun 环境下脚本可正常执行 |
+| 验收标准 | 1. SKILL.md 文件存在且 frontmatter 包含 name: arkts-runtime-fix<br>2. scripts/ 目录包含 Node ESM 分析脚本和共享模块<br>3. 通过 skill tool 可加载该 Skill<br>4. Node 环境下脚本可正常执行<br>5. jscrash 日志解析能力由私有脚本提供，不依赖全局 `jscrash_report` 工具 |
 | 关联场景 | US-002 |
 | 依赖需求 | 无 |
 
 资源清单：
 - `SKILL.md` - Skill 入口定义，包含崩溃诊断流程和脚本调用说明
-- `scripts/collect-hilog.ts` - 设备 hilog 日志收集
-- `scripts/fetch-faultlog.ts` - Faultlogger 日志拉取
-- `scripts/parse-jscrash-log.ts` - 崩溃日志结构化解析
-- `scripts/probe-faultlogger.ts` - Faultlogger 状态探测
-- `scripts/shared/hdc.ts` - hdc 命令共享封装
-- `scripts/shared/jscrash-faultlogger.ts` - Faultlogger 共享逻辑
-- `scripts/shared/jscrash-parse.ts` - 解析共享逻辑
-- `scripts/shared/utils.ts` - 通用工具函数
+- `scripts/jscrash-report.mjs` - jscrash 统一入口，支持文本、文件、hilog 自动采集和解析
+- `scripts/collect-hilog.mjs` - 设备 hilog 日志收集
+- `scripts/fetch-faultlog.mjs` - Faultlogger 日志拉取
+- `scripts/parse-jscrash-log.mjs` - 崩溃日志结构化解析
+- `scripts/probe-faultlogger.mjs` - Faultlogger 状态探测
+- `scripts/shared/hdc.mjs` - hdc 命令共享封装，自包含 DevEco/hdc 查找逻辑
+- `scripts/shared/jscrash-faultlogger.mjs` - Faultlogger 共享逻辑
+- `scripts/shared/jscrash-parse.mjs` - 解析共享逻辑
+- `scripts/shared/utils.mjs` - 通用工具函数
 
 #### FR-003: arkui-knowledge Skill 迁移
 
@@ -357,13 +360,14 @@ AI 获得 Skill 指令，按 Skill 指导执行任务
 | 项目 | 描述 |
 |------|------|
 | 需求描述 | 将 deveco-create-project Skill 完整复制到 codegenie-cli 的 resources/skills/ 目录 |
-| 验收标准 | 1. SKILL.md 文件存在且 frontmatter 包含 name: deveco-create-project<br>2. scripts/copy-template.ts 存在且可执行<br>3. application/ 目录包含完整 ArkTS 项目模板<br>4. 通过 skill tool 可加载该 Skill |
+| 验收标准 | 1. SKILL.md 文件存在且 frontmatter 包含 name: deveco-create-project<br>2. scripts/copy-template.mjs 存在且可执行<br>3. scripts/detect-sdk.mjs 可被项目创建流程调用<br>4. application/ 目录包含完整 ArkTS 项目模板，图片等二进制资源复制后保持可用<br>5. 通过 skill tool 可加载该 Skill |
 | 关联场景 | US-003 |
 | 依赖需求 | 无 |
 
 资源清单：
 - `SKILL.md` - Skill 入口定义，包含参数说明和执行步骤
-- `scripts/copy-template.ts` - 项目模板复制脚本
+- `scripts/copy-template.mjs` - 项目模板复制脚本
+- `scripts/detect-sdk.mjs` - DevEco SDK/API Level 检测脚本模块
 - `application/` - 完整 ArkTS 项目模板（AppScope、entry、build-profile.json5 等）
 
 #### FR-005: Skill 可发现性验证
@@ -407,7 +411,7 @@ FR-005 (可发现性验证)
 | 指标 | 要求 | 说明 |
 |------|------|------|
 | Skill 加载率 | 100% | 所有 4 个 Skill 必须可通过 skill tool 加载 |
-| 脚本可用性 | Bun 环境下 100% | 未安装 Bun 时 Skill 内容仍可加载，但脚本无法执行 |
+| 脚本可用性 | Node 环境下 100% | 未安装 Node 时 Skill 内容仍可加载，但脚本无法执行 |
 
 ### 6.3 安全隐私
 
@@ -420,7 +424,7 @@ FR-005 (可发现性验证)
 | 测试类型 | 测试要求 | 覆盖率目标 |
 |----------|----------|------------|
 | Skill 加载测试 | 验证 4 个 SKILL.md 可被正确解析 | 4/4 |
-| 脚本执行测试 | 验证 arkts-runtime-fix 脚本在 Bun 环境下可运行 | 关键脚本 |
+| 脚本执行测试 | 验证 arkts-runtime-fix 脚本在 Node 环境下可运行 | 关键脚本 |
 | 项目创建测试 | 验证 deveco-create-project 可创建完整项目 | 端到端 |
 
 ---
@@ -433,6 +437,8 @@ FR-005 (可发现性验证)
 |----------|----------|----------|----------|
 | `resources/skills/` | 新增 | 高 | 新增 4 个 Skill 目录及约 75+ 个资源文件 |
 | `src/skill/index.ts` | 无修改 | - | 已有 Skill Discovery 机制自动覆盖 |
+| `script/build.ts` | 修改 | 中 | 默认 Skill 嵌入逻辑需区分文本和二进制资源 |
+| `src/skill/defaults.ts` | 修改 | 中 | 默认 Skill 提取逻辑需支持 base64 二进制写出 |
 
 ### 7.2 风险评估与缓解措施
 
@@ -440,7 +446,9 @@ FR-005 (可发现性验证)
 |--------|----------|----------|----------|
 | Skill Discovery 未扫描 resources/skills/ | 低 | 所有 Skill | 验证 config.directories() 返回值 |
 | SKILL.md frontmatter 格式不兼容 | 低 | Skill 加载 | 确认 name + description 字段存在 |
-| 脚本中 hdc 路径硬编码 | 低 | arkts-runtime-fix | 脚本已通过 shared/hdc.ts 动态检测 |
+| 脚本中 hdc 路径硬编码 | 低 | arkts-runtime-fix | 脚本已通过 shared/hdc.mjs 动态检测 |
+| 默认 Skill 私有脚本依赖仓库源码 | 中 | arkts-runtime-fix | `shared/hdc.mjs` 必须自包含 DevEco/hdc 查找逻辑 |
+| 二进制资源被文本嵌入损坏 | 中 | deveco-create-project | 构建嵌入和运行时提取对图片等二进制资源使用 base64/Uint8Array |
 
 ---
 
@@ -459,3 +467,4 @@ FR-005 (可发现性验证)
 | 版本 | 日期 | 作者 | 变更描述 |
 |------|------|------|----------|
 | 1.0 | 2026-04-22 | zhangyuchen | 初始版本（仅 Skills 迁移，Tools 迁移另行规划） |
+| 1.1 | 2026-04-28 | Codex | 同步默认 Skill 私有脚本 Node 化、`jscrash_report` 下沉与二进制资源嵌入修复 |

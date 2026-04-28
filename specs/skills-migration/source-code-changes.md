@@ -11,9 +11,10 @@
 | `packages/opencode/resources/skills/` | 新增目录 | 从 codegenie-old 复制 4 个 Skill（含脚本、模板、参考文档，约 75+ 文件） |
 | `packages/opencode/src/skill/defaults.ts` | 新增 | Effect 版默认 Skill 提取逻辑，参照 codegenie-old |
 | `packages/opencode/src/skill/index.ts` | 修改 | 在 discoverSkills 中新增 defaults.ensure() + scan() |
-| `packages/opencode/script/build.ts` | 修改 | 读取 resources/skills/ 嵌入到 CODEGENIE_DEFAULT_SKILLS |
+| `packages/opencode/script/build.ts` | 修改 | 读取 resources/skills/ 嵌入到 CODEGENIE_DEFAULT_SKILLS，并对二进制资源使用 base64 |
+| `packages/opencode/src/tool/registry.ts` | 修改 | 移除全局 `jscrash_report` 工具注册，崩溃分析能力改由 runtime-fix 私有脚本提供 |
 
-**总计**: 新增 ~76 个文件（resources/skills/）+ 1 个新源码文件（defaults.ts）+ 修改 2 个文件。
+**总计**: 新增默认 Skill 资源与提取逻辑；后续同步 Node 化时将默认 Skill 私有脚本从 `.ts` 改为 `.mjs`，并删除全局 `jscrash_report` 工具。
 
 ---
 
@@ -41,16 +42,22 @@ CODEGENIE_DEFAULT_SKILLS: {
   },
   "arkts-runtime-fix": {
     "SKILL.md": "...",
-    "scripts/collect-hilog.ts": "...",
-    "scripts/shared/hdc.ts": "...",
-    // ... 8 文件
+    "scripts/jscrash-report.mjs": "...",
+    "scripts/collect-hilog.mjs": "...",
+    "scripts/shared/hdc.mjs": "...",
+    // ... Node ESM 脚本和共享模块
   },
   "arkui-knowledge": {
     "SKILL.md": "..."
   },
   "deveco-create-project": {
     "SKILL.md": "...",
-    "scripts/copy-template.ts": "...",
+    "scripts/copy-template.mjs": "...",
+    "scripts/detect-sdk.mjs": "...",
+    "application/entry/src/main/resources/base/media/icon.png": {
+      "encoding": "base64",
+      "content": "..."
+    },
     "application/build-profile.json5": "...",
     // ... 20+ 文件
   }
@@ -85,7 +92,7 @@ CODEGENIE_DEFAULT_SKILLS: {
 
 ### 5.1 `packages/opencode/resources/skills/`（新增）
 
-从 codegenie-old 的 `/packages/opencode/resources/skills/` 复制 4 个目录，内容完全一致。
+从 codegenie-old 的 `/packages/opencode/resources/skills/` 复制 4 个目录。当前产品化版本已对私有脚本运行时和部分失效资源链接做调整，不再要求与原仓内容逐字一致。
 
 ```bash
 # 复制命令示例
@@ -133,15 +140,19 @@ yield* scan(state, defaultDir, SKILL_PATTERN)
 ```typescript
 // 在 dir 定义之后、walk 函数之后新增：
 const defaultSkillsDir = path.join(dir, "resources/skills")
-const defaultSkillsData: Record<string, Record<string, string>> = {}
+type EmbeddedSkillFile = string | { encoding: "base64"; content: string }
+const binaryExtensions = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bin"])
+const defaultSkillsData: Record<string, Record<string, EmbeddedSkillFile>> = {}
 if (fs.existsSync(defaultSkillsDir)) {
   for (const entry of await fs.promises.readdir(defaultSkillsDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue
-    const files: Record<string, Record<string, string>> = {}
+    const files: Record<string, EmbeddedSkillFile> = {}
     const skillPath = path.join(defaultSkillsDir, entry.name)
     for (const file of await walk(skillPath)) {
       const rel = path.relative(skillPath, file)
-      files[rel] = await Bun.file(file).text()
+      files[rel] = binaryExtensions.has(path.extname(file).toLowerCase())
+        ? { encoding: "base64", content: Buffer.from(await Bun.file(file).arrayBuffer()).toString("base64") }
+        : await Bun.file(file).text()
     }
     defaultSkillsData[entry.name] = files
   }
@@ -158,11 +169,11 @@ CODEGENIE_DEFAULT_SKILLS: JSON.stringify(defaultSkillsData),
 
 ```
 开发时:
-  复制 resources/skills/ → 编辑 Skill 内容
+  编辑 resources/skills/ → 私有脚本保持 Node ESM `.mjs` 和自包含
 
 构建时:
   bun run build
-    └── build.ts → 读取 resources/skills/ → 嵌入到 CODEGENIE_DEFAULT_SKILLS
+    └── build.ts → 读取 resources/skills/ → 文本/二进制分流嵌入到 CODEGENIE_DEFAULT_SKILLS
 
 运行时:
   opencode 启动
@@ -173,3 +184,14 @@ CODEGENIE_DEFAULT_SKILLS: JSON.stringify(defaultSkillsData),
   AI 使用:
     └── skill tool → 列出 available_skills → 加载 Skill 指令
 ```
+
+## 7. 2026-04-28 默认 Skill 脚本 Node 化补充
+
+本次脚本运行时改造属于对默认 Skill 资源和工具注册的侵入式更新，需在 specs 中记录：
+
+- `arkts-runtime-fix/scripts/*.ts` 与 `scripts/shared/*.ts` 改为 Node ESM `.mjs`，不再依赖外部 Bun 命令。
+- 新增 `arkts-runtime-fix/scripts/jscrash-report.mjs`，承接原全局 `jscrash_report` 的文本解析、文件解析和 hilog 自动采集解析能力。
+- `arkts-runtime-fix/scripts/shared/hdc.mjs` 自包含 DevEco/hdc 查找逻辑，不再 import `packages/opencode/src/tool/lib/env`。
+- `deveco-create-project/scripts/copy-template.ts`、`detect-sdk.ts` 改为 `.mjs`，使用 Node 标准库完成模板复制、占位符替换、API Level 检测和完整性校验。
+- 删除 `packages/opencode/src/tool/jscrash_report.ts` 和 `packages/opencode/src/tool/jscrash-report.txt`，并从 `packages/opencode/src/tool/registry.ts` 移除注册。
+- `packages/opencode/script/build.ts` 与 `packages/opencode/src/skill/defaults.ts` 支持二进制 Skill 资源的 base64 嵌入和 `Uint8Array` 写出。
