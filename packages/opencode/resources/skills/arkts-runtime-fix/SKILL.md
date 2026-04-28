@@ -71,13 +71,15 @@ node "{SKILL_DIR}/scripts/parse-jscrash-log.mjs" --log-file "{logFilePath}" --bu
 
 Log collection is optional here. Use it when you still need a concrete runtime anchor.
 
-Prefer recent faultlogger evidence first. If a recent hilog snapshot is enough and faultlogger inspection is not needed, use `jscrash-report.mjs` without `--log-text` or `--log-file` to collect and parse recent hilog directly:
+Before collecting device evidence, resolve the target device:
 
-```bash
-node "{SKILL_DIR}/scripts/jscrash-report.mjs" --device-id "{deviceId}" --bundle-name "{bundleName}" --lines "4000" --include-text
-```
+- If the user provided a `deviceId`, use it for every device-side command.
+- If no `deviceId` is provided, call `hdc_log(action="list_devices")` first.
+- If exactly one device is connected, use that device.
+- If multiple devices are connected, ask the user which device to inspect. Do not probe faultlogger, fetch faultlog, or collect hilog until the user selects a device.
+- If no devices are connected, report that device-side evidence cannot be collected and ask for a connected device or a local crash log.
 
-For faultlogger-specific evidence:
+Always inspect recent faultlogger evidence first:
 
 ```bash
 node "{SKILL_DIR}/scripts/probe-faultlogger.mjs" --bundle-name "{bundleName}" --device-id "{deviceId}" --max-age-minutes "30" --limit "10"
@@ -90,7 +92,9 @@ node "{SKILL_DIR}/scripts/fetch-faultlog.mjs" --faultlog-name "{latestFaultlog}"
 node "{SKILL_DIR}/scripts/parse-jscrash-log.mjs" --log-file "{localFaultlogPath}" --bundle-name "{bundleName}" --source file --include-text
 ```
 
-If faultlogger is unavailable, empty, or still not enough, you may fall back to hilog:
+If `status: not_found`, do not broad-read the project or guess from symptoms alone. Ask the user to reproduce the crash on the selected device, then probe faultlogger again immediately.
+
+If faultlogger is unavailable, the reproduced crash still does not create a matching faultlog, or the parsed faultlog is still not enough, fall back to hilog:
 
 ```bash
 node "{SKILL_DIR}/scripts/collect-hilog.mjs" --device-id "{deviceId}" --lines "4000" --output-dir "{tempDir}"
