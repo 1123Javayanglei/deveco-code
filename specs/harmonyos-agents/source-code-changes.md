@@ -2,6 +2,8 @@
 
 > **设计原则**: 将 codegenie-old 的 4 个 HarmonyOS Agent（build、plan、Ask、debug）+ explore prompt 更新迁移到 codegenie-cli，核心工作是 prompt 文件直接复制 + Agent 定义 Effect-TS 适配。
 
+**后续变更（2026-04-29）**: 内置 **`debug` Agent 已下线**——`agent.ts` 的 `agents` 对象中不再注册 `debug`，`/agent list` 与默认 primary 候选中均不包含该 Agent。仓库内的 `prompt/debug.txt` 仍可保留，供日后恢复或通过用户配置自定义 Agent 引用；`PROMPT_DEBUG` import 若长期未使用可择机删除以避免未使用符号。
+
 ---
 
 ## 1. 修改概览
@@ -11,12 +13,12 @@
 | `packages/opencode/src/agent/prompt/build.txt` | 新增 | ArkTS 编译构建 workflow prompt（直接复制） |
 | `packages/opencode/src/agent/prompt/plan.txt` | 新增 | ArkTS 规划模式 prompt（直接复制） |
 | `packages/opencode/src/agent/prompt/ask.txt` | 新增 | HarmonyOS 工程问答 prompt（直接复制） |
-| `packages/opencode/src/agent/prompt/debug.txt` | 新增 | 假设驱动调试 prompt（直接复制） |
+| `packages/opencode/src/agent/prompt/debug.txt` | 新增 | 假设驱动调试 prompt（直接复制；Agent 本体见下方「下线」说明） |
 | `packages/opencode/src/agent/prompt/explore.txt` | 替换 | 通用搜索 → HarmonyOS/ArkTS 专业搜索（直接覆盖） |
-| `packages/opencode/src/agent/agent.ts` | 修改 | 新增 4 个 prompt import + 修改/新增 4 个 Agent 定义 |
+| `packages/opencode/src/agent/agent.ts` | 修改 | 新增 4 个 prompt import + 修改/新增 Agent 定义；**2026-04-29 起移除内置 `debug` Agent 注册** |
 | `packages/opencode/src/cli/cmd/tui/component/dialog-agent.tsx` | 修改 | `/agents` 列表优先展示 `description`，不再对 `native` Agent 固定显示 `"native"` |
 
-**总计**: 新增 4 个文件 + 替换 1 个文件 + 修改 2 个文件（含后续 TUI 修正）。
+**总计**: 新增 4 个文件 + 替换 1 个文件 + 修改 2 个文件（含后续 TUI 修正）；内置 `debug` Agent 已按上节说明下线。
 
 ---
 
@@ -31,7 +33,7 @@
 | `build.txt` | ~142 | ArkTS 编译构建 Agent 的 system prompt，包含工具路由规则、ArkTS 编码规则、构建失败诊断流程 |
 | `plan.txt` | ~113 | ArkTS 规划 Agent 的 system prompt，4 阶段 workflow、ArkTS 规划维度、计划输出格式 |
 | `ask.txt` | ~170 | HarmonyOS 工程问答 Agent 的 system prompt，中文回答、搜索优先策略、代码链接规范 |
-| `debug.txt` | ~120 | 假设驱动调试 Agent 的 system prompt，10 步调试流程、日志插桩规则、禁止行为 |
+| `debug.txt` | ~120 | 假设驱动调试用 system prompt（10 步流程、插桩规则等）；**内置 `debug` Agent 已下线**，文件仍可作为自定义 Agent 的 `prompt` 来源保留 |
 | `explore.txt` | ~26 | 替换通用版，HarmonyOS 项目结构先验、manifest 优先读取、ArkTS grep 锚点 |
 
 ---
@@ -188,9 +190,9 @@ Ask: {
 }
 ```
 
-#### 3.1.5 新增 `debug` Agent 定义
+#### 3.1.5 `debug` Agent（曾新增，**已下线**）
 
-位置：`agents` 对象中，在 `Ask` 之后
+**历史**: 迁移阶段曾在 `agents` 中注册如下内置 `debug` primary Agent（位于 `plan` 与 `general` 之间）：
 
 ```typescript
 debug: {
@@ -205,6 +207,8 @@ debug: {
   prompt: PROMPT_DEBUG,
 }
 ```
+
+**当前（2026-04-29）**: 上述块已从 `packages/opencode/src/agent/agent.ts` 删除，产品侧不再提供内置 debug Agent。若需同等能力，可通过配置 `agent` 覆盖或后续重新注册。
 
 ---
 
@@ -225,7 +229,7 @@ debug: {
 
 1. **类型检查**: `bun run typecheck` 无新增错误
 2. **构建验证**: `bun run build --single` 成功
-3. **运行时验证**: 启动 opencode，`/agent list` 包含 build、plan、Ask、debug
+3. **运行时验证**: 启动 opencode，`/agent list` 包含 build、plan 等当前内置 primary Agent；**不应**再出现内置 `debug`（已下线）。
 
 ---
 

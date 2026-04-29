@@ -1,6 +1,6 @@
 # 特性文档索引
 
-**最后更新时间**: 2026-04-28
+**最后更新时间**: 2026-04-29
 
 ---
 
@@ -28,7 +28,7 @@
 | 004 | 发布系统改造 | `publish-system` | ✅ | ✅ | - | - | ✅ | - | 2026-04-22 |
 | 005 | Skills 迁移 | `skills-migration` | ✅ | ✅ | - | - | ✅ | - | 2026-04-28 |
 | 006 | HarmonyOS 工具迁移 | `harmonyos-tools` | ✅ | ✅ | - | - | ✅ | - | 2026-04-28 |
-| 007 | HarmonyOS Agents 迁移 | `harmonyos-agents` | ✅ | ✅ | - | - | ✅ | - | 2026-04-28 |
+| 007 | HarmonyOS Agents 迁移 | `harmonyos-agents` | ✅ | ✅ | - | - | ✅ | - | 2026-04-29 |
 | 008 | 品牌增强 (Brand Enhancement) | `codegenie-brand-enhancement` | ✅ | ✅ | - | - | ✅ | - | 2026-04-22 |
 
 **状态说明**: ✅ 已完成 | 🔄 进行中 | - 未开始
@@ -39,6 +39,7 @@
 
 | 日期 | 操作 | 特性 | 描述 |
 |------|------|------|------|
+| 2026-04-29 | 更新 | 007-harmonyos-agents | 内置 `debug` Agent 从 `agent.ts` 下线；见 `specs/harmonyos-agents/source-code-changes.md` 文首「后续变更」与 §3.1.5 |
 | 2026-04-28 | 更新 | 005-skills-migration, 006-harmonyos-tools | 同步默认 Skill 私有脚本 Node 化、`jscrash_report` 下沉与二进制资源嵌入修复 |
 | 2026-04-28 | 更新 | 007-harmonyos-agents | TUI `/agents`：`DialogAgent` 优先展示各 Agent 的 `description`，修正内置 Agent 仅显示 `native` 的问题；见 `specs/harmonyos-agents/source-code-changes.md` 第 6 节 |
 | 2026-04-28 | 更新 | 001-codegenie-auth / analytics | 同步本地加密存储方案：KEK/DEK + AES-256-GCM、auth.json 敏感字段加密、analytics.json 单文件加密存储 |

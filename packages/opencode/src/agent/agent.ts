@@ -157,21 +157,6 @@ export const layer = Layer.effect(
             native: true,
             prompt: PROMPT_PLAN,
           },
-          debug: {
-            name: "debug",
-            description: "ArkTS runtime-evidence debug agent (without phone automation)",
-            options: {},
-            permission: Permission.merge(
-              defaults,
-              Permission.fromConfig({
-                plan_enter: "deny",
-                plan_exit: "deny",
-              }),
-              user,
-            ),
-            mode: "primary",
-            prompt: PROMPT_DEBUG,
-          },
           general: {
             name: "general",
             description: `General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.`,
