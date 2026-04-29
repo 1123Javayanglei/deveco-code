@@ -159,6 +159,11 @@ plan: {
     get_app_ui_tree: "deny",
     start_app: "deny",
     hdc_log: "deny",
+    switch_cwd: "deny",
+    arkts_knowledge_search: "deny",
+    external_directory: {
+      [path.join(Global.Path.data, "plans", "*")]: "allow",
+    },
     edit: "deny",
   }), user),
   mode: "primary",
@@ -169,8 +174,9 @@ plan: {
 
 **关键变更**:
 - 添加 `prompt: PROMPT_PLAN`
-- 大幅修改权限：deny bash/build_project/start_app 等执行类工具
+- 大幅修改权限：deny bash/build_project/start_app 等执行类工具，并显式 deny switch_cwd/arkts_knowledge_search
 - plan_write: "allow"、plan_exit: "ask"
+- 保留外部计划文件目录的 external_directory allow 例外
 - description 更新
 
 #### 3.2.3 debug Agent（新增）
@@ -227,7 +233,8 @@ import PROMPT_DEBUG from "./prompt/debug.txt"
 | build_project | allow | deny | deny | allow | - |
 | start_app | allow | deny | deny | allow | - |
 | hdc_log | allow | deny | deny | allow | - |
-| arkts_knowledge_search | - | - | allow | - | - |
+| switch_cwd | allow | deny | deny | allow | - |
+| arkts_knowledge_search | - | deny | allow | - | - |
 | skill | allow | - | deny | - | - |
 
 **注**: `debug` 列描述的是曾内置该 Agent 时的权限；**2026-04-29 起内置 `debug` 已下线**，列表中不再出现，除非用户自行配置。
@@ -297,10 +304,9 @@ bun run build --single
 启动 opencode 后验证：
 1. `/agent list` 显示 build、plan 等当前内置 primary Agent；内置 **`debug` 已下线**（2026-04-29），不应再出现在列表中，除非用户通过配置自行注册
 2. 切换到各 Agent，检查 system prompt 是否正确加载
-3. 各 Agent 权限是否正确（如 Ask 不能执行 bash）
+3. 各 Agent 权限是否正确（如 Ask 不能执行 bash；`plan` 不能调用 `switch_cwd`、`arkts_knowledge_search`，除非用户权限配置另行放行）
 
 ---
-
 ## 附录
 
 ### A. 设计决策记录
@@ -323,5 +329,6 @@ bun run build --single
 
 | 版本 | 日期 | 作者 | 变更描述 |
 |------|------|------|----------|
+| 1.2 | 2026-04-29 | - | 同步实现：`plan` Agent 显式拒绝 `switch_cwd` 与 `arkts_knowledge_search`，并保留计划文件目录 `external_directory` 例外 |
 | 1.1 | 2026-04-29 | - | 同步实现：`agent.ts` 移除内置 `debug` Agent；验证方案与源码清单见 `source-code-changes.md` |
 | 1.0 | 2026-04-23 | zhangyuchen | 初始版本 |

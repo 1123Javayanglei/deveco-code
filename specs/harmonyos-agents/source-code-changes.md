@@ -4,6 +4,8 @@
 
 **后续变更（2026-04-29）**: 内置 **`debug` Agent 已下线**——`agent.ts` 的 `agents` 对象中不再注册 `debug`，`/agent list` 与默认 primary 候选中均不包含该 Agent。仓库内的 `prompt/debug.txt` 仍可保留，供日后恢复或通过用户配置自定义 Agent 引用；`PROMPT_DEBUG` import 若长期未使用可择机删除以避免未使用符号。
 
+**后续变更（2026-04-29）**: `plan` Agent 权限继续收敛，显式拒绝 `switch_cwd` 与 `arkts_knowledge_search`，避免规划模式切换工作目录或直接查询 ArkTS 知识库；计划文件目录的 `external_directory` 例外仍保留。
+
 ---
 
 ## 1. 修改概览
@@ -15,7 +17,7 @@
 | `packages/opencode/src/agent/prompt/ask.txt` | 新增 | HarmonyOS 工程问答 prompt（直接复制） |
 | `packages/opencode/src/agent/prompt/debug.txt` | 新增 | 假设驱动调试 prompt（直接复制；Agent 本体见下方「下线」说明） |
 | `packages/opencode/src/agent/prompt/explore.txt` | 替换 | 通用搜索 → HarmonyOS/ArkTS 专业搜索（直接覆盖） |
-| `packages/opencode/src/agent/agent.ts` | 修改 | 新增 4 个 prompt import + 修改/新增 Agent 定义；**2026-04-29 起移除内置 `debug` Agent 注册** |
+| `packages/opencode/src/agent/agent.ts` | 修改 | 新增 prompt import + 修改/新增 Agent 定义；**2026-04-29 起移除内置 `debug` Agent 注册**，并收敛 `plan` Agent 的 `switch_cwd` / `arkts_knowledge_search` 权限 |
 | `packages/opencode/src/cli/cmd/tui/component/dialog-agent.tsx` | 修改 | `/agents` 列表优先展示 `description`，不再对 `native` Agent 固定显示 `"native"` |
 
 **总计**: 新增 4 个文件 + 替换 1 个文件 + 修改 2 个文件（含后续 TUI 修正）；内置 `debug` Agent 已按上节说明下线。
@@ -134,6 +136,11 @@ plan: {
     get_app_ui_tree: "deny",
     start_app: "deny",
     hdc_log: "deny",
+    switch_cwd: "deny",
+    arkts_knowledge_search: "deny",
+    external_directory: {
+      [path.join(Global.Path.data, "plans", "*")]: "allow",
+    },
     edit: "deny",
   }), user),
   mode: "primary",
@@ -146,9 +153,9 @@ plan: {
 1. `description`: 更新为 ArkTS 规划描述
 2. `plan_exit`: `"allow"` → `"ask"`
 3. 新增 `plan_write: "allow"`
-4. 新增多个执行类工具 deny（bash、build_project 等）
+4. 新增多个执行类、上下文切换和知识检索工具 deny（bash、build_project、switch_cwd、arkts_knowledge_search 等）
 5. `edit`: 从复杂的 glob 规则简化为 `"deny"`（plan prompt 本身会约束只写 plan 文件）
-6. 移除 `external_directory` 和 glob-based edit 规则
+6. 保留计划文件目录的 `external_directory` allow 例外，用于外部计划文件 workflow
 7. 新增 `prompt: PROMPT_PLAN`
 
 #### 3.1.4 新增 `Ask` Agent 定义
@@ -230,6 +237,7 @@ debug: {
 1. **类型检查**: `bun run typecheck` 无新增错误
 2. **构建验证**: `bun run build --single` 成功
 3. **运行时验证**: 启动 opencode，`/agent list` 包含 build、plan 等当前内置 primary Agent；**不应**再出现内置 `debug`（已下线）。
+4. **`plan` 权限**：在默认合并规则（未在用户配置中放行）下，`plan` Agent 调用 `switch_cwd`、`arkts_knowledge_search` 应被拒绝。
 
 ---
 

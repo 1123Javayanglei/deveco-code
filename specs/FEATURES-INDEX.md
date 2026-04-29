@@ -39,6 +39,7 @@
 
 | 日期 | 操作 | 特性 | 描述 |
 |------|------|------|------|
+| 2026-04-29 | 更新 | 007-harmonyos-agents | `plan` Agent 显式 deny `switch_cwd`、`arkts_knowledge_search`；见 `specs/harmonyos-agents/source-code-changes.md` §3.1.3 与 `02-functional-design.md` §3.2.2、§4 |
 | 2026-04-29 | 更新 | 007-harmonyos-agents | 内置 `debug` Agent 从 `agent.ts` 下线；见 `specs/harmonyos-agents/source-code-changes.md` 文首「后续变更」与 §3.1.5 |
 | 2026-04-28 | 更新 | 005-skills-migration, 006-harmonyos-tools | 同步默认 Skill 私有脚本 Node 化、`jscrash_report` 下沉与二进制资源嵌入修复 |
 | 2026-04-28 | 更新 | 007-harmonyos-agents | TUI `/agents`：`DialogAgent` 优先展示各 Agent 的 `description`，修正内置 Agent 仅显示 `native` 的问题；见 `specs/harmonyos-agents/source-code-changes.md` 第 6 节 |

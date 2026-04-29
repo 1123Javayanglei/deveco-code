@@ -146,6 +146,8 @@ export const layer = Layer.effect(
                 get_app_ui_tree: "deny",
                 start_app: "deny",
                 hdc_log: "deny",
+                switch_cwd: "deny",
+                arkts_knowledge_search: "deny",
                 external_directory: {
                   [path.join(Global.Path.data, "plans", "*")]: "allow",
                 },
