@@ -1,5 +1,6 @@
 import { Provider } from "@/provider"
 import { Log } from "@/util"
+import crypto from "crypto"
 import { Context, Effect, Layer, Record } from "effect"
 import * as Stream from "effect/Stream"
 import { streamText, wrapLanguageModel, type ModelMessage, type Tool, tool, jsonSchema } from "ai"
@@ -11,8 +12,9 @@ import { Instance } from "@/project/instance"
 import type { Agent } from "@/agent/agent"
 import type { MessageV2 } from "./message-v2"
 import { Plugin } from "@/plugin"
+import { sessionChatIdMap } from "@/plugin/codegenie"
 import { SystemPrompt } from "./system"
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { Bus } from "@/bus"
@@ -20,7 +22,7 @@ import { Wildcard } from "@/util"
 import { SessionID } from "@/session/schema"
 import { Auth } from "@/auth"
 import { Installation } from "@/installation"
-import { InstallationVersion } from "@/installation/version"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { EffectBridge } from "@/effect"
 import * as Option from "effect/Option"
 import * as OtelTracer from "@effect/opentelemetry/Tracer"
@@ -70,17 +72,24 @@ const live: Layer.Layer<
     const perm = yield* Permission.Service
 
     const run = Effect.fn("LLM.run")(function* (input: StreamRequest) {
+      let chatId = sessionChatIdMap.get(input.sessionID)
+      if (!chatId) {
+        chatId = crypto.randomUUID().replace(/-/g, "")
+        sessionChatIdMap.set(input.sessionID, chatId)
+      }
       const l = log
         .clone()
         .tag("providerID", input.model.providerID)
         .tag("modelID", input.model.id)
         .tag("session.id", input.sessionID)
+        .tag("chatId", chatId)
         .tag("small", (input.small ?? false).toString())
         .tag("agent", input.agent.name)
         .tag("mode", input.agent.mode)
       l.info("stream", {
         modelID: input.model.id,
         providerID: input.model.providerID,
+        chatId,
       })
 
       const [language, cfg, item, info] = yield* Effect.all(
@@ -369,15 +378,16 @@ const live: Layer.Layer<
         headers: {
           ...(input.model.providerID.startsWith("opencode")
             ? {
-                "x-opencode-project": Instance.project.id,
-                "x-opencode-session": input.sessionID,
-                "x-opencode-request": input.user.id,
-                "x-opencode-client": Flag.OPENCODE_CLIENT,
+                "x-codegenie-project": Instance.project.id,
+                "x-codegenie-session": input.sessionID,
+                "x-codegenie-request": input.user.id,
+                "x-codegenie-client": Flag.CODEGENIE_CLIENT,
+                "User-Agent": `codegenie/${InstallationVersion}`,
               }
             : {
                 "x-session-affinity": input.sessionID,
                 ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
-                "User-Agent": `opencode/${InstallationVersion}`,
+                "User-Agent": `codegenie/${InstallationVersion}`,
               }),
           ...input.model.headers,
           ...headers,

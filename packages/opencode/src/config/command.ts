@@ -2,8 +2,8 @@ export * as ConfigCommand from "./command"
 
 import { Log } from "../util"
 import { Schema } from "effect"
-import { NamedError } from "@opencode-ai/shared/util/error"
-import { Glob } from "@opencode-ai/shared/util/glob"
+import { NamedError } from "@opencode-ai/core/util/error"
+import { Glob } from "@opencode-ai/core/util/glob"
 import { Bus } from "@/bus"
 import { zod } from "@/util/effect-zod"
 import { withStatics } from "@/util/schema"
@@ -43,7 +43,7 @@ export async function load(dir: string) {
     })
     if (!md) continue
 
-    const patterns = ["/.opencode/command/", "/.opencode/commands/", "/command/", "/commands/"]
+    const patterns = ["/.codegenie/command/", "/.codegenie/commands/", "/.opencode/command/", "/.opencode/commands/", "/command/", "/commands/"]
     const name = configEntryNameFromPath(item, patterns)
 
     const config = {

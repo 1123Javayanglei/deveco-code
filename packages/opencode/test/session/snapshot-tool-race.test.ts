@@ -51,8 +51,9 @@ import { SessionStatus } from "../../src/session/status"
 import { Snapshot } from "../../src/snapshot"
 import { ToolRegistry } from "../../src/tool"
 import { Truncate } from "../../src/tool"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { Auth } from "../../src/auth"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { Format } from "../../src/format"
 
@@ -127,6 +128,7 @@ function makeHttp() {
   const registry = ToolRegistry.layer.pipe(
     Layer.provide(Skill.defaultLayer),
     Layer.provide(FetchHttpClient.layer),
+    Layer.provide(Auth.defaultLayer),
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),

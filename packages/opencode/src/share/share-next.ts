@@ -15,7 +15,7 @@ import { Log } from "@/util"
 import { SessionShareTable } from "./share.sql"
 
 const log = Log.create({ service: "share-next" })
-const disabled = process.env["OPENCODE_DISABLE_SHARE"] === "true" || process.env["OPENCODE_DISABLE_SHARE"] === "1"
+const disabled = process.env["CODEGENIE_DISABLE_SHARE"] === "true" || process.env["CODEGENIE_DISABLE_SHARE"] === "1"
 
 export type Api = {
   create: string
@@ -181,7 +181,7 @@ export const layer = Layer.effect(
 
         yield* watch(Session.Event.Updated, (evt) =>
           Effect.gen(function* () {
-            const info = yield* session.get(evt.properties.sessionID)
+            const info = evt.properties.info
             yield* sync(info.id, [{ type: "session", data: info }])
           }),
         )
