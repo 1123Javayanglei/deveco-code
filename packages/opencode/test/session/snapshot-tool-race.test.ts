@@ -14,6 +14,7 @@
 import { expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
+import { ServeError } from "effect/unstable/http/HttpServerError"
 import fs from "fs/promises"
 import path from "path"
 import { Session } from "@/session/session"
@@ -155,7 +156,7 @@ function makeHttp() {
   )
 }
 
-const it = testEffect(makeHttp())
+const it = testEffect(makeHttp() as Layer.Layer<any, ServeError, never>)
 
 const providerCfg = (url: string) => ({
   provider: {
