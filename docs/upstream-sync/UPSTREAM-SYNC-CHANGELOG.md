@@ -23,8 +23,9 @@
   - `packages/web/package.json` workspace 依赖被覆盖为 `"opencode": "workspace:*"`，手动改回 `"codegenie": "workspace:*"`。
   - 测试文件中 `Flag.OPENCODE_EXPERIMENTAL_HTTPAPI`、`Flag.OPENCODE_SERVER_PASSWORD`、`Flag.OPENCODE_SERVER_USERNAME`、`Flag.OPENCODE_EXPERIMENTAL_WORKSPACES` 需改为 `CODEGENIE_*`。
 - **待修复问题**:
-  - 测试文件 `test/session/prompt.test.ts`、`test/session/snapshot-tool-race.test.ts` Layer 类型不匹配（上游 Effect 迁移导致）。
   - bun 版本要求从 1.3.12 升级到 1.3.13。
+- **已修复问题**:
+  - 测试文件 `test/session/prompt.test.ts`、`test/session/snapshot-tool-race.test.ts` Layer 类型不匹配（Effect v4 类型推断问题）。修复：添加 `ServeError` 导入、`TestLLMServer.layer` 类型注解、`Layer.provideMerge` 替换 `Layer.provide`、测试调用处类型断言。
 - **主要变更**:
   - feat(core): store relative path for sessions (#24704)
   - feat(core): file context improvements and option to disable (#24661)
