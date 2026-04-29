@@ -2,6 +2,41 @@
 
 > 同步规则和流程见 [UPSTREAM-SYNC-GUIDE.md](./UPSTREAM-SYNC-GUIDE.md)
 
+## 2026-04-29 | v1.14.28 → v1.14.29
+
+- **分支**: upstream-tracking-develop
+- **上游提交数**: 53
+- **冲突**: 42 个文件。27 个 package.json/extension.toml 冲突（接受版本号升级，保留 name="codegenie"）；12 个测试文件冲突（接受上游）；3 个源码功能性冲突；bun.lock 重新生成。
+- **结构性变更**: 上游重构 HTTPAPI 路由处理，删除 server.ts 和 routes/instance/index.ts 中的旧路由注册代码块（已整合到新的 httpapi/public.ts、httpapi/global.ts 等文件）。
+- **导入路径重构**: 上游继续 Effect 迁移，多个文件导入路径从桶文件改为直接导入（如 `@/session` → `@/session/session`，`@/util` → `@opencode-ai/core/util/log`）。
+- **功能性冲突**:
+  - `server.ts`: 接受上游删除旧 HTTPAPI 路由注册块，保留 `Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI` 和 `Flag.CODEGENIE_WORKSPACE_ID` 品牌标识。
+  - `routes/instance/index.ts`: 接受上游删除旧 HTTPAPI 路由注册块。
+  - `llm.ts`: 接受导入路径重构，保留 `x-codegenie-*` headers 和 `Flag.CODEGENIE_CLIENT` 品牌标识。
+  - `share/session.ts`: 接受导入路径重构，保留 `Flag.CODEGENIE_AUTO_SHARE`。
+  - `skill/index.ts`: 接受导入路径重构，保留 `Flag.CODEGENIE_DISABLE_DEFAULT_SKILLS`、`Flag.CODEGENIE_DISABLE_EXTERNAL_SKILLS` 和 `Defaults.ensure()` 本地功能。
+  - `tool/registry.ts`: 接受导入路径重构，保留 HarmonyOS 工具（HdcLogTool、SwitchCwdTool、OhKnowledgeTool）和品牌标识（`Flag.CODEGENIE_CLIENT`、`Flag.CODEGENIE_EXPERIMENTAL_LSP_TOOL`、`Flag.CODEGENIE_ENABLE_EXA`）。
+  - `home.tsx`: 接受导入路径重构，保留 `CodeGenieOnboarding` 组件。
+  - `project.ts`: 接受导入路径重构，保留 `Flag.CODEGENIE_FAKE_VCS`、`Flag.CODEGENIE_EXPERIMENTAL_ICON_DISCOVERY`。
+- **本地源码修复**: `security/local-crypto.ts`、`session/oh-knowledge-async.ts`、`skill/defaults.ts` 导入路径更新为 Effect 模式。
+- **auto-merge 陷阱修复**:
+  - `packages/web/package.json` workspace 依赖被覆盖为 `"opencode": "workspace:*"`，手动改回 `"codegenie": "workspace:*"`。
+  - 测试文件中 `Flag.OPENCODE_EXPERIMENTAL_HTTPAPI`、`Flag.OPENCODE_SERVER_PASSWORD`、`Flag.OPENCODE_SERVER_USERNAME`、`Flag.OPENCODE_EXPERIMENTAL_WORKSPACES` 需改为 `CODEGENIE_*`。
+- **待修复问题**:
+  - 测试文件 `test/session/prompt.test.ts`、`test/session/snapshot-tool-race.test.ts` Layer 类型不匹配（上游 Effect 迁移导致）。
+  - bun 版本要求从 1.3.12 升级到 1.3.13。
+- **主要变更**:
+  - feat(core): store relative path for sessions (#24704)
+  - feat(core): file context improvements and option to disable (#24661)
+  - refactor(httpapi): fork server startup by flag (#24799)
+  - refactor(httpapi): align request body openapi shape (#24811)
+  - fix(httpapi): multiple OpenAPI and session parity fixes (#24660-#24809)
+  - fix(tui): Zed editor context polling stability (#24656/#24662/#24711)
+  - fix(session): compaction and shell cancellation improvements (#24553/#24676/#24677)
+  - docs: bump GitHub stars count to 150K (#24792)
+  - zen: coupons
+  - chore: bump effect beta (#24705)
+
 ## 2026-04-28 | v1.14.27 → v1.14.28
 
 - **分支**: upstream-tracking-develop

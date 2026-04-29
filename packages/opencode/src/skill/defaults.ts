@@ -2,7 +2,7 @@ import path from "path"
 import { Effect } from "effect"
 import type { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Global } from "@opencode-ai/core/global"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 
 type EmbeddedSkillFile = string | { encoding: "base64"; content: string }
 

@@ -13,7 +13,7 @@ import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { useCommandDialog } from "../component/dialog-command"
 import { useLocal } from "../context/local"
 import { CodeGenieOnboarding } from "../component/codegenie-onboarding"
-import { TuiPluginRuntime } from "../plugin"
+import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
 
 // TODO: what is the best way to do this?
 let once = false

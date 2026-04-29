@@ -1,10 +1,10 @@
-import { Session } from "@/session"
+import { Session } from "@/session/session"
 import { SessionID, MessageID, PartID } from "./schema"
 import { Effect } from "effect"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { KNOWLEDGE_TOOL_ID } from "@/tool/oh_knowledge.ts"
 
-export const log = Log.create({service: "knowledge"})
+const log = Log.create({service: "knowledge"})
 
 type OhKnowledgeResult = {
   title: string
