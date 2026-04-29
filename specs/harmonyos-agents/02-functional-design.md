@@ -175,6 +175,8 @@ plan: {
 
 #### 3.2.3 debug Agent（新增）
 
+> **实现状态（2026-04-29）**: 以下配置曾作为内置 Agent 落地，**当前已从 `agent.ts` 移除注册**（内置 debug 下线）。`debug.txt` 仍可保留；若需恢复，可通过用户 `agent` 配置引用同名 prompt。
+
 ```typescript
 debug: {
   name: "debug",
@@ -227,6 +229,8 @@ import PROMPT_DEBUG from "./prompt/debug.txt"
 | hdc_log | allow | deny | deny | allow | - |
 | arkts_knowledge_search | - | - | allow | - | - |
 | skill | allow | - | deny | - | - |
+
+**注**: `debug` 列描述的是曾内置该 Agent 时的权限；**2026-04-29 起内置 `debug` 已下线**，列表中不再出现，除非用户自行配置。
 
 ---
 
@@ -291,7 +295,7 @@ bun run build --single
 ### 6.2 运行时验证
 
 启动 opencode 后验证：
-1. `/agent list` 显示 build、plan、Ask、debug
+1. `/agent list` 显示 build、plan 等当前内置 primary Agent；内置 **`debug` 已下线**（2026-04-29），不应再出现在列表中，除非用户通过配置自行注册
 2. 切换到各 Agent，检查 system prompt 是否正确加载
 3. 各 Agent 权限是否正确（如 Ask 不能执行 bash）
 
@@ -319,4 +323,5 @@ bun run build --single
 
 | 版本 | 日期 | 作者 | 变更描述 |
 |------|------|------|----------|
+| 1.1 | 2026-04-29 | - | 同步实现：`agent.ts` 移除内置 `debug` Agent；验证方案与源码清单见 `source-code-changes.md` |
 | 1.0 | 2026-04-23 | zhangyuchen | 初始版本 |
