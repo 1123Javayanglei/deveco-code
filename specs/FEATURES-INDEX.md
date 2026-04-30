@@ -30,6 +30,7 @@
 | 006 | HarmonyOS 工具迁移 | `harmonyos-tools` | ✅ | ✅ | - | - | ✅ | - | 2026-04-28 |
 | 007 | HarmonyOS Agents 迁移 | `harmonyos-agents` | ✅ | ✅ | - | - | ✅ | - | 2026-04-29 |
 | 008 | 品牌增强 (Brand Enhancement) | `codegenie-brand-enhancement` | ✅ | ✅ | - | - | ✅ | - | 2026-04-22 |
+| 009 | AI模型排队轮询机制 | `queue-polling` | ✅ | ✅ | ✅ | - | ✅ | - | 2026-04-29 |
 
 **状态说明**: ✅ 已完成 | 🔄 进行中 | - 未开始
 
@@ -39,6 +40,8 @@
 
 | 日期 | 操作 | 特性 | 描述 |
 |------|------|------|------|
+| 2026-04-29 | 实现 | 009-queue-polling | 完成AI模型排队轮询机制实现：QueueError/QueuePart Schema、queuePolicy固定步长延迟、ExitQueue Service、processor.ts集成、TUI渲染 |
+| 2026-04-29 | 新增 | 009-queue-polling | AI模型排队轮询机制需求文档创建：406错误检测、固定步长轮询、聊天区显示、用户取消 |
 | 2026-04-29 | 更新 | 007-harmonyos-agents | `plan` Agent 显式 deny `switch_cwd`、`arkts_knowledge_search`；见 `specs/harmonyos-agents/source-code-changes.md` §3.1.3 与 `02-functional-design.md` §3.2.2、§4 |
 | 2026-04-29 | 更新 | 007-harmonyos-agents | 内置 `debug` Agent 从 `agent.ts` 下线；见 `specs/harmonyos-agents/source-code-changes.md` 文首「后续变更」与 §3.1.5 |
 | 2026-04-28 | 更新 | 005-skills-migration, 006-harmonyos-tools | 同步默认 Skill 私有脚本 Node 化、`jscrash_report` 下沉与二进制资源嵌入修复 |

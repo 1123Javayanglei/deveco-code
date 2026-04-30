@@ -62,6 +62,12 @@ export const ContextOverflowError = namedSchemaError("ContextOverflowError", {
   responseBody: Schema.optional(Schema.String),
 })
 
+export const QueueError = namedSchemaError("QueueError", {
+  position: Schema.Number,
+  message: Schema.String,
+})
+export type QueueError = z.infer<typeof QueueError.Schema>
+
 export class OutputFormatText extends Schema.Class<OutputFormatText>("OutputFormatText")({
   type: Schema.Literal("text"),
 }) {
@@ -254,6 +260,20 @@ export type RetryPart = Omit<Types.DeepMutable<Schema.Schema.Type<typeof RetryPa
   error: APIError
 }
 
+export const QueuePart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("queue"),
+  position: Schema.Number,
+  message: Schema.String,
+  time: Schema.Struct({
+    start: Schema.Number,
+    end: Schema.optional(Schema.Number),
+  }),
+})
+  .annotate({ identifier: "QueuePart" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type QueuePart = Types.DeepMutable<Schema.Schema.Type<typeof QueuePart>>
+
 export const StepStartPart = Schema.Struct({
   ...partBase,
   type: Schema.Literal("step-start"),
@@ -414,6 +434,7 @@ const _Part = Schema.Union([
   PatchPart,
   AgentPart,
   RetryPart,
+  QueuePart,
   CompactionPart,
 ]).annotate({ discriminator: "type", identifier: "Part" })
 export const Part = Object.assign(_Part, {
@@ -429,6 +450,7 @@ export const Part = Object.assign(_Part, {
     | PatchPart
     | AgentPart
     | RetryPart
+    | QueuePart
     | CompactionPart
   >,
 })
@@ -444,6 +466,7 @@ export type Part =
   | PatchPart
   | AgentPart
   | RetryPart
+  | QueuePart
   | CompactionPart
 
 // Zod discriminated union kept for the legacy Hono OpenAPI path.
@@ -455,6 +478,7 @@ const AssistantErrorZod = z.discriminatedUnion("name", [
   StructuredOutputError.Schema,
   ContextOverflowError.Schema,
   APIError.Schema,
+  QueueError.Schema,
 ])
 type AssistantError = z.infer<typeof AssistantErrorZod>
 
@@ -1163,6 +1187,15 @@ export function fromError(
           {
             message: parsed.message,
             responseBody: parsed.responseBody,
+          },
+          { cause: e },
+        ).toObject()
+      }
+      if (parsed.type === "queue") {
+        return new QueueError(
+          {
+            position: parsed.position,
+            message: parsed.message,
           },
           { cause: e },
         ).toObject()

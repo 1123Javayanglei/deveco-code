@@ -31,6 +31,7 @@ import type {
   UserMessage,
   TextPart,
   ReasoningPart,
+  QueuePart,
 } from "@opencode-ai/sdk/v2"
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util/locale"
@@ -1442,6 +1443,27 @@ const PART_MAPPING = {
   text: TextPart,
   tool: ToolPart,
   reasoning: ReasoningPart,
+  queue: QueuePartComponent,
+}
+
+function QueuePartComponent(props: { last: boolean; part: QueuePart; message: AssistantMessage }) {
+  const { theme } = useTheme()
+  return (
+    <Show when={true}>
+      <box
+        id={"queue-" + props.part.id}
+        paddingLeft={3}
+        marginTop={1}
+        flexDirection="row"
+        gap={1}
+      >
+        <text fg={theme.info}>ℹ</text>
+        <text fg={theme.text}>
+          当前模型访问量较高，您目前排在第{props.part.position}位，请耐心等待或处理其他任务
+        </text>
+      </box>
+    </Show>
+  )
 }
 
 function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: AssistantMessage }) {
