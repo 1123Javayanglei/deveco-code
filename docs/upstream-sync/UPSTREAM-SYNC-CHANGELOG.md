@@ -2,6 +2,35 @@
 
 > 同步规则和流程见 [UPSTREAM-SYNC-GUIDE.md](./UPSTREAM-SYNC-GUIDE.md)
 
+## 2026-04-30 | v1.14.29 → v1.14.30
+
+- **分支**: upstream-tracking-develop
+- **上游提交数**: 42
+- **冲突**: 29 个文件。16 个 package.json 版本号冲突（保留 name="codegenie"，升级版本）；packages/web/package.json workspace 依赖；1 个 extension.toml 版本号+下载 URL；bun.lock 重新生成；4 个源码功能性冲突；5 个测试文件冲突。
+- **结构性变更**: 上游新增 `ServerBackend` 模块选择后端（hono vs effect-httpapi），引入 `withBackend()`、`select()`、`Legacy()` 函数；新增 `ProxyUtil` 模块整合 proxy 相关工具函数；删除 `CodeSearchTool`（标记 broken）；新增 session `path` 过滤功能。
+- **功能性冲突**:
+  - `server/backend.ts`: 新增文件，将 `Flag.OPENCODE_EXPERIMENTAL_HTTPAPI` 改为 `Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI`。
+  - `server/server.ts`: 接受上游新架构（`ServerBackend.select()`、`withBackend()`），保留品牌标识。
+  - `server/proxy.ts`: 接受上游移除内联函数改用 `ProxyUtil`，保留 `x-codegenie-proxy-url` header。
+  - `server/proxy-util.ts`: 将 `x-opencode-directory`/`x-opencode-workspace` 改为 `x-codegenie-directory`/`x-codegenie-workspace`。
+  - `session/session.ts`: 接受新增 `path` 过滤功能，将 `Flag.OPENCODE_EXPERIMENTAL_WORKSPACES` 改为 `Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES`。
+  - `tool/registry.ts`: 接受删除 `CodeSearchTool`，保留 `Flag.CODEGENIE_ENABLE_EXA`。
+- **测试文件冲突**: 5 个测试文件（httpapi-json-parity/mcp/provider/sync/workspace）接受上游新增 `mock.restore()` 和 `Server.Legacy()` 分支，将所有 `Flag.OPENCODE_*` 改为 `Flag.CODEGENIE_*`。
+- **auto-merge 陷阱修复**:
+  - `packages/web/package.json` workspace 依赖已正确保留为 `"codegenie": "workspace:*"`。
+- **语法修复**: `server/server.ts` 和 `tool/registry.ts` 编辑残留的多余 `}` 已移除。
+- **主要变更**:
+  - fix(desktop): Path mismatches cause sessions missing + strong ID + existing data fix (#25013)
+  - feat: add Mistral Medium 3.5 with reasoning support (#24996)
+  - Refactor HttpApi workspace routing and proxy boundaries (#25006)
+  - fix(core): reconnect editor context for session directory (#24984)
+  - chore: rm broken codesearch tool (#24992)
+  - tweak: adjust order of system prompt instructions: Global, Project, Skills (#24974)
+  - Prepare Effect HttpApi backend parity (#24853)
+  - fix(session): remap compaction tail_start_id when forking (#24898)
+  - feat: make it easier to toggle on/off paste summary in the tui (#24869)
+  - feat(core): filter sessions by path and add setting to disable (#24849)
+
 ## 2026-04-29 | v1.14.28 → v1.14.29
 
 - **分支**: upstream-tracking-develop
