@@ -907,6 +907,9 @@ export async function CodegenieAuthPlugin(_input: PluginInput): Promise<Hooks> {
             const sessionId = headers.get("x-codegenie-session") || headers.get("x-session-affinity")
             const chatId = (sessionId && sessionChatIdMap.get(sessionId)) || crypto.randomUUID().replace(/-/g, "")
             headers.set("Chat-Id", chatId)
+            if (sessionId) {
+              headers.set("Session-Id", sessionId)
+            }
 
             return fetch(requestInput, {
               ...init,

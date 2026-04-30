@@ -8098,6 +8098,28 @@
         },
         "required": ["name", "data"]
       },
+      "QueueError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "QueueError"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "position": {
+                "type": "number"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["position", "message"]
+          }
+        },
+        "required": ["name", "data"]
+      },
       "Event.session.error": {
         "type": "object",
         "properties": {
@@ -8134,6 +8156,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/APIError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/QueueError"
                   }
                 ]
               }
@@ -8413,6 +8438,28 @@
               }
             },
             "required": ["type", "attempt", "message", "next"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "queue"
+              },
+              "attempt": {
+                "type": "number"
+              },
+              "position": {
+                "type": "number"
+              },
+              "message": {
+                "type": "string"
+              },
+              "next": {
+                "type": "number"
+              }
+            },
+            "required": ["type", "attempt", "position", "message", "next"]
           },
           {
             "type": "object",
@@ -9115,6 +9162,9 @@
               },
               {
                 "$ref": "#/components/schemas/APIError"
+              },
+              {
+                "$ref": "#/components/schemas/QueueError"
               }
             ]
           },
@@ -9983,6 +10033,46 @@
         },
         "required": ["id", "sessionID", "messageID", "type", "attempt", "error", "time"]
       },
+      "QueuePart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^prt.*"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses.*"
+          },
+          "messageID": {
+            "type": "string",
+            "pattern": "^msg.*"
+          },
+          "type": {
+            "type": "string",
+            "const": "queue"
+          },
+          "position": {
+            "type": "number"
+          },
+          "message": {
+            "type": "string"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              }
+            },
+            "required": ["start"]
+          }
+        },
+        "required": ["id", "sessionID", "messageID", "type", "position", "message", "time"]
+      },
       "CompactionPart": {
         "type": "object",
         "properties": {
@@ -10049,6 +10139,9 @@
           },
           {
             "$ref": "#/components/schemas/RetryPart"
+          },
+          {
+            "$ref": "#/components/schemas/QueuePart"
           },
           {
             "$ref": "#/components/schemas/CompactionPart"
