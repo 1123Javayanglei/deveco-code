@@ -493,6 +493,7 @@ const AssistantErrorSchema = Schema.Union([
   StructuredOutputError.EffectSchema,
   ContextOverflowError.EffectSchema,
   APIError.EffectSchema,
+  QueueError.EffectSchema,
 ]).annotate({ discriminator: "name" })
 
 // ── Prompt input schemas ─────────────────────────────────────────────────────

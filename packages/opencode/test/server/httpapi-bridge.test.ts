@@ -173,10 +173,10 @@ afterEach(async () => {
 
 describe("HttpApi server", () => {
   test("keeps Effect HttpApi behind the feature flag", () => {
-    Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = false
+    Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = false
     expect(Server.backend()).toEqual({ backend: "hono", reason: "stable" })
 
-    Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = true
+    Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = true
     expect(Server.backend()).toEqual({ backend: "effect-httpapi", reason: "env" })
   })
 
@@ -250,7 +250,7 @@ describe("HttpApi server", () => {
 
     const response = await app().request(fileUrl(), {
       headers: {
-        "x-opencode-directory": tmp.path,
+        "x-codegenie-directory": tmp.path,
       },
     })
 
@@ -263,7 +263,7 @@ describe("HttpApi server", () => {
 
     const response = await app().request("/project/current", {
       headers: {
-        "x-opencode-directory": tmp.path,
+        "x-codegenie-directory": tmp.path,
       },
     })
 
@@ -277,18 +277,18 @@ describe("HttpApi server", () => {
 
     const [missing, bad, good] = await Promise.all([
       app({ password: "secret" }).request(fileUrl(), {
-        headers: { "x-opencode-directory": tmp.path },
+        headers: { "x-codegenie-directory": tmp.path },
       }),
       app({ password: "secret" }).request(fileUrl(), {
         headers: {
           authorization: authorization("opencode", "wrong"),
-          "x-opencode-directory": tmp.path,
+          "x-codegenie-directory": tmp.path,
         },
       }),
       app({ password: "secret" }).request(fileUrl(), {
         headers: {
           authorization: authorization("opencode", "secret"),
-          "x-opencode-directory": tmp.path,
+          "x-codegenie-directory": tmp.path,
         },
       }),
     ])
@@ -306,7 +306,7 @@ describe("HttpApi server", () => {
       fileUrl({ token: Buffer.from("opencode:secret").toString("base64") }),
       {
         headers: {
-          "x-opencode-directory": tmp.path,
+          "x-codegenie-directory": tmp.path,
         },
       },
     )
@@ -322,7 +322,7 @@ describe("HttpApi server", () => {
 
     const response = await app().request(fileUrl({ directory: query.path }), {
       headers: {
-        "x-opencode-directory": header.path,
+        "x-codegenie-directory": header.path,
       },
     })
 

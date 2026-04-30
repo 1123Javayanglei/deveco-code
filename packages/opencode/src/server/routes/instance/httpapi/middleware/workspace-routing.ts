@@ -56,7 +56,7 @@ function requestURL(request: HttpServerRequest.HttpServerRequest): URL {
 }
 
 function configuredWorkspaceID(): WorkspaceID | undefined {
-  return Flag.OPENCODE_WORKSPACE_ID ? WorkspaceID.make(Flag.OPENCODE_WORKSPACE_ID) : undefined
+  return Flag.CODEGENIE_WORKSPACE_ID ? WorkspaceID.make(Flag.CODEGENIE_WORKSPACE_ID) : undefined
 }
 
 function selectedWorkspaceID(url: URL, sessionWorkspaceID?: WorkspaceID): WorkspaceID | undefined {
@@ -65,7 +65,7 @@ function selectedWorkspaceID(url: URL, sessionWorkspaceID?: WorkspaceID): Worksp
 }
 
 function defaultDirectory(request: HttpServerRequest.HttpServerRequest, url: URL): string {
-  return url.searchParams.get("directory") || request.headers["x-opencode-directory"] || currentDirectory()
+  return url.searchParams.get("directory") || request.headers["x-codegenie-directory"] || currentDirectory()
 }
 
 function shouldStayOnControlPlane(request: HttpServerRequest.HttpServerRequest, url: URL): boolean {
