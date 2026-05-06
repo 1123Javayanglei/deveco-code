@@ -18,9 +18,11 @@ const nodeVersion = await $`node --version`.text().catch(() => "v0.0.0")
 const nodeMajor = parseInt(nodeVersion.replace("v", "").split(".")[0])
 if (nodeMajor < 20) {
   console.log(`\n[0/4] Upgrading Node.js (current: ${nodeVersion.trim()})...`)
-  await $`bash -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash"`
-  await $`bash -c ". ~/.nvm/nvm.sh && nvm install 22"`
-  const newVersion = await $`bash -c ". ~/.nvm/nvm.sh && node --version"`.text()
+  const nodeDir = "/tmp/node22"
+  await $`mkdir -p ${nodeDir}`
+  await $`curl -fsSL https://npmmirror.com/mirrors/node/v22.14.0/node-v22.14.0-linux-x64.tar.xz | tar -xJ -C ${nodeDir} --strip-components=1`
+  process.env.PATH = `${nodeDir}/bin:${process.env.PATH}`
+  const newVersion = await $`node --version`.text()
   console.log(`  Node.js upgraded to ${newVersion.trim()}`)
 }
 
