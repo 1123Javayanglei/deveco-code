@@ -13,6 +13,19 @@ console.log("=== Pipeline Prepare ===")
 console.log(`Monorepo root: ${monorepoRoot}`)
 console.log(`Opencode dir:  ${opencodeDir}`)
 
+// Upgrade Node.js if version < 20 (Vite 7 requires Node 20.19+)
+const nodeVersion = await $`node --version`.text().catch(() => "v0.0.0")
+const nodeMajor = parseInt(nodeVersion.replace("v", "").split(".")[0])
+if (nodeMajor < 20) {
+  console.log(`\n[0/4] Upgrading Node.js (current: ${nodeVersion.trim()})...`)
+  const nodeDir = "/tmp/node22"
+  await $`mkdir -p ${nodeDir}`
+  await $`curl -fsSL https://npmmirror.com/mirrors/node/v22.14.0/node-v22.14.0-linux-x64.tar.xz | tar -xJ -C ${nodeDir} --strip-components=1`
+  process.env.PATH = `${nodeDir}/bin:${process.env.PATH}`
+  const newVersion = await $`node --version`.text()
+  console.log(`  Node.js upgraded to ${newVersion.trim()}`)
+}
+
 // Filter workspace packages to only what's needed for CI build
 // Full monorepo includes electron/tauri/desktop apps that are unnecessary for CLI build
 // and cause CI timeout when electron's postinstall downloads ~200MB binary from GitHub
