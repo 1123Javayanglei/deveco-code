@@ -2,6 +2,36 @@
 
 > 同步规则和流程见 [UPSTREAM-SYNC-GUIDE.md](./UPSTREAM-SYNC-GUIDE.md)
 
+## 2026-05-06 | v1.14.30 → v1.14.31
+
+- **分支**: upstream-tracking-develop
+- **上游提交数**: 93
+- **冲突**: 43 个文件。16 个 package.json 版本号冲突（保留 name="codegenie"，升级版本）；packages/web/package.json workspace 依赖；1 个 extension.toml 版本号；bun.lock 重新生成；6 个核心源码冲突；10 个测试文件冲突。
+- **结构性变更**: 上游将 workspace.ts 重构为 Effect Service/Layer 模式，删除旧的函数式实现；新增 AzureAuthPlugin；新增 CLAUDE_EXTERNAL_DIR/AGENTS_EXTERNAL_DIR 常量；新增 CORS 中间件；新增 config.instructions 配置支持；SDK types 使用 hey-api/openapi-ts 生成。
+- **功能性冲突**:
+  - `workspace.ts`: 接受上游 Effect Service/Layer 重构，保留 `Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES`、`CODEGENIE_AUTH_CONTENT`、`CODEGENIE_WORKSPACE_ID` 品牌标识。
+  - `llm.ts`: 保留 `x-codegenie-*` headers 和 `User-Agent: codegenie/*`，接受上游 `opencodeProjectID` 变量重构。
+  - `session.ts`: 保留 `Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES`。
+  - `skill/index.ts`: 保留 `CODEGENIE_DISABLE_DEFAULT_SKILLS`、`Defaults.ensure()`、`CODEGENIE_SKILL_PATTERN`，合并上游 `CLAUDE_EXTERNAL_DIR` 支持。
+  - `instruction.ts`: 保留 `Flag.CODEGENIE_DISABLE_CLAUDE_CODE_PROMPT`、`Flag.CODEGENIE_DISABLE_PROJECT_CONFIG`，合并上游 `config.instructions` 处理逻辑。
+  - `plugin/index.ts`: 保留本地内部插件（CodegenieAuthPlugin、AnalyticsPlugin、HarmonyNapiDynamicToolsPlugin），合并上游 AzureAuthPlugin。
+- **品牌修复**:
+  - `global.ts`: `OPENCODE_CONFIG_DIR` → `CODEGENIE_CONFIG_DIR`
+  - `ui.ts`: `OPENCODE_DISABLE_EMBEDDED_WEB_UI` → `CODEGENIE_DISABLE_EMBEDDED_WEB_UI`
+  - `workspace.test.ts`: 多处 `OPENCODE_EXPERIMENTAL_WORKSPACES` → `CODEGENIE_EXPERIMENTAL_WORKSPACES`
+- **SDK 修复**: 重新生成 SDK types（`bun run build` in packages/sdk/js）以解决 MessageV2.Part 类型不匹配问题（新增 QueueError type）。
+- **plan.ts 修复**: 添加 `Instance` 导入，修复 `Session.plan()` 调用参数（需要 `instance: InstanceContext`）。
+- **auto-merge 陷阱修复**:
+  - `packages/web/package.json` workspace 依赖已正确保留为 `"codegenie": "workspace:*"`。
+- **主要变更**:
+  - feat(workspace): Effect Service/Layer refactor (#24xxx)
+  - feat(plugin): add AzureAuthPlugin for Azure authentication
+  - feat(skill): support external Claude/Agents directories
+  - feat(config): add instructions field for additional instruction files
+  - feat(cors): add CORS middleware for HTTPAPI
+  - fix(sdk): regenerate types to include new error types
+  - Multiple HTTPAPI parity improvements
+
 ## 2026-04-30 | v1.14.29 → v1.14.30
 
 - **分支**: upstream-tracking-develop
