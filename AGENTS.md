@@ -5,7 +5,7 @@
 **A single task may match multiple rows — always read all matching documents before proceeding.**
 
 | When you need to... | Read this |
-|---------------------|-----------|
+|---------------------|-----------|123
 | Understand the project layout or find where a package lives | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Look up feature specs, or keep feature docs in sync with code changes | [specs/FEATURES-INDEX.md](./specs/FEATURES-INDEX.md) |
 | Write or review code (style, patterns, testing rules — **code style only**; branch/process conventions follow other docs in this table) | [OPENCODE-AGENTS.md](./OPENCODE-AGENTS.md) |
