@@ -287,9 +287,6 @@ for (const item of targets) {
         version: Script.version,
         os: [item.os],
         cpu: [item.arch],
-        bin: {
-          codegenie: "./bin/codegenie",
-        },
         files: [
           "bin/**/*",
           "vendor/**/*",
