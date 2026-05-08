@@ -1,0 +1,107 @@
+---
+description: Execute the implementation planning workflow using the plan template to generate design artifacts.
+agent: spec
+---
+
+## User Input
+```text
+$ARGUMENTS
+```
+
+You **MUST** consider the user input before proceeding (if not empty).
+
+## DYNAMIC CONFIG ROOT RESOLUTION RULE
+Configuration root `CONFIG_ROOT` is resolved at runtime by fixed priority:
+1. FIRST: Project-level configuration directory `.codegenie`
+2. FALLBACK: User-level global directory `~/.config/codegenie/`, The tilde symbol `~` denotes the **user home directory**.
+   For configuration file lookup: if the target file is not found in the higher-priority directory, it must be searched in sequence in the lower-priority fallback directory.
+
+## STRICT OPERATIONAL CONSTRAINTS (ENFORCED WITH ZERO EXCEPTIONS)
+1. **No Early Coding (Non-Negotiable):** You are strictly forbidden from writing, generating, or even outlining application code in `src/` or any other source directory during this workflow. Output must remain strictly at the design/planning level. Main Agent must comply fully; no implicit code generation is allowed.
+2. **No Auto-Execute Next Command:** Upon completion of this planning workflow, refrain from auto-executing any follow-up commands including `/spec-tasks`. Remain idle and await explicit user instruction to proceed. Main Agent is prohibited from triggering any downstream commands automatically.
+3. **Mandatory User Confirmation:** Must invoke the `question` tool to confirm the candidate feature directory with the user before proceeding to subsequent steps. Do not auto-confirm. If the user rejects, abort the entire workflow immediately.
+4. **Hard Context Lock**: All logic, config lookup, and state management only runs in subagent `general`.
+
+## Language Rules
+**Document language must match user input language; default to system language if no user input is provided**:
+- Detect the language used in user input (Chinese, English, etc.)
+- If there is **no valid user input content**, automatically use the **current system default language** as the output language
+- Generate all document content in the detected user input language (or system fallback language)
+- Section titles, descriptions, and explanations must use the consistent determined language
+- Preserve original form of proper nouns, technical terms, code, and commands
+
+## Outline
+1. **Setup & Directory Resolution**:
+    - Resolve `CONFIG_ROOT` using the priority rule above.
+    - Determine `CANDIDATE_FEATURE_DIR`:
+        - If `$ARGUMENTS` is not empty: Use the argument as the target folder name. Check if `.specs/{folder}` exists as a valid directory.
+            - If exists: Set as `CANDIDATE_FEATURE_DIR`.
+            - If not exists: Read the current feature directory from `.specs/feature.json` as `CANDIDATE_FEATURE_DIR`.
+        - If `$ARGUMENTS` is empty: Read the current feature directory from `.specs/feature.json` as `CANDIDATE_FEATURE_DIR`.
+    - Resolve absolute paths:
+        - `SPECS_DIR` = Absolute path of `CANDIDATE_FEATURE_DIR`
+        - `FEATURE_SPEC` = `SPECS_DIR/spec.md`
+        - `IMPL_PLAN` = `SPECS_DIR/plan.md`
+    - Invoke `question` tool to ask the user to confirm using `SPECS_DIR` as the target feature directory.
+    - Only continue after user agreement; stop and output termination status if disagreed.
+
+2. **Check Existing Document** (if `IMPL_PLAN` already exists):
+    - Preserve existing sections that remain valid and relevant.
+    - Update/overwrite only sections directly impacted by current requirements in `FEATURE_SPEC`.
+    - Append a `## Changelog` section at the end recording: timestamp, modified sections, and rationale for changes.
+
+3. **Load Context & Template**:
+    - Read `FEATURE_SPEC`.
+    - Load `IMPL_PLAN` template from `{CONFIG_ROOT}/specs/templates/plan-template.md`.
+    - **Fallback:** If the template is missing, initialize `IMPL_PLAN` with the minimal required structure: `## Technical Context`, `## Research & Decisions`, `## Data Model`, `## Contracts & Interfaces`, `## Quickstart`.
+
+4. **Execute Plan Workflow**: Follow the loaded/initialized template structure to:
+    - Fill `Technical Context` section
+    - Execute Phase 0: Research unknowns and document decisions inline
+    - Execute Phase 1: Design data structures, interfaces, and setup guidelines inline
+    - Finalize and validate the complete plan
+
+5. **Stop and Report**: Command ends after Phase 1 Design & Contracts. Report the absolute path of `IMPL_PLAN` and list all generated artifacts. Do not trigger further actions.
+
+## Phases
+### Phase 0: Research & Resolution
+
+1. **Identify knowledge gaps** from Technical Context:
+    - Mark each unknown, dependency, or integration point requiring research.
+
+2. **Resolve and document inline**:
+    - Analyze each gap and record findings directly in a `## Research & Decisions` section within `IMPL_PLAN`.
+    - Format each entry strictly as:
+        - **Decision**: [chosen approach]
+        - **Rationale**: [reasoning]
+        - **Alternatives considered**: [other options evaluated]
+
+### Phase 1: Architecture & Contracts Design
+**Prerequisites:** Phase 0 complete
+
+1. **Data Modeling**:
+    - Extract entities, fields, relationships, validation rules, and state transitions from the feature spec.
+    - Document under a `## Data Model` section in `IMPL_PLAN`.
+
+2. **Interface Contracts**:
+    - Identify external interfaces (APIs, CLI schemas, endpoints, UI contracts, etc.).
+    - Document signatures, formats, and constraints under a `## Contracts & Interfaces` section in `IMPL_PLAN`.
+    - Omit this section entirely for purely internal projects.
+
+3. **Setup Guidelines**:
+    - Summarize environment setup, dependencies, and initial run steps in a `## Quickstart` section within `IMPL_PLAN`.
+
+4. **Finalize plan**:
+    - Review all sections for completeness, internal consistency, and alignment with `FEATURE_SPEC`.
+    - Ensure `IMPL_PLAN` contains all research, models, contracts, and setup instructions before concluding.
+
+## Key Rules
+- Consolidate all design artifacts—research decisions, data models, interface contracts, and quickstart instructions—directly into `IMPL_PLAN` using the designated sections.
+- Use absolute paths for all file and directory references.
+- Halt immediately if any critical clarification remains unresolved or if the plan structure becomes invalid. Output strictly in this format:
+  ```text
+  [ERROR] <clear reason for termination>
+  [ACTION_REQUIRED] <specific user instruction needed>
+  [STATUS] TERMINATED
+  ```
+- Output must be self-contained within `IMPL_PLAN` to ensure seamless downstream task generation.
