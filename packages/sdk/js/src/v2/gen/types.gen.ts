@@ -33,6 +33,13 @@ export type EventProjectUpdated = {
   properties: Project
 }
 
+export type EventServerInstanceDisposed = {
+  type: "server.instance.disposed"
+  properties: {
+    directory: string
+  }
+}
+
 export type EventServerConnected = {
   type: "server.connected"
   properties: {
@@ -47,10 +54,18 @@ export type EventGlobalDisposed = {
   }
 }
 
-export type EventServerInstanceDisposed = {
-  type: "server.instance.disposed"
+export type EventFileEdited = {
+  type: "file.edited"
   properties: {
-    directory: string
+    file: string
+  }
+}
+
+export type EventFileWatcherUpdated = {
+  type: "file.watcher.updated"
+  properties: {
+    file: string
+    event: "add" | "change" | "unlink"
   }
 }
 
@@ -221,53 +236,6 @@ export type EventInstallationUpdateAvailable = {
   type: "installation.update-available"
   properties: {
     version: string
-  }
-}
-
-export type EventWorkspaceReady = {
-  type: "workspace.ready"
-  properties: {
-    name: string
-  }
-}
-
-export type EventWorkspaceFailed = {
-  type: "workspace.failed"
-  properties: {
-    message: string
-  }
-}
-
-export type EventWorkspaceRestore = {
-  type: "workspace.restore"
-  properties: {
-    workspaceID: string
-    sessionID: string
-    total: number
-    step: number
-  }
-}
-
-export type EventWorkspaceStatus = {
-  type: "workspace.status"
-  properties: {
-    workspaceID: string
-    status: "connected" | "connecting" | "disconnected" | "error"
-  }
-}
-
-export type EventFileEdited = {
-  type: "file.edited"
-  properties: {
-    file: string
-  }
-}
-
-export type EventFileWatcherUpdated = {
-  type: "file.watcher.updated"
-  properties: {
-    file: string
-    event: "add" | "change" | "unlink"
   }
 }
 
@@ -497,6 +465,38 @@ export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
     branch?: string
+  }
+}
+
+export type EventWorkspaceReady = {
+  type: "workspace.ready"
+  properties: {
+    name: string
+  }
+}
+
+export type EventWorkspaceFailed = {
+  type: "workspace.failed"
+  properties: {
+    message: string
+  }
+}
+
+export type EventWorkspaceRestore = {
+  type: "workspace.restore"
+  properties: {
+    workspaceID: string
+    sessionID: string
+    total: number
+    step: number
+  }
+}
+
+export type EventWorkspaceStatus = {
+  type: "workspace.status"
+  properties: {
+    workspaceID: string
+    status: "connected" | "connecting" | "disconnected" | "error"
   }
 }
 
@@ -1143,9 +1143,11 @@ export type GlobalEvent = {
   workspace?: string
   payload:
     | EventProjectUpdated
+    | EventServerInstanceDisposed
     | EventServerConnected
     | EventGlobalDisposed
-    | EventServerInstanceDisposed
+    | EventFileEdited
+    | EventFileWatcherUpdated
     | EventLspClientDiagnostics
     | EventLspUpdated
     | EventMessagePartDelta
@@ -1155,12 +1157,6 @@ export type GlobalEvent = {
     | EventSessionError
     | EventInstallationUpdated
     | EventInstallationUpdateAvailable
-    | EventWorkspaceReady
-    | EventWorkspaceFailed
-    | EventWorkspaceRestore
-    | EventWorkspaceStatus
-    | EventFileEdited
-    | EventFileWatcherUpdated
     | EventQuestionAsked
     | EventQuestionReplied
     | EventQuestionRejected
@@ -1176,6 +1172,10 @@ export type GlobalEvent = {
     | EventMcpBrowserOpenFailed
     | EventCommandExecuted
     | EventVcsBranchUpdated
+    | EventWorkspaceReady
+    | EventWorkspaceFailed
+    | EventWorkspaceRestore
+    | EventWorkspaceStatus
     | EventWorktreeReady
     | EventWorktreeFailed
     | EventPtyCreated
@@ -2086,9 +2086,11 @@ export type File = {
 
 export type Event =
   | EventProjectUpdated
+  | EventServerInstanceDisposed
   | EventServerConnected
   | EventGlobalDisposed
-  | EventServerInstanceDisposed
+  | EventFileEdited
+  | EventFileWatcherUpdated
   | EventLspClientDiagnostics
   | EventLspUpdated
   | EventMessagePartDelta
@@ -2098,12 +2100,6 @@ export type Event =
   | EventSessionError
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
-  | EventWorkspaceReady
-  | EventWorkspaceFailed
-  | EventWorkspaceRestore
-  | EventWorkspaceStatus
-  | EventFileEdited
-  | EventFileWatcherUpdated
   | EventQuestionAsked
   | EventQuestionReplied
   | EventQuestionRejected
@@ -2119,6 +2115,10 @@ export type Event =
   | EventMcpBrowserOpenFailed
   | EventCommandExecuted
   | EventVcsBranchUpdated
+  | EventWorkspaceReady
+  | EventWorkspaceFailed
+  | EventWorkspaceRestore
+  | EventWorkspaceStatus
   | EventWorktreeReady
   | EventWorktreeFailed
   | EventPtyCreated
