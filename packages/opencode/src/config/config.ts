@@ -11,9 +11,10 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { applyEdits, modify } from "jsonc-parser"
-import { type InstanceContext } from "../project/instance"
+import { Instance, type InstanceContext } from "../project/instance"
 import { InstanceStore } from "../project/instance-store"
-import { InstallationLocal, InstallationVersion } from "@opencode-ai/core/installation/version"
+import { InstallationLocal } from "@opencode-ai/core/installation/version"
+import pluginPkg from "@opencode-ai/plugin/package.json"
 import { existsSync } from "fs"
 import { GlobalBus } from "@/bus/global"
 import { Event } from "../server/event"
@@ -557,7 +558,7 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
               add: [
                 {
                   name: "@opencode-ai/plugin",
-                  version: InstallationLocal ? undefined : InstallationVersion,
+                  version: InstallationLocal ? undefined : pluginPkg.version,
                 },
               ],
             })
