@@ -1,0 +1,199 @@
+CodeGenie CLI Notices
+=====================
+
+This product is CodeGenie CLI, an AI CLI assistant for HarmonyOS application
+development. CodeGenie CLI is based on and extends the open source OpenCode
+project.
+
+Product: CodeGenie CLI (HarmonyOS AI Assistant)
+
+The workspace and some package names retain OpenCode naming for upstream
+compatibility and historical reasons. The distributed product name is CodeGenie
+CLI.
+
+Unless otherwise noted, this repository is distributed under the MIT License.
+See the accompanying LICENSE file for the full license text.
+
+Copyright ownership and license obligations are separated by component:
+
+  Original OpenCode portions retain the OpenCode copyright and MIT License
+  notice listed below.
+
+  CodeGenie-specific modifications and HarmonyOS integration source files are
+  owned by their respective contributors or copyright holders. Some of those
+  files carry Apache License, Version 2.0 headers, as noted below.
+
+  Third-party dependencies and native components remain subject to their own
+  licenses, copyright notices, source availability terms, and redistribution
+  requirements.
+
+This NOTICE file records attribution and redistribution notices. It does not
+relicense third-party components or override license headers in individual
+files.
+
+
+License Boundary and Compatibility Notes
+----------------------------------------
+
+The repository contains code and dependencies under multiple permissive
+licenses, including MIT, Apache License, Version 2.0, Mulan PSL v2, and other
+third-party licenses.
+
+The repository-level MIT License applies only to files that do not state a
+different license. Files with explicit Apache License, Version 2.0 headers are
+licensed under Apache License, Version 2.0. Third-party native and JavaScript
+dependencies are governed by the licenses distributed with those components.
+
+For source or binary redistribution, preserve all applicable copyright notices,
+license texts, NOTICE files, attribution files, source offer requirements, and
+other notices required by each component license.
+
+
+OpenCode
+--------
+
+Portions of this software are based on OpenCode.
+
+  Project: OpenCode
+  Website: https://opencode.ai
+  Repository: https://github.com/anomalyco/opencode
+  License: MIT
+
+Copyright notice from the accompanying repository license:
+
+  Copyright (c) 2025 opencode
+
+CodeGenie CLI modifies and extends OpenCode for HarmonyOS-focused development
+workflows, including DevEco Studio integration, hvigorw execution, hdc tooling,
+ArkTS checks, runtime debugging, MCP bridge integration, and related Skill /
+Plugin capabilities. Original OpenCode copyright notices and license terms are
+retained for the OpenCode-derived portions.
+
+OpenCode naming in the workspace and package layout is retained for upstream
+compatibility only and does not change the distributed product name.
+
+
+CodeGenie / HarmonyOS Extensions
+--------------------------------
+
+Some HarmonyOS integration source files in this repository carry their own
+Apache License, Version 2.0 headers. The Apache-licensed files are identified
+by their individual file headers and currently include selected files under:
+
+  packages/opencode/src/tool/
+  packages/opencode/src/tool/lib/
+  packages/opencode/src/plugin/
+  packages/opencode/resources/skills/
+
+Not every file in those directories is licensed under Apache License, Version
+2.0. Files without an explicit Apache License, Version 2.0 header remain
+subject to the repository default license or their own stated license.
+
+Those files include the following copyright notice:
+
+  Copyright (c) 2026 Huawei Device Co., Ltd.
+
+They are licensed under the Apache License, Version 2.0, as stated in the
+individual file headers.
+
+
+Native MCP Bridge Components
+----------------------------
+
+This project depends on the @deveco-codegenie/mcp-bridge package and related
+platform packages for native MCP bridge functionality:
+
+  @deveco-codegenie/mcp-bridge
+  @deveco-codegenie/mcp-bridge-darwin-arm64
+  @deveco-codegenie/mcp-bridge-darwin-x64
+  @deveco-codegenie/mcp-bridge-win32-x64
+
+When these native packages are included in a distribution, preserve the package
+license files, package metadata, native binary notices, and any source or
+redistribution information supplied with the resolved package artifacts. If the
+native package artifacts do not include explicit license, source, or
+redistribution terms, verify those terms with the package publisher before
+release.
+
+The following open source component notices apply to the corresponding native
+bridge artifacts when those artifacts are distributed with this product.
+
+--------------------------------------------------------------------------
+Software: third_party_bounds_checking_function OpenHarmony-v6.0-Beta1
+
+Source reference:
+https://gitee.com/openharmony/third_party_bounds_checking_function
+
+Copyright notice:
+Copyright (c) Huawei Technologies Co., Ltd. 2014-2021. All rights reserved.
+
+License: Mulan PSL v2
+License text: https://license.coscl.org.cn/MulanPSL2
+
+--------------------------------------------------------------------------
+Software: openssl_quic OpenSSL_1_1_1t-quic1
+
+Source reference:
+https://github.com/quictls/openssl
+
+Copyright notice:
+Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
+
+License: Primarily licensed under Apache License, Version 2.0; refer to the
+original artifact license files for any additional or different terms.
+
+License text: https://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------
+Software: nghttp2 v1.65.0
+
+Source reference:
+https://github.com/nghttp2/nghttp2
+
+Copyright notice:
+Copyright (c) 2012, 2014, 2015, 2016 Tatsuhiro Tsujikawa
+Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors
+
+License: MIT License
+License text: see the MIT License text below.
+
+--------------------------------------------------------------------------
+Software: json v3.11.2
+
+Source reference:
+https://github.com/nlohmann/json
+
+Copyright notice:
+Copyright (c) 2013-2026 Niels Lohmann
+
+License: MIT License
+License text: see the MIT License text below.
+
+MIT License text for nghttp2 and nlohmann/json:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+JavaScript Dependencies
+-----------------------
+
+This project also uses third-party JavaScript packages from npm, GitHub, and
+workspace packages in this repository. Their license declarations are recorded
+in their respective package metadata and in the package manager lockfile. Each
+package remains subject to its own license terms and notices.
