@@ -2,6 +2,39 @@
 
 > 同步规则和流程见 [UPSTREAM-SYNC-GUIDE.md](./UPSTREAM-SYNC-GUIDE.md)
 
+## 2026-05-06 | v1.14.31 → v1.14.32
+
+- **分支**: upstream-tracking-develop
+- **上游提交数**: 23
+- **冲突**: 41 个文件。17 个 package.json 版本号冲突（保留 name="codegenie"，升级版本）；packages/web/package.json workspace 依赖；1 个 extension.toml 版本号+下载 URL；bun.lock 重新生成；4 个源码功能性冲突；18 个测试文件冲突。
+- **结构性变更**: opentui 升级至 0.2.2（renderer.waitForThemeMode 正式 API）；上游将 workspace adapters 重命名（adaptors → adapters）；新增 InstanceStore/InstanceContext 模块；Logo 组件上游大幅重构（添加复杂交互效果）。
+- **功能性冲突**:
+  - `tui/app.tsx`: 接受上游 `renderer.waitForThemeMode()` 正式 API 和 prewarm palette，保留本地品牌标识。
+  - `tui/component/logo.tsx`: **保留本地简化版**，拒绝上游复杂交互效果（shimmer/wave/burst/rings 等）。
+  - `config/config.ts`: 保留 `CODEGENIE_CONFIG_CONTENT` 品牌标识，接受上游 `containsPath()` 简化逻辑。
+  - `workspace-routing.ts`: 保留 `x-codegenie-directory` header 品牌标识。
+- **品牌修复**:
+  - 18 个测试文件中 `Flag.OPENCODE_*` → `Flag.CODEGENIE_*`
+- **主要变更**:
+  - release: v1.14.32
+  - upgrade opentui to 0.2.2 (#25420)
+  - fix(tui): keep shell-mode prompt editable (#25419)
+  - Replace Instance.disposeAll/load with fixture helper (#25418)
+  - fix(httpapi): install Instance ALS for adapter Promise bridge (#25417)
+  - fix(httpapi): re-land workspace create payload accepts missing extra (#25412)
+  - Migrate test inits from Promise to Effect (#25377)
+  - Convert LoadInput.init to Effect + extract InstanceBootstrap as a Service (#25376)
+  - Drop ALS fallbacks from containsPath and workspace routing (#25374)
+  - Extract InstanceStore.provide helper (#25372)
+  - fix(httpapi): preserve OpenAPI parameter parity (#25291)
+  - Move instance loading into Effect service (#25277)
+  - fix(read): prevent unsupported image formats from being sending to provider (#21114)
+  - core: fix npm package detection to properly handle cached directories without installed packages (#25354)
+  - core: allow agents to access global tmp directory without permission prompts
+  - fix: bedrock reasoning issue (#25303)
+  - fix(session): use finite archived timestamp schema (#25275)
+  - refactor: rename workspace adapters (#25272)
+
 ## 2026-05-06 | v1.14.30 → v1.14.31
 
 - **分支**: upstream-tracking-develop

@@ -15,13 +15,13 @@ import { Session as SessionNs } from "@/session/session"
 import { TestLLMServer } from "../lib/llm-server"
 import path from "path"
 import { resetDatabase } from "../fixture/db"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 import { it } from "../lib/effect"
 
 const original = {
-  CODEGENIE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
-  CODEGENIE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
-  CODEGENIE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
+  OPENCODE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
+  OPENCODE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
+  OPENCODE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
 }
 
 type Backend = "legacy" | "httpapi"
@@ -42,8 +42,8 @@ function app(backend: Backend, input?: { password?: string; username?: string })
       Layer.provide(
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
-            CODEGENIE_SERVER_PASSWORD: input?.password,
-            CODEGENIE_SERVER_USERNAME: input?.username,
+            OPENCODE_SERVER_PASSWORD: input?.password,
+            OPENCODE_SERVER_USERNAME: input?.username,
           }),
         ),
       ),
@@ -169,7 +169,7 @@ function sessionTitles(value: unknown) {
 
 function resetState() {
   return Effect.promise(async () => {
-    await Instance.disposeAll()
+    await disposeAllInstances()
     await resetDatabase()
   })
 }
@@ -257,10 +257,10 @@ function seedMessage(directory: string, sessionID: string) {
 }
 
 afterEach(async () => {
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.CODEGENIE_EXPERIMENTAL_HTTPAPI
-  Flag.CODEGENIE_SERVER_PASSWORD = original.CODEGENIE_SERVER_PASSWORD
-  Flag.CODEGENIE_SERVER_USERNAME = original.CODEGENIE_SERVER_USERNAME
-  await Instance.disposeAll()
+  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.OPENCODE_EXPERIMENTAL_HTTPAPI
+  Flag.CODEGENIE_SERVER_PASSWORD = original.OPENCODE_SERVER_PASSWORD
+  Flag.CODEGENIE_SERVER_USERNAME = original.OPENCODE_SERVER_USERNAME
+  await disposeAllInstances()
   await resetDatabase()
 })
 
