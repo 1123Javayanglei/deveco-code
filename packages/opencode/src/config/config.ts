@@ -11,7 +11,9 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { applyEdits, modify } from "jsonc-parser"
-import { Instance, type InstanceContext } from "../project/instance"
+import { type InstanceContext } from "../project/instance"
+import { InstanceStore } from "../project/instance-store"
+import { InstanceRef } from "@/effect/instance-ref"
 import { InstallationLocal, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { existsSync } from "fs"
 import { GlobalBus } from "@/bus/global"
@@ -23,7 +25,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { InstanceState } from "@/effect/instance-state"
 import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
-import { InstanceRef } from "@/effect/instance-ref"
+import { containsPath } from "../project/instance-context"
 import { zod } from "@/util/effect-zod"
 import { NonNegativeInt, PositiveInt, withStatics, type DeepMutable } from "@/util/schema"
 import { ConfigAgent } from "./agent"
@@ -458,8 +460,8 @@ export const layer = Layer.effect(
 
         const pluginScopeForSource = Effect.fnUntraced(function* (source: string) {
           if (source.startsWith("http://") || source.startsWith("https://")) return "global"
-          if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
-          if (yield* InstanceRef.use((ctx) => Effect.succeed(Instance.containsPath(source, ctx)))) return "local"
+if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
+          if (containsPath(source, ctx)) return "local"
           return "global"
         })
 
@@ -736,12 +738,16 @@ export const layer = Layer.effect(
       yield* fs
         .writeFileString(file, JSON.stringify(mergeDeep(writable(existing), writable(config)), null, 2))
         .pipe(Effect.orDie)
-      if (options?.dispose !== false) yield* Effect.promise(() => Instance.dispose())
+      if (options?.dispose !== false) {
+        const ctx = yield* InstanceRef
+        if (ctx) yield* Effect.promise(() => InstanceStore.runtime.runPromise((s) => s.dispose(ctx)))
+      }
     })
 
     const invalidate = Effect.fn("Config.invalidate")(function* (wait?: boolean) {
       yield* invalidateGlobal
-      const task = Instance.disposeAll()
+      const task = InstanceStore.runtime
+        .runPromise((s) => s.disposeAll())
         .catch(() => undefined)
         .finally(() =>
           GlobalBus.emit("event", {
