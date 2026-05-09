@@ -1,4 +1,5 @@
 import path from "path"
+import { fileURLToPath } from "url"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Cause, Context, Effect, Fiber, Layer, Queue, Schema, Stream } from "effect"
 import type { PlatformError } from "effect/PlatformError"
@@ -288,11 +289,29 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
 
       const filepath = yield* Effect.cached(
         Effect.gen(function* () {
+          // 1. System PATH
           const system = yield* Effect.sync(() => which(process.platform === "win32" ? "rg.exe" : "rg"))
           if (system && (yield* fs.isFile(system).pipe(Effect.orDie))) return system
 
+          // 2. Vendor directory relative to binary (production / npm mode)
+          const binaryName = process.platform === "win32" ? "rg.exe" : "rg"
+          const execDir = path.dirname(process.execPath)
+          const vendorRg = path.join(execDir, "..", "vendor", "ripgrep", binaryName)
+          if (yield* fs.isFile(vendorRg).pipe(Effect.orDie)) return vendorRg
+
+          // 3. Cache directory
           const target = path.join(Global.Path.bin, `rg${process.platform === "win32" ? ".exe" : ""}`)
           if (yield* fs.isFile(target).pipe(Effect.orDie)) return target
+
+          // 4. Dev mode: check .build-cache/ relative to source
+          const devRg = path.join(
+            path.dirname(fileURLToPath(import.meta.url)),
+            "..", "..",
+            ".build-cache", "ripgrep",
+            `${process.platform}-${process.arch}`,
+            binaryName,
+          )
+          if (yield* fs.isFile(devRg).pipe(Effect.orDie)) return devRg
 
           const platformKey = `${process.arch}-${process.platform}` as keyof typeof PLATFORM
           const config = PLATFORM[platformKey]

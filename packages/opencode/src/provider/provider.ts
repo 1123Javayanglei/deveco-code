@@ -330,7 +330,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           }
 
           // Region resolution precedence (highest to lowest):
-          // 1. options.region from opencode.json provider config
+          // 1. options.region from codegenie.json provider config
           // 2. defaultRegion from AWS_REGION environment variable
           // 3. Default "us-east-1" (baked into defaultRegion)
           const region = options?.region ?? defaultRegion
@@ -414,7 +414,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "X-Title": "codegenie",
             "X-Source": "opencode",
           },
         },
@@ -425,7 +425,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "X-Title": "codegenie",
           },
         },
       }),
@@ -435,7 +435,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "X-Title": "codegenie",
           },
         },
       }),
@@ -445,7 +445,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "http-referer": "https://opencode.ai/",
-            "x-title": "opencode",
+            "x-title": "codegenie",
           },
         },
       }),
@@ -543,7 +543,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "X-Title": "codegenie",
           },
         },
       }),
@@ -568,7 +568,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const directory = yield* InstanceState.directory
 
       const aiGatewayHeaders = {
-        "User-Agent": `opencode/${InstallationVersion} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
+        "User-Agent": `codegenie/${InstallationVersion} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
         "anthropic-beta": "context-1m-2025-08-07",
         ...providerConfig?.options?.aiGatewayHeaders,
       }
@@ -721,7 +721,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           apiKey,
           headers: {
-            "User-Agent": `opencode/${InstallationVersion} cloudflare-workers-ai (${os.platform()} ${os.release()}; ${os.arch()})`,
+            "User-Agent": `codegenie/${InstallationVersion} cloudflare-workers-ai (${os.platform()} ${os.release()}; ${os.arch()})`,
           },
         },
         async getModel(sdk: any, modelID: string) {
@@ -792,7 +792,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         skipCache: input.options?.skipCache,
         collectLog: input.options?.collectLog,
         headers: {
-          "User-Agent": `opencode/${InstallationVersion} cloudflare-ai-gateway (${os.platform()} ${os.release()}; ${os.arch()})`,
+          "User-Agent": `codegenie/${InstallationVersion} cloudflare-ai-gateway (${os.platform()} ${os.release()}; ${os.arch()})`,
         },
       }
 
@@ -828,10 +828,52 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "X-Title": "codegenie",
           },
         },
       }),
+    codegenie: Effect.fnUntraced(function* () {
+      const auth = yield* dep.auth("codegenie")
+      if (!auth) return { autoload: false }
+
+      if (auth.type === "oauth") {
+        if (auth.expires && Date.now() >= auth.expires) {
+          log.info("codegenie token expired, attempting refresh")
+          const { codegenieAuth, ACCESS_TOKEN_EXPIRES_MS } = yield* Effect.promise(() => import("@/plugin/codegenie"))
+          const newTokens = yield* Effect.promise(() => codegenieAuth.refreshToken())
+          if (newTokens) {
+            log.info("codegenie token refresh successful")
+            yield* Effect.promise(() =>
+              import("@/plugin/codegenie").then((m) =>
+                m.saveAuthToDisk("codegenie", {
+                  type: "oauth",
+                  access: newTokens.accessToken,
+                  refresh: newTokens.refreshToken,
+                  expires: Date.now() + m.ACCESS_TOKEN_EXPIRES_MS,
+                }),
+              ),
+            )
+            return {
+              autoload: true,
+              options: {
+                apiKey: newTokens.accessToken,
+              },
+            }
+          }
+          log.warn("codegenie token refresh failed, user needs to re-login")
+          return { autoload: false }
+        }
+
+        return {
+          autoload: true,
+          options: {
+            apiKey: auth.access,
+          },
+        }
+      }
+
+      return { autoload: false }
+    }),
   }
 }
 
@@ -1131,6 +1173,14 @@ const layer: Layer.Layer<
 
         // now read config providers - includes any modifications from plugin config() hook
         const configProviders = Object.entries(cfg.provider ?? {})
+
+        // === CodeGenie: inject provider config if authenticated ===
+        const codegenieAuth = yield* auth.get("codegenie").pipe(Effect.orElseSucceed(() => undefined))
+        if (codegenieAuth) {
+          const { CODEGENIE_PROVIDER_CONFIG } = yield* Effect.promise(() => import("@/plugin/codegenie-models"))
+          configProviders.push(["codegenie", CODEGENIE_PROVIDER_CONFIG])
+        }
+
         const disabled = new Set(cfg.disabled_providers ?? [])
         const enabled = cfg.enabled_providers ? new Set(cfg.enabled_providers) : null
 
@@ -1369,7 +1419,7 @@ const layer: Layer.Layer<
               (providerID === ProviderID.openrouter && modelID === "openai/gpt-5-chat")
             )
               delete provider.models[modelID]
-            if (model.status === "alpha" && !Flag.OPENCODE_ENABLE_EXPERIMENTAL_MODELS) delete provider.models[modelID]
+            if (model.status === "alpha" && !Flag.CODEGENIE_ENABLE_EXPERIMENTAL_MODELS) delete provider.models[modelID]
             if (model.status === "deprecated") delete provider.models[modelID]
             if (
               (configProvider?.blacklist && configProvider.blacklist.includes(modelID)) ||
@@ -1644,6 +1694,9 @@ const layer: Layer.Layer<
       ]
       if (providerID.startsWith("opencode")) {
         priority = ["gpt-5-nano"]
+      }
+      if (providerID.startsWith("codegenie")) {
+        priority = ["deepseek-v3.2"]
       }
       if (providerID.startsWith("github-copilot")) {
         priority = ["gpt-5-mini", "claude-haiku-4.5", ...priority]

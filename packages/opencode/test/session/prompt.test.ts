@@ -2,6 +2,7 @@ import { NodeFileSystem } from "@effect/platform-node"
 import { FetchHttpClient } from "effect/unstable/http"
 import { expect } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
+import { ServeError } from "effect/unstable/http/HttpServerError"
 import path from "path"
 import { fileURLToPath } from "url"
 import { NamedError } from "@opencode-ai/core/util/error"
@@ -201,7 +202,7 @@ function makeHttp() {
   ).pipe(Layer.provide(summary))
 }
 
-const it = testEffect(makeHttp())
+const it = testEffect(makeHttp() as Layer.Layer<any, ServeError, never>)
 const unix = process.platform !== "win32" ? it.live : it.live.skip
 
 // Config that registers a custom "test" provider with a "test-model" model

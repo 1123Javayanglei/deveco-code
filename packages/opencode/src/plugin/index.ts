@@ -17,6 +17,9 @@ import { CopilotAuthPlugin } from "./github-copilot/copilot"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
+import { CodegenieAuthPlugin } from "./codegenie"
+import AnalyticsPlugin from "./analytics/analytics-plugin"
+import HarmonyNapiDynamicToolsPlugin from "./harmony-napi-dynamic-tools"
 import { AzureAuthPlugin } from "./azure"
 import { Effect, Layer, Context, Stream } from "effect"
 import { EffectBridge } from "@/effect/bridge"
@@ -62,6 +65,9 @@ const INTERNAL_PLUGINS: PluginInstance[] = [
   PoeAuthPlugin,
   CloudflareWorkersAuthPlugin,
   CloudflareAIGatewayAuthPlugin,
+  CodegenieAuthPlugin,
+  AnalyticsPlugin,
+  HarmonyNapiDynamicToolsPlugin,
   AzureAuthPlugin,
 ]
 
@@ -124,9 +130,9 @@ export const layer = Layer.effect(
         const client = createOpencodeClient({
           baseUrl: "http://localhost:4096",
           directory: ctx.directory,
-          headers: Flag.OPENCODE_SERVER_PASSWORD
+          headers: Flag.CODEGENIE_SERVER_PASSWORD
             ? {
-                Authorization: `Basic ${Buffer.from(`${Flag.OPENCODE_SERVER_USERNAME ?? "opencode"}:${Flag.OPENCODE_SERVER_PASSWORD}`).toString("base64")}`,
+                Authorization: `Basic ${Buffer.from(`${Flag.CODEGENIE_SERVER_USERNAME ?? "opencode"}:${Flag.CODEGENIE_SERVER_PASSWORD}`).toString("base64")}`,
               }
             : undefined,
           fetch: async (...args) => Server.Default().app.fetch(...args),
@@ -160,8 +166,8 @@ export const layer = Layer.effect(
           if (init._tag === "Some") hooks.push(init.value)
         }
 
-        const plugins = Flag.OPENCODE_PURE ? [] : (cfg.plugin_origins ?? [])
-        if (Flag.OPENCODE_PURE && cfg.plugin_origins?.length) {
+        const plugins = Flag.CODEGENIE_PURE ? [] : (cfg.plugin_origins ?? [])
+        if (Flag.CODEGENIE_PURE && cfg.plugin_origins?.length) {
           log.info("skipping external plugins in pure mode", { count: cfg.plugin_origins.length })
         }
         if (plugins.length) yield* config.waitForDependencies()

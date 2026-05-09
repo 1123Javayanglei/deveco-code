@@ -491,7 +491,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
 
       yield* sync.run(Event.Created, { sessionID: result.id, info: result })
 
-      if (!Flag.OPENCODE_EXPERIMENTAL_WORKSPACES) {
+      if (!Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES) {
         // This only exist for backwards compatibility. We should not be
         // manually publishing this event; it is a sync event now
         yield* bus.publish(Event.Updated, {
@@ -789,7 +789,7 @@ function* listByProject(
   if (input.workspaceID) {
     conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
   }
-  if (input.path !== undefined) {
+if (input.path !== undefined) {
     if (input.path) {
       const conds = [eq(SessionTable.path, input.path), like(SessionTable.path, `${input.path}/%`)]
 
@@ -799,7 +799,7 @@ function* listByProject(
           : or(...conds)!,
       )
     }
-  } else if (input.scope !== "project" && !Flag.OPENCODE_EXPERIMENTAL_WORKSPACES) {
+} else if (input.scope !== "project" && !Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES) {
     if (input.directory) {
       conditions.push(eq(SessionTable.directory, input.directory))
     }

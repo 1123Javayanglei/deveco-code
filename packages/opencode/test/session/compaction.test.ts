@@ -26,6 +26,7 @@ import { Snapshot } from "../../src/snapshot"
 import { ProviderTest } from "../fake/provider"
 import { testEffect } from "../lib/effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { ExitQueue } from "../../src/session/exit-queue"
 
 void Log.init({ print: false })
 
@@ -285,6 +286,7 @@ function liveRuntime(layer: Layer.Layer<LLM.Service>, provider = ProviderTest.fa
       Layer.provide(Permission.defaultLayer),
       Layer.provide(Agent.defaultLayer),
       Layer.provide(Plugin.defaultLayer),
+      Layer.provide(ExitQueue.defaultLayer),
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(config),

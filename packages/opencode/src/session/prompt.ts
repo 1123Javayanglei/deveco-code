@@ -229,7 +229,7 @@ export const layer = Layer.effect(
       const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
       if (!userMessage) return input.messages
 
-      if (!Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE) {
+      if (!Flag.CODEGENIE_EXPERIMENTAL_PLAN_MODE) {
         if (input.agent.name === "plan") {
           userMessage.parts.push({
             id: PartID.ascending(),
@@ -1492,6 +1492,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 overflow: !handle.message.finish,
               })
             }
+
             return "continue" as const
           }).pipe(Effect.ensuring(instruction.clear(handle.message.id)))
           if (outcome === "break") break

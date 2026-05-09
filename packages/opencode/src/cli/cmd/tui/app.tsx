@@ -13,7 +13,6 @@ import {
   onMount,
   batch,
   Show,
-  on,
 } from "solid-js"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -68,7 +67,7 @@ import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
 
 function rendererConfig(_config: TuiConfig.Info): CliRendererConfig {
-  const mouseEnabled = !Flag.OPENCODE_DISABLE_MOUSE && (_config.mouse ?? true)
+  const mouseEnabled = !Flag.CODEGENIE_DISABLE_MOUSE && (_config.mouse ?? true)
 
   return {
     externalOutputMode: "passthrough",
@@ -133,7 +132,7 @@ export function tui(input: {
     }
 
     const renderer = await createCliRenderer(rendererConfig(input.config))
-    // Prewarm palette before ThemeProvider mounts so `system` theme avoids a first-paint fallback flash.
+// Prewarm palette before ThemeProvider mounts so `system` theme avoids a first-paint fallback flash.
     void renderer.getPalette({ size: 16 }).catch(() => undefined)
     const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
 
@@ -258,7 +257,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     })
 
   useKeyboard((evt) => {
-    if (!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
+    if (!Flag.CODEGENIE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
     const sel = renderer.getSelection()
     if (!sel) return
 
@@ -309,27 +308,27 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
 
   // Update terminal window title based on current route and session
   createEffect(() => {
-    if (!terminalTitleEnabled() || Flag.OPENCODE_DISABLE_TERMINAL_TITLE) return
+    if (!terminalTitleEnabled() || Flag.CODEGENIE_DISABLE_TERMINAL_TITLE) return
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle("OpenCode")
+      renderer.setTerminalTitle("CodeGenie")
       return
     }
 
     if (route.data.type === "session") {
       const session = sync.session.get(route.data.sessionID)
       if (!session || SessionApi.isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle("OpenCode")
+        renderer.setTerminalTitle("CodeGenie")
         return
       }
 
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
-      renderer.setTerminalTitle(`OC | ${title}`)
+      renderer.setTerminalTitle(`CodeGenie | ${title}`)
       return
     }
 
     if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`OC | ${route.data.id}`)
+      renderer.setTerminalTitle(`CodeGenie | ${route.data.id}`)
     }
   })
 
@@ -394,17 +393,6 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       }
     })
   })
-
-  createEffect(
-    on(
-      () => sync.status === "complete" && sync.data.provider.length === 0,
-      (isEmpty, wasEmpty) => {
-        // only trigger when we transition into an empty-provider state
-        if (!isEmpty || wasEmpty) return
-        dialog.replace(() => <DialogProviderList />)
-      },
-    ),
-  )
 
   const connected = useConnected()
   command.register(() => [
@@ -776,6 +764,36 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         dialog.clear()
       },
     },
+    {
+      title: "Feedback",
+      description: "Submit complaints, suggestions or feedback",
+      value: "feedback.open",
+      slash: {
+        name: "feedback",
+      },
+      onSelect: () => {
+        open("https://developer.huawei.com/consumer/cn/support/feedback/#/").catch(() => {})
+        dialog.clear()
+      },
+      category: "System",
+    },
+    ...(sync.data.provider_next.connected.includes("codegenie")
+      ? [
+          {
+            title: "Privacy",
+            description: "Show privacy policy",
+            value: "privacy.open",
+            slash: {
+              name: "privacy",
+            },
+            onSelect: () => {
+              open("https://consumer.huawei.com/cn/privacy/privacy-statement-huawei/#/").catch(() => {})
+              dialog.clear()
+            },
+            category: "System",
+          },
+        ]
+      : []),
   ])
 
   event.on(TuiEvent.CommandExecute.type, (evt) => {
@@ -861,7 +879,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     await DialogAlert.show(
       dialog,
       "Update Complete",
-      `Successfully updated to OpenCode v${result.data.version}. Please restart the application.`,
+      `Successfully updated to CodeGenie v${result.data.version}. Please restart the application.`,
     )
 
     void exit()
@@ -881,16 +899,16 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       height={dimensions().height}
       backgroundColor={theme.background}
       onMouseDown={(evt) => {
-        if (!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
+        if (!Flag.CODEGENIE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
         if (evt.button !== MouseButton.RIGHT) return
 
         if (!Selection.copy(renderer, toast)) return
         evt.preventDefault()
         evt.stopPropagation()
       }}
-      onMouseUp={Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? undefined : () => Selection.copy(renderer, toast)}
+      onMouseUp={Flag.CODEGENIE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? undefined : () => Selection.copy(renderer, toast)}
     >
-      <Show when={Flag.OPENCODE_SHOW_TTFD}>
+      <Show when={Flag.CODEGENIE_SHOW_TTFD}>
         <TimeToFirstDraw />
       </Show>
       <Show when={ready()}>

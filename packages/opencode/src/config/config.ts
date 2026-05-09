@@ -300,7 +300,7 @@ export interface Interface {
 export class Service extends Context.Service<Service, Interface>()("@opencode/Config") {}
 
 function globalConfigFile() {
-  const candidates = ["opencode.jsonc", "opencode.json", "config.json"].map((file) =>
+  const candidates = ["codegenie.jsonc", "codegenie.json", "config.json"].map((file) =>
     path.join(Global.Path.config, file),
   )
   for (const file of candidates) {
@@ -396,8 +396,8 @@ export const layer = Layer.effect(
     const loadGlobal = Effect.fnUntraced(function* () {
       let result: Info = {}
       result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "config.json")))
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.json")))
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.jsonc")))
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "codegenie.json")))
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "codegenie.jsonc")))
 
       const legacy = path.join(Global.Path.config, "config")
       if (existsSync(legacy)) {
@@ -460,7 +460,7 @@ export const layer = Layer.effect(
 
         const pluginScopeForSource = Effect.fnUntraced(function* (source: string) {
           if (source.startsWith("http://") || source.startsWith("https://")) return "global"
-          if (source === "OPENCODE_CONFIG_CONTENT") return "local"
+if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
           if (containsPath(source, ctx)) return "local"
           return "global"
         })
@@ -516,13 +516,13 @@ export const layer = Layer.effect(
         const global = yield* getGlobal()
         yield* merge(Global.Path.config, global, "global")
 
-        if (Flag.OPENCODE_CONFIG) {
-          yield* merge(Flag.OPENCODE_CONFIG, yield* loadFile(Flag.OPENCODE_CONFIG))
-          log.debug("loaded custom config", { path: Flag.OPENCODE_CONFIG })
+        if (Flag.CODEGENIE_CONFIG) {
+          yield* merge(Flag.CODEGENIE_CONFIG, yield* loadFile(Flag.CODEGENIE_CONFIG))
+          log.debug("loaded custom config", { path: Flag.CODEGENIE_CONFIG })
         }
 
-        if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
-          for (const file of yield* ConfigPaths.files("opencode", ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
+        if (!Flag.CODEGENIE_DISABLE_PROJECT_CONFIG) {
+          for (const file of yield* ConfigPaths.files("codegenie", ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
             yield* merge(file, yield* loadFile(file), "local")
           }
         }
@@ -533,15 +533,15 @@ export const layer = Layer.effect(
 
         const directories = yield* ConfigPaths.directories(ctx.directory, ctx.worktree)
 
-        if (Flag.OPENCODE_CONFIG_DIR) {
-          log.debug("loading config from OPENCODE_CONFIG_DIR", { path: Flag.OPENCODE_CONFIG_DIR })
+        if (Flag.CODEGENIE_CONFIG_DIR) {
+          log.debug("loading config from CODEGENIE_CONFIG_DIR", { path: Flag.CODEGENIE_CONFIG_DIR })
         }
 
         const deps: Fiber.Fiber<void, never>[] = []
 
         for (const dir of directories) {
-          if (dir.endsWith(".opencode") || dir === Flag.OPENCODE_CONFIG_DIR) {
-            for (const file of ["opencode.json", "opencode.jsonc"]) {
+          if (dir.endsWith(".codegenie") || dir === Flag.CODEGENIE_CONFIG_DIR) {
+            for (const file of ["codegenie.json", "codegenie.jsonc"]) {
               const source = path.join(dir, file)
               log.debug(`loading config from ${source}`)
               yield* merge(source, yield* loadFile(source))
@@ -579,20 +579,20 @@ export const layer = Layer.effect(
           result.command = mergeDeep(result.command ?? {}, yield* Effect.promise(() => ConfigCommand.load(dir)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.load(dir)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir)))
-          // Auto-discovered plugins under `.opencode/plugin(s)` are already local files, so ConfigPlugin.load
+          // Auto-discovered plugins under `.codegenie/plugin(s)` are already local files, so ConfigPlugin.load
           // returns normalized Specs and we only need to attach origin metadata here.
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))
           yield* mergePluginOrigins(dir, list)
         }
 
-        if (process.env.OPENCODE_CONFIG_CONTENT) {
-          const source = "OPENCODE_CONFIG_CONTENT"
-          const next = yield* loadConfig(process.env.OPENCODE_CONFIG_CONTENT, {
+        if (process.env.CODEGENIE_CONFIG_CONTENT) {
+          const source = "CODEGENIE_CONFIG_CONTENT"
+          const next = yield* loadConfig(process.env.CODEGENIE_CONFIG_CONTENT, {
             dir: ctx.directory,
             source,
           })
           yield* merge(source, next, "local")
-          log.debug("loaded custom config from OPENCODE_CONFIG_CONTENT")
+          log.debug("loaded custom config from CODEGENIE_CONFIG_CONTENT")
         }
 
         const activeAccount = Option.getOrUndefined(
@@ -608,8 +608,8 @@ export const layer = Layer.effect(
               { concurrency: 2 },
             )
             if (Option.isSome(tokenOpt)) {
-              process.env["OPENCODE_CONSOLE_TOKEN"] = tokenOpt.value
-              yield* env.set("OPENCODE_CONSOLE_TOKEN", tokenOpt.value)
+              process.env["CODEGENIE_CONSOLE_TOKEN"] = tokenOpt.value
+              yield* env.set("CODEGENIE_CONSOLE_TOKEN", tokenOpt.value)
             }
 
             if (Option.isSome(configOpt)) {
@@ -636,7 +636,7 @@ export const layer = Layer.effect(
 
         const managedDir = ConfigManaged.managedConfigDir()
         if (existsSync(managedDir)) {
-          for (const file of ["opencode.json", "opencode.jsonc"]) {
+          for (const file of ["codegenie.json", "codegenie.jsonc"]) {
             const source = path.join(managedDir, file)
             yield* merge(source, yield* loadFile(source), "global")
           }
@@ -663,8 +663,8 @@ export const layer = Layer.effect(
           })
         }
 
-        if (Flag.OPENCODE_PERMISSION) {
-          result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.OPENCODE_PERMISSION))
+        if (Flag.CODEGENIE_PERMISSION) {
+          result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.CODEGENIE_PERMISSION))
         }
 
         if (result.tools) {
@@ -686,10 +686,10 @@ export const layer = Layer.effect(
           result.share = "auto"
         }
 
-        if (Flag.OPENCODE_DISABLE_AUTOCOMPACT) {
+        if (Flag.CODEGENIE_DISABLE_AUTOCOMPACT) {
           result.compaction = { ...result.compaction, auto: false }
         }
-        if (Flag.OPENCODE_DISABLE_PRUNE) {
+        if (Flag.CODEGENIE_DISABLE_PRUNE) {
           result.compaction = { ...result.compaction, prune: false }
         }
 

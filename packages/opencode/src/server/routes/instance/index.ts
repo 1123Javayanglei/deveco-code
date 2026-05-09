@@ -1,4 +1,4 @@
-import { describeRoute, resolver, validator } from "hono-openapi"
+﻿import { describeRoute, resolver, validator } from "hono-openapi"
 import { Hono } from "hono"
 import type { UpgradeWebSocket } from "hono/ws"
 import { Effect } from "effect"

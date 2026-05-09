@@ -26,24 +26,24 @@ export const directories = Effect.fn("ConfigPaths.directories")(function* (direc
   const afs = yield* AppFileSystem.Service
   return unique([
     Global.Path.config,
-    ...(!Flag.OPENCODE_DISABLE_PROJECT_CONFIG
+    ...(!Flag.CODEGENIE_DISABLE_PROJECT_CONFIG
       ? yield* afs.up({
-          targets: [".opencode"],
+          targets: [".codegenie"],
           start: directory,
           stop: worktree,
         })
       : []),
     ...(yield* afs.up({
-      targets: [".opencode"],
+      targets: [".codegenie"],
       start: Global.Path.home,
       stop: Global.Path.home,
     })),
-    ...(Flag.OPENCODE_CONFIG_DIR ? [Flag.OPENCODE_CONFIG_DIR] : []),
+    ...(Flag.CODEGENIE_CONFIG_DIR ? [Flag.CODEGENIE_CONFIG_DIR] : []),
   ])
 })
 
 export function fileInDirectory(dir: string, name: string) {
-  return [path.join(dir, `${name}.json`), path.join(dir, `${name}.jsonc`)]
+  return [path.join(dir, `${name}.jsonc`), path.join(dir, `${name}.json`)]
 }
 
 /** Read a config file, returning undefined for missing files and throwing JsonError for other failures. */

@@ -186,6 +186,14 @@ export type ApiError = {
   }
 }
 
+export type QueueError = {
+  name: "QueueError"
+  data: {
+    position: number
+    message: string
+  }
+}
+
 export type EventSessionError = {
   type: "session.error"
   properties: {
@@ -198,6 +206,7 @@ export type EventSessionError = {
       | StructuredOutputError
       | ContextOverflowError
       | ApiError
+      | QueueError
   }
 }
 
@@ -369,6 +378,13 @@ export type SessionStatus =
   | {
       type: "retry"
       attempt: number
+      message: string
+      next: number
+    }
+  | {
+      type: "queue"
+      attempt: number
+      position: number
       message: string
       next: number
     }
@@ -595,6 +611,7 @@ export type AssistantMessage = {
     | StructuredOutputError
     | ContextOverflowError
     | ApiError
+    | QueueError
   parentID: string
   modelID: string
   providerID: string
@@ -878,6 +895,19 @@ export type RetryPart = {
   }
 }
 
+export type QueuePart = {
+  id: string
+  sessionID: string
+  messageID: string
+  type: "queue"
+  position: number
+  message: string
+  time: {
+    start: number
+    end?: number
+  }
+}
+
 export type CompactionPart = {
   id: string
   sessionID: string
@@ -900,6 +930,7 @@ export type Part =
   | PatchPart
   | AgentPart
   | RetryPart
+  | QueuePart
   | CompactionPart
 
 export type EventMessagePartUpdated = {
@@ -1189,7 +1220,7 @@ export type ServerConfig = {
    */
   mdns?: boolean
   /**
-   * Custom domain name for mDNS service (default: opencode.local)
+   * Custom domain name for mDNS service (default: codegenie.local)
    */
   mdnsDomain?: string
   /**

@@ -15,9 +15,9 @@ const { Workspace } = await import("../../src/control-plane/workspace")
 const { Instance } = await import("../../src/project/instance")
 const it = testEffect(Layer.mergeAll(Plugin.defaultLayer, Workspace.defaultLayer, CrossSpawnSpawner.defaultLayer))
 
-const experimental = Flag.OPENCODE_EXPERIMENTAL_WORKSPACES
+const experimental = Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES
 
-Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = true
+Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = true
 
 afterEach(async () => {
   await disposeAllInstances()
@@ -30,7 +30,7 @@ afterAll(() => {
     process.env.OPENCODE_DISABLE_DEFAULT_PLUGINS = disableDefault
   }
 
-  Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = experimental
+  Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = experimental
 })
 
 describe("plugin.workspace", () => {

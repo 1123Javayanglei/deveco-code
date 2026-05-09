@@ -1,4 +1,4 @@
-import { PlanExitTool } from "./plan"
+import { PlanExitTool, PlanWriteTool, PlanEnterTool } from "./plan"
 import { Session } from "@/session/session"
 import { QuestionTool } from "./question"
 import { BashTool } from "./bash"
@@ -12,6 +12,10 @@ import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
 import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
+import { HdcLogTool } from "./hdc_log"
+import { SwitchCwdTool } from "./switch-cwd"
+import { OhKnowledgeTool } from "./oh_knowledge"
+import { Auth } from "@/auth"
 import * as Tool from "./tool"
 import { Config } from "@/config/config"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@opencode-ai/plugin"
@@ -88,6 +92,7 @@ export const layer: Layer.Layer<
   | Ripgrep.Service
   | Format.Service
   | Truncate.Service
+  | Auth.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -104,6 +109,8 @@ export const layer: Layer.Layer<
     const todo = yield* TodoWriteTool
     const lsptool = yield* LspTool
     const plan = yield* PlanExitTool
+    const planwrite = yield* PlanWriteTool
+    const planenter = yield* PlanEnterTool
     const webfetch = yield* WebFetchTool
     const websearch = yield* WebSearchTool
     const bash = yield* BashTool
@@ -113,6 +120,9 @@ export const layer: Layer.Layer<
     const greptool = yield* GrepTool
     const patchtool = yield* ApplyPatchTool
     const skilltool = yield* SkillTool
+    const hdclog = yield* HdcLogTool
+    const switchcwd = yield* SwitchCwdTool
+    const ohknowledge = yield* OhKnowledgeTool
     const agent = yield* Agent.Service
 
     const state = yield* InstanceState.make<State>(
@@ -182,7 +192,7 @@ export const layer: Layer.Layer<
 
         yield* config.get()
         const questionEnabled =
-          ["app", "cli", "desktop"].includes(Flag.OPENCODE_CLIENT) || Flag.OPENCODE_ENABLE_QUESTION_TOOL
+          ["app", "cli", "desktop"].includes(Flag.CODEGENIE_CLIENT) || Flag.CODEGENIE_ENABLE_QUESTION_TOOL
 
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
@@ -201,6 +211,11 @@ export const layer: Layer.Layer<
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
+          planwrite: Tool.init(planwrite),
+          planenter: Tool.init(planenter),
+          hdclog: Tool.init(hdclog),
+          switchcwd: Tool.init(switchcwd),
+          ohknowledge: Tool.init(ohknowledge),
         })
 
         return {
@@ -220,8 +235,12 @@ export const layer: Layer.Layer<
             tool.search,
             tool.skill,
             tool.patch,
-            ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
-            ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [tool.plan] : []),
+            // HarmonyOS tools
+            tool.hdclog,
+            tool.switchcwd,
+            tool.ohknowledge,
+            ...(Flag.CODEGENIE_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
+            ...(Flag.CODEGENIE_CLIENT === "cli" ? [tool.plan, tool.planwrite, tool.planenter] : []),
           ],
           task: tool.task,
           read: tool.read,
@@ -274,8 +293,8 @@ export const layer: Layer.Layer<
 
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const filtered = (yield* all()).filter((tool) => {
-        if (tool.id === WebSearchTool.id) {
-          return input.providerID === ProviderID.opencode || Flag.OPENCODE_ENABLE_EXA
+if (tool.id === WebSearchTool.id) {
+          return input.providerID === ProviderID.opencode || Flag.CODEGENIE_ENABLE_EXA
         }
 
         const usePatch =
@@ -335,6 +354,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(LSP.defaultLayer),
     Layer.provide(Instruction.defaultLayer),
     Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(Auth.defaultLayer),
     Layer.provide(Bus.layer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(Format.defaultLayer),

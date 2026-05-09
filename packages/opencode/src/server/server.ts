@@ -1,4 +1,4 @@
-import { generateSpecs } from "hono-openapi"
+﻿import { generateSpecs } from "hono-openapi"
 import { Hono } from "hono"
 import { adapter } from "#hono"
 import { lazy } from "@/util/lazy"
@@ -108,10 +108,10 @@ function createHono(opts: CorsOptions, selection: ServerBackend.Selection = Serv
 
   const runtime = adapter.create(app)
 
-  if (Flag.OPENCODE_WORKSPACE_ID) {
+  if (Flag.CODEGENIE_WORKSPACE_ID) {
     return {
       app: app
-        .use(InstanceMiddleware(Flag.OPENCODE_WORKSPACE_ID ? WorkspaceID.make(Flag.OPENCODE_WORKSPACE_ID) : undefined))
+        .use(InstanceMiddleware(Flag.CODEGENIE_WORKSPACE_ID ? WorkspaceID.make(Flag.CODEGENIE_WORKSPACE_ID) : undefined))
         .use(FenceMiddleware)
         .route("/", InstanceRoutes(runtime.upgradeWebSocket)),
       runtime,
