@@ -21,16 +21,16 @@ import { useEvent } from "@tui/context/event"
 import { SplitBorder } from "@tui/component/border"
 import { Spinner } from "@tui/component/spinner"
 import { selectedForeground, useTheme } from "@tui/context/theme"
-import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
+import { addDefaultParsers, BoxRenderable, RGBA, ScrollBoxRenderable, TextAttributes } from "@opentui/core"
 import { Prompt, type PromptRef } from "@tui/component/prompt"
 import type {
   AssistantMessage,
   Part,
   Provider,
+  ReasoningPart,
+  TextPart,
   ToolPart,
   UserMessage,
-  TextPart,
-  ReasoningPart,
 } from "@opencode-ai/sdk/v2"
 import { QueuePart } from "@/session/message-v2"
 import { useLocal } from "@tui/context/local"
@@ -49,7 +49,7 @@ import type { WebSearchTool } from "@/tool/websearch"
 import type { TaskTool } from "@/tool/task"
 import type { QuestionTool } from "@/tool/question"
 import type { SkillTool } from "@/tool/skill"
-import { useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
+import { type JSX, useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { useSDK } from "@tui/context/sdk"
 import { useEditorContext } from "@tui/context/editor"
 import { useCommandDialog } from "@tui/component/dialog-command"
@@ -1199,6 +1199,7 @@ export function Session() {
                       toBottom()
                     }}
                     sessionID={route.sessionID}
+                    notice="⚠︎ AI-generated content. For reference only"
                     right={<TuiPluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
                   />
                 </TuiPluginRuntime.Slot>
@@ -1450,17 +1451,9 @@ function QueuePartComponent(props: { last: boolean; part: QueuePart; message: As
   const { theme } = useTheme()
   return (
     <Show when={true}>
-      <box
-        id={"queue-" + props.part.id}
-        paddingLeft={3}
-        marginTop={1}
-        flexDirection="row"
-        gap={1}
-      >
+      <box id={"queue-" + props.part.id} paddingLeft={3} marginTop={1} flexDirection="row" gap={1}>
         <text fg={theme.info}>ℹ</text>
-        <text fg={theme.text}>
-          当前模型访问量较高，您目前排在第{props.part.position}位，请耐心等待或处理其他任务
-        </text>
+        <text fg={theme.text}>当前模型访问量较高，您目前排在第{props.part.position}位，请耐心等待或处理其他任务</text>
       </box>
     </Show>
   )
