@@ -1,0 +1,98 @@
+# Task 7: HTTPAPI Brand Identifiers Evidence
+
+## Summary
+Processed HTTPAPI new files (groups/handlers/middleware) to add brand identifiers and resolve merge conflicts.
+
+## Files Processed (10 files with conflicts resolved)
+
+### Groups
+- packages/opencode/src/server/routes/instance/httpapi/groups/workspace.ts
+  - Resolved adaptor/adapter naming conflict (accepted upstream: adapter)
+  - Resolved CreatePayload schema conflict (accepted upstream: with extra field)
+
+### Handlers
+- packages/opencode/src/server/routes/instance/httpapi/handlers/global.ts
+  - Resolved Instance vs InstanceStore conflict (accepted upstream: InstanceStore)
+- packages/opencode/src/server/routes/instance/httpapi/handlers/project.ts
+  - Resolved InstanceBootstrap import conflict (accepted upstream: removed)
+- packages/opencode/src/server/routes/instance/httpapi/handlers/workspace.ts
+  - No conflicts, already clean
+
+### Root Files
+- packages/opencode/src/server/routes/instance/httpapi/lifecycle.ts
+  - Resolved Instance vs InstanceStore conflict (accepted upstream: InstanceStore)
+  - Resolved WorkspaceContext/WorkspaceRef conflict (accepted upstream: EffectBridge)
+- packages/opencode/src/server/routes/instance/httpapi/public.ts
+  - Resolved OpenApiSchema pattern field conflict (accepted upstream: added)
+  - Resolved QueryParameterSchemas conflict (accepted upstream: added messageID)
+  - Resolved PathParameterSchemas conflict (accepted upstream: added)
+  - Resolved stripOptionalNull conflict (accepted upstream: allOf handling)
+  - Resolved normalizeParameter conflict (accepted upstream: path parameter handling)
+- packages/opencode/src/server/routes/instance/httpapi/server.ts
+  - Resolved FileWatcher import conflict (accepted upstream: added)
+  - Resolved InstanceBootstrap/InstanceStore/Plugin import conflict (accepted upstream: added)
+  - Resolved ShareNext/Snapshot import conflict (accepted upstream: added)
+  - Resolved defaultLayer conflicts (accepted upstream: added new layers)
+
+### Middleware
+- packages/opencode/src/server/routes/instance/httpapi/middleware/authorization.ts
+  - Already has CODEGENIE_SERVER_PASSWORD and CODEGENIE_SERVER_USERNAME
+- packages/opencode/src/server/routes/instance/httpapi/middleware/instance-context.ts
+  - No brand identifiers needed
+- packages/opencode/src/server/routes/instance/httpapi/middleware/workspace-routing.ts
+  - Already has CODEGENIE_WORKSPACE_ID and x-codegenie-directory
+
+## Brand Identifiers Verification
+
+### CODEGENIE_* Identifiers (3 occurrences)
+```
+packages\opencode\src\server\routes\instance\httpapi\middleware\authorization.ts:
+    password: Config.string("CODEGENIE_SERVER_PASSWORD").pipe(Config.option),
+    username: Config.string("CODEGENIE_SERVER_USERNAME").pipe(Config.withDefault("opencode")),
+
+packages\opencode\src\server\routes\instance\httpapi\middleware\workspace-routing.ts:
+  return Flag.CODEGENIE_WORKSPACE_ID ? WorkspaceID.make(Flag.CODEGENIE_WORKSPACE_ID) : undefined
+```
+
+### x-codegenie Headers (1 occurrence)
+```
+packages\opencode\src\server\routes\instance\httpapi\middleware\workspace-routing.ts:
+  return url.searchParams.get("directory") || request.headers["x-codegenie-directory"] || currentDirectory()
+```
+
+### OPENCODE_* Identifiers (0 occurrences)
+No OPENCODE_* identifiers found in HTTPAPI files.
+
+### x-opencode Headers (0 occurrences)
+No x-opencode headers found in HTTPAPI files.
+
+## Git Status After Resolution
+All 10 files marked as M (modified) and staged:
+- M  packages/opencode/src/server/routes/instance/httpapi/groups/workspace.ts
+- M  packages/opencode/src/server/routes/instance/httpapi/handlers/global.ts
+- M  packages/opencode/src/server/routes/instance/httpapi/handlers/project.ts
+- M  packages/opencode/src/server/routes/instance/httpapi/handlers/workspace.ts
+- M  packages/opencode/src/server/routes/instance/httpapi/lifecycle.ts
+- M  packages/opencode/src/server/routes/instance/httpapi/middleware/authorization.ts
+- M  packages/opencode/src/server/routes/instance/httpapi/middleware/instance-context.ts
+- M  packages/opencode/src/server/routes/instance/httpapi/middleware/workspace-routing.ts
+- M  packages/opencode/src/server/routes/instance/httpapi/public.ts
+- M  packages/opencode/src/server/routes/instance/httpapi/server.ts
+
+## Conflict Resolution Strategy
+All conflicts resolved by accepting upstream version (v1.14.32) as per task instructions:
+"接受上游新增文件（HTTPAPI 架构重构），需在新增文件中添加品牌标识"
+
+The upstream version introduces:
+- InstanceStore instead of Instance for lifecycle management
+- EffectBridge for async context bridging
+- Adapter naming (instead of adaptor)
+- Additional schema handling for OpenAPI generation
+- New layers: FileWatcher, InstanceBootstrap, InstanceStore, Plugin, ShareNext, Snapshot
+
+## Completion Status
+- [x] HTTPAPI files processed
+- [x] CODEGENIE identifiers present
+- [x] x-opencode headers = 0
+- [x] Merge conflicts resolved
+- [x] Evidence saved

@@ -1,0 +1,74 @@
+# Task 6: Test File Brand Identifier Replacement
+
+## Execution Summary
+
+**Date**: 2026-05-11
+**Task**: Batch replace OPENCODE_* → CODEGENIE_* in test files
+
+## Files Processed
+
+Total files: 43
+
+Files modified:
+1. packages/opencode/test/preload.ts
+2. packages/opencode/test/cli/tui/editor-context-zed.test.ts
+3. packages/opencode/test/cli/tui/plugin-add.test.ts
+4. packages/opencode/test/cli/tui/plugin-install.test.ts
+5. packages/opencode/test/cli/tui/plugin-loader-entrypoint.test.ts
+6. packages/opencode/test/cli/tui/plugin-loader-pure.test.ts
+7. packages/opencode/test/cli/tui/plugin-loader.test.ts
+8. packages/opencode/test/cli/tui/plugin-toggle.test.ts
+9. packages/opencode/test/config/config.test.ts
+10. packages/opencode/test/config/tui.test.ts
+11. packages/opencode/test/control-plane/workspace.test.ts
+12. packages/opencode/test/file/watcher.test.ts
+13. packages/opencode/test/fixture/plugin-meta-worker.ts
+14. packages/opencode/test/fixture/tui-runtime.ts
+15. packages/opencode/test/plugin/loader-shared.test.ts
+16. packages/opencode/test/plugin/meta.test.ts
+17. packages/opencode/test/plugin/trigger.test.ts
+18. packages/opencode/test/plugin/workspace-adapter.test.ts
+19. packages/opencode/test/plugin/workspace-adaptor.test.ts
+20. packages/opencode/test/provider/transform.test.ts
+21. packages/opencode/test/server/httpapi-bridge.test.ts
+22. packages/opencode/test/server/httpapi-config.test.ts
+23. packages/opencode/test/server/httpapi-cors.test.ts
+24. packages/opencode/test/server/httpapi-event.test.ts
+25. packages/opencode/test/server/httpapi-experimental.test.ts
+26. packages/opencode/test/server/httpapi-instance.legacy.test.ts
+27. packages/opencode/test/server/httpapi-instance.test.ts
+28. packages/opencode/test/server/httpapi-json-parity.test.ts
+29. packages/opencode/test/server/httpapi-mcp.test.ts
+30. packages/opencode/test/server/httpapi-provider.test.ts
+31. packages/opencode/test/server/httpapi-pty.test.ts
+32. packages/opencode/test/server/httpapi-raw-route-auth.test.ts
+33. packages/opencode/test/server/httpapi-sdk.test.ts
+34. packages/opencode/test/server/httpapi-sync.test.ts
+35. packages/opencode/test/server/httpapi-tui.test.ts
+36. packages/opencode/test/server/httpapi-ui.test.ts
+37. packages/opencode/test/server/httpapi-workspace.test.ts
+38. packages/opencode/test/server/session-list.test.ts
+39. packages/opencode/test/server/session-messages.test.ts
+40. packages/opencode/test/skill/skill.test.ts
+41. packages/opencode/test/sync/index.test.ts
+42. packages/opencode/test/tool/bash.test.ts
+43. packages/opencode/test/tool/skill.test.ts
+
+## Verification Results
+
+| Metric | Expected | Actual | Status |
+|--------|----------|--------|--------|
+| Files processed | 40+ | 43 | ✅ PASS |
+| OPENCODE_ residue | < 5 | 0 | ✅ PASS |
+| CODEGENIE_ count | > 100 | 434 | ✅ PASS |
+
+## Git Status
+
+- Staged: packages/opencode/test/ (all 43 files)
+- Status: Ready for commit
+
+## Notes
+
+- All replacements were successful
+- No OPENCODE_ identifiers remain in test files
+- Git add completed successfully

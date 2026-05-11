@@ -1,0 +1,42 @@
+﻿bun.exe : $ bun turbo typecheck
+所在位置 D:\node-v22.19.0-win-x64\node-v22.19.0-win-x64\bun.ps1:14 字符: 3
++   & "$basedir/node_modules/bun/bin/bun.exe"   $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ bun turbo typecheck:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+鈥?turbo 2.8.13
+鈥?Packages in scope: @opencode-ai/app, @opencode-ai/console-app, @opencode-ai/console-core, @opencode-ai/console-function, @opencode-ai/console-mail, @opencode-ai/console-resource, @opencode-ai/core, @opencode-ai/desktop, @opencode-ai/desktop-electron, @opencode-ai/enterprise, @opencode-ai/function, @opencode-ai/plugin, @opencode-ai/script, @opencode-ai/sdk, @opencode-ai/slack, @opencode-ai/storybook, @opencode-ai/ui, @opencode-ai/web, codegenie
+鈥?Running typecheck in 19 packages
+鈥?Remote caching disabled
+@opencode-ai/desktop-electron:typecheck: cache hit, replaying logs be98f89c5fb1222a
+@opencode-ai/core:typecheck: cache hit, replaying logs ce03770ee7ae2320
+@opencode-ai/enterprise:typecheck: cache hit, replaying logs 765c0612ac49fcb3
+@opencode-ai/slack:typecheck: cache hit, replaying logs 6805b32a76321b58
+@opencode-ai/plugin:typecheck: cache hit, replaying logs 1b0d333a1372519b
+@opencode-ai/desktop-electron:typecheck: $ tsgo -b
+@opencode-ai/console-function:typecheck: cache hit, replaying logs a5e8bc688f72f5e4
+@opencode-ai/core:typecheck: $ tsgo --noEmit
+@opencode-ai/slack:typecheck: $ tsgo --noEmit
+@opencode-ai/console-app:typecheck: cache hit, replaying logs 8b7dd5e98105d59a
+@opencode-ai/enterprise:typecheck: $ tsgo --noEmit
+@opencode-ai/plugin:typecheck: $ tsgo --noEmit
+@opencode-ai/ui:typecheck: cache hit, replaying logs df946453df27e133
+@opencode-ai/console-function:typecheck: $ tsgo --noEmit
+@opencode-ai/console-app:typecheck: $ tsgo --noEmit
+codegenie:typecheck: cache miss, executing 55bdab9711bbbeb5
+@opencode-ai/sdk:typecheck: cache hit, replaying logs cf1c2211f5bcc57d
+@opencode-ai/console-core:typecheck: cache hit, replaying logs 19b0227b9ea72c29
+@opencode-ai/ui:typecheck: $ tsgo --noEmit
+@opencode-ai/app:typecheck: cache hit, replaying logs c1f16d673a4c4854
+@opencode-ai/console-core:typecheck: $ tsgo --noEmit
+@opencode-ai/desktop:typecheck: cache hit, replaying logs 3fd084d6d310ca43
+@opencode-ai/sdk:typecheck: $ tsgo --noEmit
+@opencode-ai/app:typecheck: $ tsgo -b
+@opencode-ai/desktop:typecheck: $ tsgo -b
+codegenie:typecheck: $ tsgo --noEmit
+
+ Tasks:    13 successful, 13 total
+Cached:    12 cached, 13 total
+  Time:    3.124s 
+

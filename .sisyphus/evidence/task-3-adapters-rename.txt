@@ -1,0 +1,110 @@
+# Task 3: Workspace Adapters Rename Evidence
+# Date: 2026-05-11
+
+## Summary
+Successfully migrated workspace adapters rename (adaptors → adapters) by:
+1. Accepting upstream rename (adaptors → adapters)
+2. Preserving CODEGENIE brand identifiers (not changing to OPENCODE)
+3. Resolving all conflict markers in affected files
+4. Deleting old adaptors files
+5. Staging new adapters files
+
+## Files Modified
+
+### Source Files (Conflict Resolution)
+1. packages/opencode/src/server/routes/control/workspace.ts
+   - Changed import: `listAdaptors` → `listAdapters`
+   - Changed import: `WorkspaceAdaptorEntry` → `WorkspaceAdapterEntry`
+   - Changed import path: `control-plane/adaptors` → `control-plane/adapters`
+
+2. packages/opencode/src/server/routes/instance/httpapi/handlers/workspace.ts
+   - Changed import: `listAdaptors` → `listAdapters`
+   - Changed variable: `adaptors` → `adapters`
+   - Changed handler: `.handle("adaptors")` → `.handle("adapters")`
+   - Added `extra: ctx.payload.extra ?? null` from upstream
+
+3. packages/opencode/src/server/routes/instance/httpapi/middleware/workspace-routing.ts
+   - Changed import: `getAdaptor` → `getAdapter`
+   - Added import: `EffectBridge` from upstream
+   - Changed function: `resolveTarget` to use `EffectBridge.fromPromise`
+   - Preserved: `currentDirectory()` function (local logic)
+   - Preserved: `CODEGENIE_*` brand identifiers
+
+### Test Files (Conflict Resolution)
+4. packages/opencode/test/control-plane/workspace.test.ts
+   - Changed imports: `registerAdaptor` → `registerAdapter`, `WorkspaceAdaptor` → `WorkspaceAdapter`
+   - Changed types: `RecordedAdaptor` → `RecordedAdapter`
+   - Changed functions: `recordedAdaptor` → `recordedAdapter`, `localAdaptor` → `localAdapter`, `remoteAdaptor` → `remoteAdapter`
+   - Changed variable: `adaptor` → `adapter`
+   - Preserved: `CODEGENIE_*` brand identifiers
+   - Accepted: `disposeAllInstances` from upstream
+
+5. packages/opencode/test/server/httpapi-instance-context.test.ts
+   - Changed imports: `registerAdaptor` → `registerAdapter`, `WorkspaceAdaptor` → `WorkspaceAdapter`
+   - Added imports: `InstanceBootstrap`, `InstanceStore` from upstream
+   - Changed function: `localAdaptor` → `localAdapter`
+   - Preserved: `CODEGENIE_*` brand identifiers
+   - Accepted: `disposeAllInstances` from upstream
+
+6. packages/opencode/test/server/httpapi-session.test.ts
+   - Changed imports: `registerAdaptor` → `registerAdapter`, `WorkspaceAdaptor` → `WorkspaceAdapter`
+   - Changed function: `localAdaptor` → `localAdapter`
+   - Preserved: `CODEGENIE_*` brand identifiers
+   - Accepted: `disposeAllInstances` from upstream
+
+7. packages/opencode/test/server/httpapi-workspace-routing.test.ts
+   - Changed imports: `registerAdaptor` → `registerAdapter`, `WorkspaceAdaptor` → `WorkspaceAdapter`
+   - Changed functions: `localAdaptor` → `localAdapter`, `remoteAdaptor` → `remoteAdapter`
+   - Changed variable: `adaptor` → `adapter`
+   - Preserved: `CODEGENIE_*` brand identifiers
+
+8. packages/opencode/test/server/httpapi-workspace.test.ts
+   - Changed imports: `registerAdaptor` → `registerAdapter`, `WorkspaceAdaptor` → `WorkspaceAdapter`
+   - Changed functions: `localAdaptor` → `localAdapter`, `remoteAdaptor` → `remoteAdapter`
+   - Changed variable: `adaptors` → `adapters`
+   - Added new tests from upstream: "creates workspace with the TUI payload shape", "creates a real git worktree workspace via the builtin adapter", "documents legacy Hono accepting the TUI payload shape"
+   - Preserved: `CODEGENIE_*` brand identifiers
+   - Accepted: `disposeAllInstances` from upstream
+
+## Files Deleted
+- packages/opencode/src/control-plane/adaptors/index.ts (git rm)
+- packages/opencode/src/control-plane/adaptors/worktree.ts (git rm)
+
+## Files Staged (Already Present from Upstream)
+- packages/opencode/src/control-plane/adapters/index.ts (git add)
+- packages/opencode/src/control-plane/adapters/worktree.ts (git add)
+
+## Verification Results
+
+### Import References
+- Files importing from `control-plane/adaptors`: 0 (expected: 0)
+- Files importing from `control-plane/adapters`: 11 (expected: > 10)
+
+### Git Status
+- adapters/index.ts: staged (mode 0)
+- adapters/worktree.ts: staged (mode 0)
+- adaptors/index.ts: deleted (removed from index)
+- adaptors/worktree.ts: deleted (removed from index)
+
+## Brand Identifier Preservation
+The following CODEGENIE brand identifiers were preserved (not changed to OPENCODE):
+- Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES
+- Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI
+- Flag.CODEGENIE_WORKSPACE_ID
+- process.env.CODEGENIE_AUTH_CONTENT
+- x-codegenie-directory header
+
+## Local Logic Preservation
+The following local logic was preserved:
+- `currentDirectory()` function in workspace-routing.ts (uses Instance.directory with fallback)
+- All CODEGENIE-specific flag and environment variable handling
+
+## Upstream Features Accepted
+The following upstream features were accepted:
+- `EffectBridge.fromPromise` for async adapter operations
+- `InstanceBootstrap.defaultLayer` and `InstanceStore.defaultLayer` in test layers
+- `disposeAllInstances` function for cleanup
+- New test cases for TUI payload shape and worktree adapter
+- `extra: ctx.payload.extra ?? null` in workspace creation
+
+## Task Status: COMPLETED

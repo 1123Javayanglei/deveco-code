@@ -1,0 +1,198 @@
+# Task 1: Git Merge v1.14.32 - Status Report
+
+## Execution Summary
+- **Command**: `git merge --no-ff v1.14.32 --no-edit`
+- **Status**: MERGE IN PROGRESS (conflicts detected)
+- **Timestamp**: 2026-05-11
+
+## Conflict Statistics
+- **Total Conflict Files**: 128
+- **UU (both modified)**: 92 files
+- **AA (both added)**: 36 files
+- **UD (deleted in theirs, modified in ours)**: 2 files
+- **DU (deleted in ours, modified in theirs)**: 0 files
+
+## Conflict Types Breakdown
+
+### UU (Both Modified) - 92 files
+Files modified in both branches with conflicting changes.
+
+### AA (Both Added) - 36 files
+Files added in both branches with different content.
+
+### UD (Deleted in v1.14.32, Modified in HEAD) - 2 files
+- packages/opencode/src/control-plane/adaptors/index.ts
+- packages/opencode/test/plugin/workspace-adaptor.test.ts
+
+## Affected Packages (by conflict count)
+1. packages/opencode/ - 95 conflicts (largest impact)
+2. packages/core/ - 4 conflicts
+3. packages/console/ - 4 conflicts
+4. packages/sdk/ - 2 conflicts
+5. Root level - 3 conflicts (bun.lock, package.json, .github/VOUCHED.td)
+
+## Key Conflict Areas
+
+### Server/HTTP API (Major Refactor)
+- packages/opencode/src/server/backend.ts (AA)
+- packages/opencode/src/server/proxy-util.ts (AA)
+- packages/opencode/src/server/routes/instance/httpapi/* (multiple AA conflicts)
+
+### Control Plane (Renamed)
+- adaptors/ -> adapters/ (rename conflict)
+- packages/opencode/src/control-plane/types.ts (UU)
+- packages/opencode/src/control-plane/workspace.ts (UU)
+
+### Session/Processor
+- packages/opencode/src/session/processor.ts (UU)
+- packages/opencode/src/session/session.ts (UU)
+- packages/opencode/src/session/message-v2.ts (UU)
+
+### File Operations
+- packages/opencode/src/file/index.ts (UU)
+- packages/opencode/src/file/ripgrep.ts (UU)
+- packages/opencode/src/file/watcher.ts (UU)
+
+### Tests
+- packages/opencode/test/server/* (multiple AA conflicts for new test files)
+- packages/opencode/test/tool/* (multiple UU conflicts)
+
+## Next Steps
+1. Phase 2: Categorize conflicts by resolution strategy
+2. Phase 3: Resolve conflicts systematically
+3. Phase 4: Verify build and tests
+
+## Raw Status Output
+```
+UU .github/VOUCHED.td
+UU bun.lock
+UU package.json
+UU packages/app/package.json
+UU packages/app/src/env.d.ts
+UU packages/console/app/package.json
+UU packages/console/core/package.json
+UU packages/console/function/package.json
+UU packages/console/mail/package.json
+AA packages/core/package.json
+AA packages/core/src/flag/flag.ts
+AA packages/core/src/global.ts
+AA packages/core/src/installation/version.ts
+AA packages/core/test/npm.test.ts
+UU packages/desktop-electron/package.json
+UU packages/desktop/package.json
+UU packages/enterprise/package.json
+UU packages/extensions/zed/extension.toml
+UU packages/function/package.json
+UU packages/opencode/package.json
+UU packages/opencode/specs/effect/http-api.md
+UU packages/opencode/specs/effect/schema.md
+UU packages/opencode/src/agent/agent.ts
+UU packages/opencode/src/auth/index.ts
+UU packages/opencode/src/cli/cmd/tui/app.tsx
+UU packages/opencode/src/cli/cmd/tui/component/logo.tsx
+UU packages/opencode/src/cli/cmd/tui/config/tui.ts
+UU packages/opencode/src/cli/cmd/tui/routes/home.tsx
+UU packages/opencode/src/cli/cmd/tui/worker.ts
+UU packages/opencode/src/cli/ui.ts
+UU packages/opencode/src/cli/upgrade.ts
+UU packages/opencode/src/config/config.ts
+UD packages/opencode/src/control-plane/adaptors/index.ts
+UD packages/opencode/src/control-plane/adaptors/worktree.ts
+UU packages/opencode/src/control-plane/types.ts
+UU packages/opencode/src/control-plane/workspace.ts
+UU packages/opencode/src/effect/app-runtime.ts
+UU packages/opencode/src/file/index.ts
+UU packages/opencode/src/file/ripgrep.ts
+UU packages/opencode/src/file/watcher.ts
+UU packages/opencode/src/installation/index.ts
+UU packages/opencode/src/lsp/lsp.ts
+UU packages/opencode/src/lsp/server.ts
+UU packages/opencode/src/plugin/index.ts
+UU packages/opencode/src/project/bootstrap.ts
+UU packages/opencode/src/project/instance.ts
+AA packages/opencode/src/server/backend.ts
+AA packages/opencode/src/server/proxy-util.ts
+UU packages/opencode/src/server/proxy.ts
+UU packages/opencode/src/server/routes/control/workspace.ts
+AA packages/opencode/src/server/routes/instance/httpapi/groups/workspace.ts
+AA packages/opencode/src/server/routes/instance/httpapi/handlers/global.ts
+AA packages/opencode/src/server/routes/instance/httpapi/handlers/project.ts
+AA packages/opencode/src/server/routes/instance/httpapi/handlers/workspace.ts
+AA packages/opencode/src/server/routes/instance/httpapi/lifecycle.ts
+AA packages/opencode/src/server/routes/instance/httpapi/middleware/authorization.ts
+AA packages/opencode/src/server/routes/instance/httpapi/middleware/instance-context.ts
+AA packages/opencode/src/server/routes/instance/httpapi/middleware/workspace-routing.ts
+AA packages/opencode/src/server/routes/instance/httpapi/public.ts
+UU packages/opencode/src/server/routes/instance/httpapi/server.ts
+UU packages/opencode/src/server/routes/instance/index.ts
+UU packages/opencode/src/server/routes/ui.ts
+UU packages/opencode/src/server/workspace.ts
+UU packages/opencode/src/session/instruction.ts
+UU packages/opencode/src/session/llm.ts
+UU packages/opencode/src/session/message-v2.ts
+UU packages/opencode/src/session/processor.ts
+UU packages/opencode/src/session/session.ts
+UU packages/opencode/src/session/status.ts
+UU packages/opencode/src/skill/index.ts
+UU packages/opencode/src/tool/bash.ts
+UU packages/opencode/src/tool/external-directory.ts
+UU packages/opencode/src/tool/plan.ts
+UU packages/opencode/src/tool/registry.ts
+UU packages/opencode/src/worktree/index.ts
+UU packages/opencode/test/agent/agent.test.ts
+UU packages/opencode/test/bus/bus-effect.test.ts
+AA packages/opencode/test/control-plane/workspace.test.ts
+UU packages/opencode/test/effect/instance-state.test.ts
+UU packages/opencode/test/effect/run-service.test.ts
+UU packages/opencode/test/file/index.test.ts
+UU packages/opencode/test/fixture/db.ts
+UU packages/opencode/test/installation/installation.test.ts
+UU packages/opencode/test/plugin/loader-shared-test.ts
+UD packages/opencode/test/plugin/workspace-adaptor.test.ts
+UU packages/opencode/test/provider/provider.test.ts
+AA packages/opencode/test/server/httpapi-bridge.test.ts
+AA packages/opencode/test/server/httpapi-config-test.ts
+AA packages/opencode/test/server/httpapi-cors.test.ts
+AA packages/opencode/test/server/httpapi-event.test.ts
+AA packages/opencode/test/server/httpapi-experimental.test.ts
+AA packages/opencode/test/server/httpapi-file.test.ts
+AA packages/opencode/test/server/httpapi-instance-context.test.ts
+AA packages/opencode/test/server/httpapi-instance.legacy.test.ts
+AA packages/opencode/test/server/httpapi-instance.test.ts
+AA packages/opencode/test/server/httpapi-json-parity.test.ts
+AA packages/opencode/test/server/httpapi-mcp.test.ts
+AA packages/opencode/test/server/httpapi-provider.test.ts
+AA packages/opencode/test/server/httpapi-pty.test.ts
+AA packages/opencode/test/server/httpapi-raw-route-auth.test.ts
+AA packages/opencode/test/server/httpapi-sdk.test.ts
+AA packages/opencode/test/server/httpapi-session.test.ts
+AA packages/opencode/test/server/httpapi-sync.test.ts
+AA packages/opencode/test/server/httpapi-tui.test.ts
+AA packages/opencode/test/server/httpapi-ui.test.ts
+AA packages/opencode/test/server/httpapi-workspace-routing.test.ts
+AA packages/opencode/test/server/httpapi-workspace.test.ts
+UU packages/opencode/test/server/session-actions.test.ts
+UU packages/opencode/test/server/session-list.test.ts
+UU packages/opencode/test/server/session-messages.test.ts
+UU packages/opencode/test/session/compaction.test.ts
+UU packages/opencode/test/session/processor-effect.test.ts
+UU packages/opencode/test/session/system.test.ts
+UU packages/opencode/test/snapshot/snapshot.test.ts
+UU packages/opencode/test/sync/index.test.ts
+UU packages/opencode/test/tool/edit.test.ts
+AA packages/opencode/test/tool/lsp.test.ts
+UU packages/opencode/test/tool/read.test.ts
+UU packages/opencode/test/tool/registry.test.ts
+UU packages/opencode/test/tool/skill.test.ts
+UU packages/opencode/test/tool/task.test.ts
+UU packages/opencode/test/tool/write.test.ts
+UU packages/opencode/tsconfig.json
+UU packages/plugin/package.json
+UU packages/sdk/js/package.json
+UU packages/sdk/js/src/v2/gen/types.gen.ts
+UU packages/sdk/openapi.json
+UU packages/slack/package.json
+UU packages/ui/package.json
+UU packages/web/package.json
+UU sdks/vscode/package.json
+```

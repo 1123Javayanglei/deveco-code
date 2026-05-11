@@ -1,0 +1,63 @@
+# Task 4: InstanceStore/InstanceContext Conflicts Resolution
+
+## Summary
+Resolved InstanceStore/InstanceContext conflicts by accepting upstream Effect Service/Layer architecture while preserving brand identifiers.
+
+## Files Resolved
+
+### New Modules (Accepted Upstream)
+1. `packages/opencode/src/project/instance-store.ts` - New Effect Service/Layer architecture for instance management
+2. `packages/opencode/src/project/instance-context.ts` - New InstanceContext interface and ALS context helper
+
+### Merged Files
+3. `packages/opencode/src/project/bootstrap.ts` - Accepted upstream Effect Service/Layer architecture (InstanceBootstrap.Service)
+4. `packages/opencode/src/project/instance.ts` - Accepted upstream Effect-based implementation using InstanceStore
+
+### HTTPAPI Middleware
+5. `packages/opencode/src/server/routes/instance/httpapi/middleware/instance-context.ts` - Accepted upstream InstanceStore-based implementation
+6. `packages/opencode/src/server/routes/instance/httpapi/middleware/authorization.ts` - Kept CODEGENIE flags (CODEGENIE_SERVER_PASSWORD, CODEGENIE_SERVER_USERNAME)
+7. `packages/opencode/src/server/routes/instance/httpapi/middleware/workspace-routing.ts` - Kept Instance ALS logic + CODEGENIE flags (CODEGENIE_WORKSPACE_ID, x-codegenie-directory header)
+
+## Verification Results
+
+### Files Exist
+- instance-store.ts: EXISTS
+- instance-context.ts: EXISTS
+
+### Brand Identifiers Present
+- authorization.ts: CODEGENIE_SERVER_PASSWORD, CODEGENIE_SERVER_USERNAME (lines 23-24)
+- workspace-routing.ts: CODEGENIE_WORKSPACE_ID (line 60), x-codegenie-directory header (line 69)
+
+### ALS Installation Preserved
+- bridge.ts: Instance.restore, Instance.current, Instance.bind patterns preserved (10 lines with Instance references)
+- workspace-routing.ts: currentDirectory() function with Instance.directory ALS fallback preserved
+
+## Architecture Changes
+
+### bootstrap.ts
+- HEAD: Simple Effect.gen function with direct service yields
+- Upstream: Full Service/Layer architecture with InstanceBootstrap.Service
+- Decision: Accept upstream to break circular dependency loop (Config → Instance → InstanceStore)
+
+### instance.ts
+- HEAD: Promise-based implementation with manual cache management
+- Upstream: Effect-based implementation delegating to InstanceStore
+- Decision: Accept upstream for cleaner Effect integration
+
+### instance-context.ts middleware
+- HEAD: Uses Instance.provide() with AppRuntime.runPromise(InstanceBootstrap)
+- Upstream: Uses InstanceStore.provide() with bootstrap.run
+- Decision: Accept upstream for proper Effect Service integration
+
+## Git Status
+All files staged with `git add`:
+- packages/opencode/src/project/instance-store.ts
+- packages/opencode/src/project/instance-context.ts
+- packages/opencode/src/project/bootstrap.ts
+- packages/opencode/src/project/instance.ts
+- packages/opencode/src/server/routes/instance/httpapi/middleware/instance-context.ts
+- packages/opencode/src/server/routes/instance/httpapi/middleware/authorization.ts
+- packages/opencode/src/server/routes/instance/httpapi/middleware/workspace-routing.ts
+
+## Timestamp
+2026-05-11
