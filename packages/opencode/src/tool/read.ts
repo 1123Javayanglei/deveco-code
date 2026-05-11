@@ -154,6 +154,13 @@ export const ReadTool = Tool.define(
       params: Schema.Schema.Type<typeof Parameters>,
       ctx: Tool.Context,
     ) {
+<<<<<<< HEAD
+=======
+      if (params.offset !== undefined && params.offset < 1) {
+        return yield* Effect.fail(new Error("offset must be greater than or equal to 1"))
+      }
+
+>>>>>>> 430d158d0
       const instance = yield* InstanceState.context
       let filepath = params.filePath
       if (!path.isAbsolute(filepath)) {

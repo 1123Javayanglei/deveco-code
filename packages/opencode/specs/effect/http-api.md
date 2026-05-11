@@ -198,7 +198,11 @@ Use raw Effect HTTP routes where `HttpApi` does not fit. The goal is deleting Ho
 | `project`                 | `bridged`         | list, current, git init, update                                            |
 | `file`                    | `bridged` partial | find text/file/symbol, list/content/status                                 |
 | `mcp`                     | `bridged`         | status, add, OAuth, connect/disconnect                                     |
+<<<<<<< HEAD
 | `workspace`               | `bridged`         | adapter/list/status/create/remove/session-restore                          |
+=======
+| `workspace`               | `bridged`         | adaptor/list/status/create/remove/session-restore                          |
+>>>>>>> 430d158d0
 | top-level instance routes | `bridged`         | path, vcs, command, agent, skill, lsp, formatter, dispose                  |
 | experimental JSON routes  | `bridged`         | console, tool, worktree list/mutations, global session list, resource list |
 | `session`                 | `bridged`         | read, lifecycle, prompt, message/part mutations, revert, permission reply  |
@@ -290,7 +294,11 @@ This checklist tracks bridge parity only. Checked routes are available through t
 
 ### Workspace Routes
 
+<<<<<<< HEAD
 - [x] `GET /experimental/workspace/adapter` - list workspace adapters.
+=======
+- [x] `GET /experimental/workspace/adaptor` - list workspace adaptors.
+>>>>>>> 430d158d0
 - [x] `POST /experimental/workspace` - create workspace.
 - [x] `GET /experimental/workspace` - list workspaces.
 - [x] `GET /experimental/workspace/status` - workspace status.

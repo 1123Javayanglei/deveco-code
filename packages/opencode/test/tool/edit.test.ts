@@ -4,7 +4,11 @@ import fs from "fs/promises"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import { EditTool } from "../../src/tool/edit"
 import { Instance } from "../../src/project/instance"
+<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+=======
+import { tmpdir } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { LSP } from "@/lsp/lsp"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Format } from "../../src/format"

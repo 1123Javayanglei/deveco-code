@@ -11,19 +11,27 @@ import { Config } from "@/config/config"
 import { Command } from "@/command"
 import * as Observability from "@opencode-ai/core/effect/observability"
 import { File } from "@/file"
+<<<<<<< HEAD
 import { FileWatcher } from "@/file/watcher"
+=======
+>>>>>>> 430d158d0
 import { Ripgrep } from "@/file/ripgrep"
 import { Format } from "@/format"
 import { LSP } from "@/lsp/lsp"
 import { MCP } from "@/mcp"
 import { Permission } from "@/permission"
 import { Installation } from "@/installation"
+<<<<<<< HEAD
 import { InstanceBootstrap } from "@/project/bootstrap"
 import { InstanceStore } from "@/project/instance-store"
 import { Plugin } from "@/plugin"
 import { Project } from "@/project/project"
 import { ProviderAuth } from "@/provider/auth"
 import { ModelsDev } from "@/provider/models"
+=======
+import { Project } from "@/project/project"
+import { ProviderAuth } from "@/provider/auth"
+>>>>>>> 430d158d0
 import { Provider } from "@/provider/provider"
 import { Pty } from "@/pty"
 import { Question } from "@/question"
@@ -36,9 +44,13 @@ import { SessionStatus } from "@/session/status"
 import { SessionSummary } from "@/session/summary"
 import { Todo } from "@/session/todo"
 import { SessionShare } from "@/share/session"
+<<<<<<< HEAD
 import { ShareNext } from "@/share/share-next"
 import { Skill } from "@/skill"
 import { Snapshot } from "@/snapshot"
+=======
+import { Skill } from "@/skill"
+>>>>>>> 430d158d0
 import { SyncEvent } from "@/sync"
 import { ToolRegistry } from "@/tool/registry"
 import { lazy } from "@/util/lazy"
@@ -149,6 +161,7 @@ export function createRoutes(corsOptions?: CorsOptions) {
       Command.defaultLayer,
       Config.defaultLayer,
       File.defaultLayer,
+<<<<<<< HEAD
       FileWatcher.defaultLayer,
       Format.defaultLayer,
       LSP.defaultLayer,
@@ -159,6 +172,13 @@ export function createRoutes(corsOptions?: CorsOptions) {
       ModelsDev.defaultLayer,
       Permission.defaultLayer,
       Plugin.defaultLayer,
+=======
+      Format.defaultLayer,
+      LSP.defaultLayer,
+      Installation.defaultLayer,
+      MCP.defaultLayer,
+      Permission.defaultLayer,
+>>>>>>> 430d158d0
       Project.defaultLayer,
       ProviderAuth.defaultLayer,
       Provider.defaultLayer,
@@ -173,8 +193,11 @@ export function createRoutes(corsOptions?: CorsOptions) {
       SessionRunState.defaultLayer,
       SessionStatus.defaultLayer,
       SessionSummary.defaultLayer,
+<<<<<<< HEAD
       ShareNext.defaultLayer,
       Snapshot.defaultLayer,
+=======
+>>>>>>> 430d158d0
       SyncEvent.defaultLayer,
       Skill.defaultLayer,
       Todo.defaultLayer,

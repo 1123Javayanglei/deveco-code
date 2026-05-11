@@ -15,7 +15,11 @@ import { MessageID, PartID } from "../../src/session/schema"
 import { Session } from "@/session/session"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
+<<<<<<< HEAD
 import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
+=======
+import { provideInstance, tmpdir } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { it } from "../lib/effect"
 
 void Log.init({ print: false })
@@ -89,7 +93,11 @@ function expectJsonParity(input: {
 
 afterEach(async () => {
   Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original
+<<<<<<< HEAD
   await disposeAllInstances()
+=======
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
   await resetDatabase()
 })
 

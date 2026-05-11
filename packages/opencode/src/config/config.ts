@@ -12,7 +12,10 @@ import { Auth } from "../auth"
 import { Env } from "../env"
 import { applyEdits, modify } from "jsonc-parser"
 import { Instance, type InstanceContext } from "../project/instance"
+<<<<<<< HEAD
 import { InstanceStore } from "../project/instance-store"
+=======
+>>>>>>> 430d158d0
 import { InstallationLocal } from "@opencode-ai/core/installation/version"
 import pluginPkg from "@opencode-ai/plugin/package.json"
 import { existsSync } from "fs"
@@ -25,7 +28,11 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { InstanceState } from "@/effect/instance-state"
 import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+<<<<<<< HEAD
 import { containsPath } from "../project/instance-context"
+=======
+import { InstanceRef } from "@/effect/instance-ref"
+>>>>>>> 430d158d0
 import { zod } from "@/util/effect-zod"
 import { NonNegativeInt, PositiveInt, withStatics, type DeepMutable } from "@/util/schema"
 import { ConfigAgent } from "./agent"
@@ -460,8 +467,13 @@ export const layer = Layer.effect(
 
         const pluginScopeForSource = Effect.fnUntraced(function* (source: string) {
           if (source.startsWith("http://") || source.startsWith("https://")) return "global"
+<<<<<<< HEAD
 if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
           if (containsPath(source, ctx)) return "local"
+=======
+          if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
+          if (yield* InstanceRef.use((ctx) => Effect.succeed(Instance.containsPath(source, ctx)))) return "local"
+>>>>>>> 430d158d0
           return "global"
         })
 
@@ -738,6 +750,7 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
       yield* fs
         .writeFileString(file, JSON.stringify(mergeDeep(writable(existing), writable(config)), null, 2))
         .pipe(Effect.orDie)
+<<<<<<< HEAD
       if (options?.dispose !== false) {
         // Fail loudly if no instance is bound — silently skipping would
         // mask "config update without an active instance" bugs. The throw
@@ -745,6 +758,9 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
         const ctx = yield* InstanceState.context
         yield* Effect.promise(() => InstanceStore.disposeInstance(ctx))
       }
+=======
+      if (options?.dispose !== false) yield* Effect.promise(() => Instance.dispose())
+>>>>>>> 430d158d0
     })
 
     const invalidate = Effect.fn("Config.invalidate")(function* (wait?: boolean) {

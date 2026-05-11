@@ -17,12 +17,20 @@ export const WorkspaceInfo = Schema.Struct({
   .pipe(withStatics((s) => ({ zod: zod(s) })))
 export type WorkspaceInfo = DeepMutable<Schema.Schema.Type<typeof WorkspaceInfo>>
 
+<<<<<<< HEAD
 export const WorkspaceAdapterEntry = Schema.Struct({
+=======
+export const WorkspaceAdaptorEntry = Schema.Struct({
+>>>>>>> 430d158d0
   type: Schema.String,
   name: Schema.String,
   description: Schema.String,
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
+<<<<<<< HEAD
 export type WorkspaceAdapterEntry = Schema.Schema.Type<typeof WorkspaceAdapterEntry>
+=======
+export type WorkspaceAdaptorEntry = Schema.Schema.Type<typeof WorkspaceAdaptorEntry>
+>>>>>>> 430d158d0
 
 export type Target =
   | {

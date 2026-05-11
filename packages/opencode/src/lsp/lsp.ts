@@ -12,7 +12,11 @@ import { Process } from "@/util/process"
 import { spawn as lspspawn } from "./launch"
 import { Effect, Layer, Context, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
+<<<<<<< HEAD
 import { containsPath } from "@/project/instance-context"
+=======
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+>>>>>>> 430d158d0
 import { NonNegativeInt, withStatics } from "@/util/schema"
 import { zod, ZodOverride } from "@/util/effect-zod"
 

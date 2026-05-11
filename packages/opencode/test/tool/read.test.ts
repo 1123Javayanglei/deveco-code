@@ -13,7 +13,11 @@ import { ReadTool } from "../../src/tool/read"
 import { Truncate } from "@/tool/truncate"
 import { Tool } from "@/tool/tool"
 import { Filesystem } from "@/util/filesystem"
+<<<<<<< HEAD
 import { disposeAllInstances, provideInstance, tmpdirScoped } from "../fixture/fixture"
+=======
+import { provideInstance, tmpdirScoped } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { testEffect } from "../lib/effect"
 
 const FIXTURES_DIR = path.join(import.meta.dir, "fixtures")

@@ -11,11 +11,19 @@ import { MessageID, SessionID } from "../../src/session/schema"
 import { Tool } from "@/tool/tool"
 import { Truncate } from "@/tool/truncate"
 import { LspTool } from "../../src/tool/lsp"
+<<<<<<< HEAD
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 afterEach(async () => {
   await disposeAllInstances()
+=======
+import { provideTmpdirInstance } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
+
+afterEach(async () => {
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
 })
 
 const ctx = {

@@ -8,7 +8,11 @@ import { PtyPaths } from "../../src/server/routes/instance/httpapi/groups/pty"
 import { ExperimentalHttpApiServer } from "../../src/server/routes/instance/httpapi/server"
 import { PtyID } from "../../src/pty/schema"
 import { resetDatabase } from "../fixture/db"
+<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+=======
+import { tmpdir } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import * as Log from "@opencode-ai/core/util/log"
 
 void Log.init({ print: false })
@@ -22,8 +26,13 @@ function app(input: { password?: string; username?: string }) {
       Layer.provide(
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
+<<<<<<< HEAD
             OPENCODE_SERVER_PASSWORD: input.password,
             OPENCODE_SERVER_USERNAME: input.username,
+=======
+            CODEGENIE_SERVER_PASSWORD: input.password,
+            CODEGENIE_SERVER_USERNAME: input.username,
+>>>>>>> 430d158d0
           }),
         ),
       ),
@@ -49,7 +58,11 @@ async function cancelBody(response: Response) {
 
 afterEach(async () => {
   Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = originalHttpApi
+<<<<<<< HEAD
   await disposeAllInstances()
+=======
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
   await resetDatabase()
 })
 

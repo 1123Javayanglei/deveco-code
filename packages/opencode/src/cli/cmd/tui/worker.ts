@@ -2,7 +2,11 @@ import { Installation } from "@/installation"
 import { Server } from "@/server/server"
 import * as Log from "@opencode-ai/core/util/log"
 import { Instance } from "@/project/instance"
+<<<<<<< HEAD
 import { InstanceStore } from "@/project/instance-store"
+=======
+import { InstanceBootstrap } from "@/project/bootstrap"
+>>>>>>> 430d158d0
 import { Rpc } from "@/util/rpc"
 import { upgrade } from "@/cli/upgrade"
 import { Config } from "@/config/config"
@@ -10,7 +14,11 @@ import { GlobalBus } from "@/bus/global"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { writeHeapSnapshot } from "node:v8"
 import { Heap } from "@/cli/heap"
+<<<<<<< HEAD
 import { AppRuntime, getBootstrapRunEffect } from "@/effect/app-runtime"
+=======
+import { AppRuntime } from "@/effect/app-runtime"
+>>>>>>> 430d158d0
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process"
 
 ensureProcessMetadata("worker")

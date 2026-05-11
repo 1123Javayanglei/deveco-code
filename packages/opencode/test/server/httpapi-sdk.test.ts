@@ -15,6 +15,7 @@ import { Session as SessionNs } from "@/session/session"
 import { TestLLMServer } from "../lib/llm-server"
 import path from "path"
 import { resetDatabase } from "../fixture/db"
+<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 import { it } from "../lib/effect"
 
@@ -22,6 +23,15 @@ const original = {
   OPENCODE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
   OPENCODE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
   OPENCODE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
+=======
+import { tmpdir } from "../fixture/fixture"
+import { it } from "../lib/effect"
+
+const original = {
+  CODEGENIE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
+  CODEGENIE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
+  CODEGENIE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
+>>>>>>> 430d158d0
 }
 
 type Backend = "legacy" | "httpapi"
@@ -42,8 +52,13 @@ function app(backend: Backend, input?: { password?: string; username?: string })
       Layer.provide(
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
+<<<<<<< HEAD
             OPENCODE_SERVER_PASSWORD: input?.password,
             OPENCODE_SERVER_USERNAME: input?.username,
+=======
+            CODEGENIE_SERVER_PASSWORD: input?.password,
+            CODEGENIE_SERVER_USERNAME: input?.username,
+>>>>>>> 430d158d0
           }),
         ),
       ),
@@ -169,7 +184,11 @@ function sessionTitles(value: unknown) {
 
 function resetState() {
   return Effect.promise(async () => {
+<<<<<<< HEAD
     await disposeAllInstances()
+=======
+    await Instance.disposeAll()
+>>>>>>> 430d158d0
     await resetDatabase()
   })
 }
@@ -257,10 +276,17 @@ function seedMessage(directory: string, sessionID: string) {
 }
 
 afterEach(async () => {
+<<<<<<< HEAD
   Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.OPENCODE_EXPERIMENTAL_HTTPAPI
   Flag.CODEGENIE_SERVER_PASSWORD = original.OPENCODE_SERVER_PASSWORD
   Flag.CODEGENIE_SERVER_USERNAME = original.OPENCODE_SERVER_USERNAME
   await disposeAllInstances()
+=======
+  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.CODEGENIE_EXPERIMENTAL_HTTPAPI
+  Flag.CODEGENIE_SERVER_PASSWORD = original.CODEGENIE_SERVER_PASSWORD
+  Flag.CODEGENIE_SERVER_USERNAME = original.CODEGENIE_SERVER_USERNAME
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
   await resetDatabase()
 })
 

@@ -10,7 +10,11 @@ import fuzzysort from "fuzzysort"
 import ignore from "ignore"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
+<<<<<<< HEAD
 import { containsPath } from "../project/instance-context"
+=======
+import { Instance } from "../project/instance"
+>>>>>>> 430d158d0
 import * as Log from "@opencode-ai/core/util/log"
 import { Protected } from "./protected"
 import { Ripgrep } from "./ripgrep"

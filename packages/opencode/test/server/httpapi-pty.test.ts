@@ -7,7 +7,11 @@ import { Server } from "../../src/server/server"
 import { PtyPaths } from "../../src/server/routes/instance/httpapi/groups/pty"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
+<<<<<<< HEAD
 import { disposeAllInstances, tmpdir, tmpdirScoped } from "../fixture/fixture"
+=======
+import { tmpdir, tmpdirScoped } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { Config, Effect, Layer, Queue, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter, HttpServer } from "effect/unstable/http"
 import * as Socket from "effect/unstable/socket/Socket"
@@ -63,7 +67,11 @@ const directoryHeader = (dir: string) => HttpClientRequest.setHeader("x-opencode
 
 afterEach(async () => {
   Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original
+<<<<<<< HEAD
   await disposeAllInstances()
+=======
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
   await resetDatabase()
 })
 

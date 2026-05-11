@@ -7,7 +7,11 @@ import { SyncPaths } from "../../src/server/routes/instance/httpapi/groups/sync"
 import { Session } from "@/session/session"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
+<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+=======
+import { tmpdir } from "../fixture/fixture"
+>>>>>>> 430d158d0
 
 void Log.init({ print: false })
 
@@ -27,7 +31,11 @@ afterEach(async () => {
   mock.restore()
   Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = originalHttpApi
   Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
+<<<<<<< HEAD
   await disposeAllInstances()
+=======
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
   await resetDatabase()
 })
 

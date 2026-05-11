@@ -3,11 +3,18 @@ import { Effect, FileSystem, Layer, Path } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Instance } from "../../src/project/instance"
+<<<<<<< HEAD
 import { InstanceStore } from "../../src/project/instance-store"
 import { Server } from "../../src/server/server"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, provideInstance } from "../fixture/fixture"
+=======
+import { Server } from "../../src/server/server"
+import * as Log from "@opencode-ai/core/util/log"
+import { resetDatabase } from "../fixture/db"
+import { provideInstance } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { testEffect } from "../lib/effect"
 
 void Log.init({ print: false })
@@ -90,9 +97,13 @@ function withProviderProject<A, E, R>(self: (dir: string) => Effect.Effect<A, E,
     )
     yield* writeProviderAuthPlugin(dir)
     yield* Effect.addFinalizer(() =>
+<<<<<<< HEAD
       Effect.promise(() =>
         Instance.provide({ directory: dir, fn: () => InstanceStore.disposeInstance(Instance.current) }),
       ).pipe(Effect.ignore),
+=======
+      Effect.promise(() => Instance.provide({ directory: dir, fn: () => Instance.dispose() })).pipe(Effect.ignore),
+>>>>>>> 430d158d0
     )
 
     return yield* self(dir).pipe(provideInstance(dir))
@@ -101,7 +112,11 @@ function withProviderProject<A, E, R>(self: (dir: string) => Effect.Effect<A, E,
 
 afterEach(async () => {
   Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original
+<<<<<<< HEAD
   await disposeAllInstances()
+=======
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
   await resetDatabase()
 })
 

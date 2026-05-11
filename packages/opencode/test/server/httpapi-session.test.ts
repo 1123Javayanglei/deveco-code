@@ -3,8 +3,13 @@ import { mkdir } from "node:fs/promises"
 import path from "node:path"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
+<<<<<<< HEAD
 import { registerAdapter } from "../../src/control-plane/adapters"
 import type { WorkspaceAdapter } from "../../src/control-plane/types"
+=======
+import { registerAdaptor } from "../../src/control-plane/adaptors"
+import type { WorkspaceAdaptor } from "../../src/control-plane/types"
+>>>>>>> 430d158d0
 import { Workspace } from "../../src/control-plane/workspace"
 import { PermissionID } from "../../src/permission/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
@@ -20,7 +25,11 @@ import { SessionTable } from "@/session/session.sql"
 import * as Log from "@opencode-ai/core/util/log"
 import { eq } from "drizzle-orm"
 import { resetDatabase } from "../fixture/db"
+<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+=======
+import { tmpdir } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { it } from "../lib/effect"
 
 void Log.init({ print: false })
@@ -82,7 +91,11 @@ function createTextMessage(directory: string, sessionID: SessionID, text: string
   )
 }
 
+<<<<<<< HEAD
 const localAdapter = (directory: string): WorkspaceAdapter => ({
+=======
+const localAdaptor = (directory: string): WorkspaceAdaptor => ({
+>>>>>>> 430d158d0
   name: "Local Test",
   description: "Create a local test workspace",
   configure: (info) => ({ ...info, name: "local-test", directory }),
@@ -95,7 +108,11 @@ const localAdapter = (directory: string): WorkspaceAdapter => ({
 
 const createLocalWorkspace = (input: { projectID: Project.Info["id"]; type: string; directory: string }) =>
   Effect.gen(function* () {
+<<<<<<< HEAD
     registerAdapter(input.projectID, input.type, localAdapter(input.directory))
+=======
+    registerAdaptor(input.projectID, input.type, localAdaptor(input.directory))
+>>>>>>> 430d158d0
     return yield* Workspace.Service.use((svc) =>
       svc.create({
         type: input.type,
@@ -138,7 +155,11 @@ function withTmp<A, E, R>(
 afterEach(async () => {
   Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original
   Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
+<<<<<<< HEAD
   await disposeAllInstances()
+=======
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
   await resetDatabase()
 })
 

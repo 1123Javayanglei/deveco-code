@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { listAdapters } from "@/control-plane/adapters"
+=======
+import { listAdaptors } from "@/control-plane/adaptors"
+>>>>>>> 430d158d0
 import { Workspace } from "@/control-plane/workspace"
 import * as InstanceState from "@/effect/instance-state"
 import { Effect } from "effect"
@@ -10,9 +14,15 @@ export const workspaceHandlers = HttpApiBuilder.group(InstanceHttpApi, "workspac
   Effect.gen(function* () {
     const workspace = yield* Workspace.Service
 
+<<<<<<< HEAD
     const adapters = Effect.fn("WorkspaceHttpApi.adapters")(function* () {
       const instance = yield* InstanceState.context
       return yield* Effect.promise(() => listAdapters(instance.project.id))
+=======
+    const adaptors = Effect.fn("WorkspaceHttpApi.adaptors")(function* () {
+      const instance = yield* InstanceState.context
+      return yield* Effect.promise(() => listAdaptors(instance.project.id))
+>>>>>>> 430d158d0
     })
 
     const list = Effect.fn("WorkspaceHttpApi.list")(function* () {
@@ -24,7 +34,10 @@ export const workspaceHandlers = HttpApiBuilder.group(InstanceHttpApi, "workspac
       return yield* workspace
         .create({
           ...ctx.payload,
+<<<<<<< HEAD
           extra: ctx.payload.extra ?? null,
+=======
+>>>>>>> 430d158d0
           projectID: instance.project.id,
         })
         .pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
@@ -52,7 +65,11 @@ export const workspaceHandlers = HttpApiBuilder.group(InstanceHttpApi, "workspac
     })
 
     return handlers
+<<<<<<< HEAD
       .handle("adapters", adapters)
+=======
+      .handle("adaptors", adaptors)
+>>>>>>> 430d158d0
       .handle("list", list)
       .handle("create", create)
       .handle("status", status)

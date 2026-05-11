@@ -8,7 +8,11 @@ import type { Tool } from "@/tool/tool"
 import { Instance } from "../../src/project/instance"
 import { SkillTool } from "../../src/tool/skill"
 import { ToolRegistry } from "@/tool/registry"
+<<<<<<< HEAD
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
+=======
+import { provideTmpdirInstance } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { SessionID, MessageID } from "../../src/session/schema"
 import { testEffect } from "../lib/effect"
 

@@ -353,7 +353,11 @@ piecewise.
 - [ ] `src/cli/cmd/tui/event.ts`
 - [ ] `src/cli/ui.ts`
 - [ ] `src/command/index.ts`
+<<<<<<< HEAD
 - [x] `src/control-plane/adapters/worktree.ts`
+=======
+- [x] `src/control-plane/adaptors/worktree.ts`
+>>>>>>> 430d158d0
 - [x] `src/control-plane/types.ts`
 - [x] `src/control-plane/workspace.ts`
 - [ ] `src/file/index.ts`

@@ -7,6 +7,7 @@ import { HttpClient, HttpClientRequest, HttpRouter, HttpServerResponse } from "e
 import * as Socket from "effect/unstable/socket/Socket"
 import { mkdir } from "node:fs/promises"
 import path from "node:path"
+<<<<<<< HEAD
 import { registerAdapter } from "../../src/control-plane/adapters"
 import type { WorkspaceAdapter } from "../../src/control-plane/types"
 import { Workspace } from "../../src/control-plane/workspace"
@@ -14,12 +15,23 @@ import { InstanceRef, WorkspaceRef } from "../../src/effect/instance-ref"
 import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { Instance } from "../../src/project/instance"
 import { InstanceStore } from "../../src/project/instance-store"
+=======
+import { registerAdaptor } from "../../src/control-plane/adaptors"
+import type { WorkspaceAdaptor } from "../../src/control-plane/types"
+import { Workspace } from "../../src/control-plane/workspace"
+import { InstanceRef, WorkspaceRef } from "../../src/effect/instance-ref"
+import { Instance } from "../../src/project/instance"
+>>>>>>> 430d158d0
 import { Project } from "../../src/project/project"
 import { disposeMiddleware, markInstanceForDisposal } from "../../src/server/routes/instance/httpapi/lifecycle"
 import { instanceRouterMiddleware } from "../../src/server/routes/instance/httpapi/middleware/instance-context"
 import { workspaceRouterMiddleware } from "../../src/server/routes/instance/httpapi/middleware/workspace-routing"
 import { resetDatabase } from "../fixture/db"
+<<<<<<< HEAD
 import { disposeAllInstances, tmpdirScoped } from "../fixture/fixture"
+=======
+import { tmpdirScoped } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { testEffect } from "../lib/effect"
 
 const testStateLayer = Layer.effectDiscard(
@@ -30,7 +42,11 @@ const testStateLayer = Layer.effectDiscard(
     yield* Effect.addFinalizer(() =>
       Effect.promise(async () => {
         Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
+<<<<<<< HEAD
         await disposeAllInstances()
+=======
+        await Instance.disposeAll()
+>>>>>>> 430d158d0
         await resetDatabase()
       }),
     )
@@ -42,8 +58,11 @@ const it = testEffect(
     testStateLayer,
     NodeHttpServer.layerTest,
     NodeServices.layer,
+<<<<<<< HEAD
     InstanceBootstrap.defaultLayer,
     InstanceStore.defaultLayer,
+=======
+>>>>>>> 430d158d0
     Project.defaultLayer,
     Workspace.defaultLayer,
   ),
@@ -53,7 +72,11 @@ const instanceContextTestLayer = instanceRouterMiddleware
   .combine(workspaceRouterMiddleware)
   .layer.pipe(Layer.provide(Socket.layerWebSocketConstructorGlobal))
 
+<<<<<<< HEAD
 const localAdapter = (directory: string): WorkspaceAdapter => ({
+=======
+const localAdaptor = (directory: string): WorkspaceAdaptor => ({
+>>>>>>> 430d158d0
   name: "Local Test",
   description: "Create a local test workspace",
   configure: (info) => ({ ...info, name: "local-test", directory }),
@@ -67,7 +90,11 @@ const localAdapter = (directory: string): WorkspaceAdapter => ({
 const createLocalWorkspace = (input: { projectID: Project.Info["id"]; type: string; directory: string }) =>
   Effect.acquireRelease(
     Effect.gen(function* () {
+<<<<<<< HEAD
       registerAdapter(input.projectID, input.type, localAdapter(input.directory))
+=======
+      registerAdaptor(input.projectID, input.type, localAdaptor(input.directory))
+>>>>>>> 430d158d0
       const workspace = yield* Workspace.Service
       return yield* workspace.create({
         type: input.type,

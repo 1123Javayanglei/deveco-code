@@ -6,7 +6,11 @@ import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
+<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+=======
+import { tmpdir } from "../fixture/fixture"
+>>>>>>> 430d158d0
 
 void Log.init({ print: false })
 
@@ -37,7 +41,11 @@ async function waitDisposed(directory: string) {
 
 afterEach(async () => {
   Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original
+<<<<<<< HEAD
   await disposeAllInstances()
+=======
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
   await resetDatabase()
 })
 

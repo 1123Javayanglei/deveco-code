@@ -2,7 +2,10 @@ import { Hono } from "hono"
 import { describeRoute, validator } from "hono-openapi"
 import { resolver } from "hono-openapi"
 import { Instance } from "@/project/instance"
+<<<<<<< HEAD
 import { InstanceStore } from "@/project/instance-store"
+=======
+>>>>>>> 430d158d0
 import { Project } from "@/project/project"
 import z from "zod"
 import { ProjectID } from "@/project/schema"

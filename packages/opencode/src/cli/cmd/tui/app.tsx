@@ -132,9 +132,13 @@ export function tui(input: {
     }
 
     const renderer = await createCliRenderer(rendererConfig(input.config))
+<<<<<<< HEAD
 // Prewarm palette before ThemeProvider mounts so `system` theme avoids a first-paint fallback flash.
     void renderer.getPalette({ size: 16 }).catch(() => undefined)
     const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
+=======
+    const mode = (await (renderer as any).waitForThemeMode?.(1000)) ?? "dark"
+>>>>>>> 430d158d0
 
     await render(() => {
       return (

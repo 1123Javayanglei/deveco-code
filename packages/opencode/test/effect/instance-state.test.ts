@@ -3,9 +3,14 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { $ } from "bun"
 import { Context, Deferred, Duration, Effect, Exit, Fiber, Layer } from "effect"
 import { InstanceState } from "@/effect/instance-state"
+<<<<<<< HEAD
 import { InstanceStore } from "../../src/project/instance-store"
 import { Instance } from "../../src/project/instance"
 import { disposeAllInstances, provideInstance, tmpdirScoped } from "../fixture/fixture"
+=======
+import { Instance } from "../../src/project/instance"
+import { provideInstance, tmpdirScoped } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(CrossSpawnSpawner.defaultLayer)
@@ -70,7 +75,11 @@ it.live("InstanceState invalidates on reload", () =>
     )
 
     const a = yield* access(state, dir)
+<<<<<<< HEAD
     yield* Effect.promise(() => InstanceStore.reloadInstance({ directory: dir }))
+=======
+    yield* Effect.promise(() => Instance.reload({ directory: dir }))
+>>>>>>> 430d158d0
     const b = yield* access(state, dir)
 
     expect(a).not.toBe(b)
@@ -95,7 +104,11 @@ it.live("InstanceState invalidates on disposeAll", () =>
 
     yield* access(state, one)
     yield* access(state, two)
+<<<<<<< HEAD
     yield* Effect.promise(disposeAllInstances)
+=======
+    yield* Effect.promise(() => Instance.disposeAll())
+>>>>>>> 430d158d0
 
     expect(seen.sort()).toEqual([one, two].sort())
   }),
@@ -270,7 +283,11 @@ it.live("InstanceState correct after interleaved init and dispose", () =>
 
       const [, b] = yield* Effect.all(
         [
+<<<<<<< HEAD
           Effect.promise(() => InstanceStore.reloadInstance({ directory: one })),
+=======
+          Effect.promise(() => Instance.reload({ directory: one })),
+>>>>>>> 430d158d0
           Test.use((svc) => svc.get()).pipe(provideInstance(two)),
         ],
         { concurrency: "unbounded" },

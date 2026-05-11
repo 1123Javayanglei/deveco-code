@@ -2,10 +2,17 @@ import { Hono } from "hono"
 import { describeRoute, resolver, validator } from "hono-openapi"
 import z from "zod"
 import { Effect } from "effect"
+<<<<<<< HEAD
 import { listAdapters } from "@/control-plane/adapters"
 import { Workspace } from "@/control-plane/workspace"
 import { AppRuntime } from "@/effect/app-runtime"
 import { WorkspaceAdapterEntry } from "@/control-plane/types"
+=======
+import { listAdaptors } from "@/control-plane/adaptors"
+import { Workspace } from "@/control-plane/workspace"
+import { AppRuntime } from "@/effect/app-runtime"
+import { WorkspaceAdaptorEntry } from "@/control-plane/types"
+>>>>>>> 430d158d0
 import { zodObject } from "@/util/effect-zod"
 import { Instance } from "@/project/instance"
 import { errors } from "../../error"
@@ -28,7 +35,11 @@ export const WorkspaceRoutes = lazy(() =>
             description: "Workspace adapters",
             content: {
               "application/json": {
+<<<<<<< HEAD
                 schema: resolver(z.array(zodObject(WorkspaceAdapterEntry))),
+=======
+                schema: resolver(z.array(zodObject(WorkspaceAdaptorEntry))),
+>>>>>>> 430d158d0
               },
             },
           },

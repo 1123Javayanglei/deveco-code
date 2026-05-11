@@ -3,7 +3,11 @@ import { Effect } from "effect"
 import { Instance } from "../../src/project/instance"
 import { Session as SessionNs } from "@/session/session"
 import * as Log from "@opencode-ai/core/util/log"
+<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+=======
+import { tmpdir } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { mkdir } from "fs/promises"
 import path from "path"
@@ -30,7 +34,11 @@ const svc = {
 
 afterEach(async () => {
   Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
+<<<<<<< HEAD
   await disposeAllInstances()
+=======
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
 })
 
 describe("session.list", () => {

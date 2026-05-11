@@ -6,7 +6,11 @@ import fs from "fs/promises"
 import { File } from "../../src/file"
 import { Instance } from "../../src/project/instance"
 import { Filesystem } from "@/util/filesystem"
+<<<<<<< HEAD
 import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
+=======
+import { provideInstance, tmpdir } from "../fixture/fixture"
+>>>>>>> 430d158d0
 
 afterEach(async () => {
   await disposeAllInstances()

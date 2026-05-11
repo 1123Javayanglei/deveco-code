@@ -5,7 +5,11 @@ import { Effect, Layer } from "effect"
 import { Instance } from "../../src/project/instance"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ToolRegistry } from "@/tool/registry"
+<<<<<<< HEAD
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
+=======
+import { provideTmpdirInstance } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { testEffect } from "../lib/effect"
 
 const node = CrossSpawnSpawner.defaultLayer

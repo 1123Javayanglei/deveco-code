@@ -2,7 +2,10 @@ import { expect } from "bun:test"
 import { Effect, Layer, Context } from "effect"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { makeRuntime } from "../../src/effect/run-service"
+<<<<<<< HEAD
 import { ProjectID } from "../../src/project/schema"
+=======
+>>>>>>> 430d158d0
 import { it } from "../lib/effect"
 
 class Shared extends Context.Service<Shared, { readonly id: number }>()("@test/Shared") {}
@@ -50,6 +53,7 @@ it.live("makeRuntime shares dependent layers through the shared memo map", () =>
     expect(n).toBe(1)
   }),
 )
+<<<<<<< HEAD
 
 it.live("makeRuntime inherits InstanceRef from the current fiber", () =>
   Effect.gen(function* () {
@@ -87,3 +91,5 @@ it.live("makeRuntime inherits InstanceRef from the current fiber", () =>
     }),
   ),
 )
+=======
+>>>>>>> 430d158d0

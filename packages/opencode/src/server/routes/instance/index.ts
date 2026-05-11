@@ -6,7 +6,10 @@ import z from "zod"
 import { Format } from "@/format"
 import { TuiRoutes } from "./tui"
 import { Instance } from "@/project/instance"
+<<<<<<< HEAD
 import { InstanceStore } from "@/project/instance-store"
+=======
+>>>>>>> 430d158d0
 import { Vcs } from "@/project/vcs"
 import { Agent } from "@/agent/agent"
 import { Skill } from "@/skill"

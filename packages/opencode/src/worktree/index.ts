@@ -2,6 +2,10 @@ import z from "zod"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Global } from "@opencode-ai/core/global"
 import { Instance } from "../project/instance"
+<<<<<<< HEAD
+=======
+import { InstanceBootstrap } from "../project/bootstrap"
+>>>>>>> 430d158d0
 import { Project } from "@/project/project"
 import { Database } from "@/storage/db"
 import { eq } from "drizzle-orm"

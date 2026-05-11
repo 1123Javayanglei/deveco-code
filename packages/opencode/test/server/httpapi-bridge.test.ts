@@ -12,14 +12,24 @@ import { ConfigProvider, Layer } from "effect"
 import { HttpRouter } from "effect/unstable/http"
 import { OpenApi } from "effect/unstable/httpapi"
 import { resetDatabase } from "../fixture/db"
+<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+=======
+import { tmpdir } from "../fixture/fixture"
+>>>>>>> 430d158d0
 
 void Log.init({ print: false })
 
 const original = {
+<<<<<<< HEAD
   OPENCODE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
   OPENCODE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
   OPENCODE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
+=======
+  CODEGENIE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
+  CODEGENIE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
+  CODEGENIE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
+>>>>>>> 430d158d0
 }
 
 const methods = ["get", "post", "put", "delete", "patch"] as const
@@ -39,8 +49,13 @@ function app(input?: { password?: string; username?: string }) {
       Layer.provide(
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
+<<<<<<< HEAD
             OPENCODE_SERVER_PASSWORD: input?.password,
             OPENCODE_SERVER_USERNAME: input?.username,
+=======
+            CODEGENIE_SERVER_PASSWORD: input?.password,
+            CODEGENIE_SERVER_USERNAME: input?.username,
+>>>>>>> 430d158d0
           }),
         ),
       ),
@@ -119,6 +134,7 @@ type RequestBody = {
 function parameterKey(param: unknown): string | undefined {
   if (!param || typeof param !== "object" || !("in" in param) || !("name" in param)) return undefined
   if (typeof param.in !== "string" || typeof param.name !== "string") return undefined
+<<<<<<< HEAD
   return `${param.in}:${param.name}:${"required" in param && param.required === true}:${stableSchema(
     "schema" in param ? param.schema : undefined,
   )}`
@@ -136,6 +152,9 @@ function sortSchema(input: unknown): unknown {
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, value]) => [key, sortSchema(value)]),
   )
+=======
+  return `${param.in}:${param.name}:${"required" in param && param.required === true}`
+>>>>>>> 430d158d0
 }
 
 function parameterSchema(input: {
@@ -205,10 +224,17 @@ function fileUrl(input?: { directory?: string; token?: string }) {
 }
 
 afterEach(async () => {
+<<<<<<< HEAD
   Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.OPENCODE_EXPERIMENTAL_HTTPAPI
   Flag.CODEGENIE_SERVER_PASSWORD = original.OPENCODE_SERVER_PASSWORD
   Flag.CODEGENIE_SERVER_USERNAME = original.OPENCODE_SERVER_USERNAME
   await disposeAllInstances()
+=======
+  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.CODEGENIE_EXPERIMENTAL_HTTPAPI
+  Flag.CODEGENIE_SERVER_PASSWORD = original.CODEGENIE_SERVER_PASSWORD
+  Flag.CODEGENIE_SERVER_USERNAME = original.CODEGENIE_SERVER_USERNAME
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
   await resetDatabase()
 })
 
@@ -274,6 +300,7 @@ describe("HttpApi server", () => {
     })
   })
 
+<<<<<<< HEAD
   test("matches SDK-affecting request schema details", () => {
     const effect = effectOpenApi()
     const sessionUpdate = effect.paths["/session/{sessionID}"]?.patch?.requestBody
@@ -286,6 +313,8 @@ describe("HttpApi server", () => {
     expect(time?.properties?.archived).toEqual({ type: "number" })
   })
 
+=======
+>>>>>>> 430d158d0
   test("documents event routes as server-sent events", () => {
     const effect = effectOpenApi()
 

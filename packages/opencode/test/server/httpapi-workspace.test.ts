@@ -4,15 +4,24 @@ import { mkdir } from "node:fs/promises"
 import path from "node:path"
 import { Effect, Layer } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
+<<<<<<< HEAD
 import { registerAdapter } from "../../src/control-plane/adapters"
 import type { WorkspaceAdapter } from "../../src/control-plane/types"
+=======
+import { registerAdaptor } from "../../src/control-plane/adaptors"
+import type { WorkspaceAdaptor } from "../../src/control-plane/types"
+>>>>>>> 430d158d0
 import { Workspace } from "../../src/control-plane/workspace"
 import { WorkspacePaths } from "../../src/server/routes/instance/httpapi/groups/workspace"
 import { Session } from "@/session/session"
 import * as Log from "@opencode-ai/core/util/log"
 import { Server } from "../../src/server/server"
 import { resetDatabase } from "../fixture/db"
+<<<<<<< HEAD
 import { disposeAllInstances, provideInstance, tmpdirScoped } from "../fixture/fixture"
+=======
+import { provideInstance, tmpdirScoped } from "../fixture/fixture"
+>>>>>>> 430d158d0
 import { Instance } from "../../src/project/instance"
 import { Project } from "../../src/project/project"
 import { InstancePaths } from "../../src/server/routes/instance/httpapi/groups/instance"
@@ -27,16 +36,26 @@ const it = testEffect(
   Layer.mergeAll(NodeServices.layer, Project.defaultLayer, Session.defaultLayer, Workspace.defaultLayer),
 )
 
+<<<<<<< HEAD
 function request(path: string, directory: string, init: RequestInit = {}, httpApi = true) {
   return Effect.promise(() => {
     Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = httpApi
+=======
+function request(path: string, directory: string, init: RequestInit = {}) {
+  return Effect.promise(() => {
+    Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = true
+>>>>>>> 430d158d0
     const headers = new Headers(init.headers)
     headers.set("x-opencode-directory", directory)
     return Promise.resolve(Server.Default().app.request(path, { ...init, headers }))
   })
 }
 
+<<<<<<< HEAD
 function localAdapter(directory: string): WorkspaceAdapter {
+=======
+function localAdaptor(directory: string): WorkspaceAdaptor {
+>>>>>>> 430d158d0
   return {
     name: "Local Test",
     description: "Create a local test workspace",
@@ -60,7 +79,11 @@ function localAdapter(directory: string): WorkspaceAdapter {
   }
 }
 
+<<<<<<< HEAD
 function remoteAdapter(directory: string, url: string, headers?: HeadersInit): WorkspaceAdapter {
+=======
+function remoteAdaptor(directory: string, url: string, headers?: HeadersInit): WorkspaceAdaptor {
+>>>>>>> 430d158d0
   return {
     name: "Remote Test",
     description: "Create a remote test workspace",
@@ -128,7 +151,11 @@ afterEach(async () => {
   mock.restore()
   Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
   Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = originalHttpApi
+<<<<<<< HEAD
   await disposeAllInstances()
+=======
+  await Instance.disposeAll()
+>>>>>>> 430d158d0
   await resetDatabase()
 })
 
@@ -137,14 +164,24 @@ describe("workspace HttpApi", () => {
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped({ git: true })
 
+<<<<<<< HEAD
       const [adapters, workspaces, status] = yield* Effect.all([
         request(WorkspacePaths.adapters, dir),
+=======
+      const [adaptors, workspaces, status] = yield* Effect.all([
+        request(WorkspacePaths.adaptors, dir),
+>>>>>>> 430d158d0
         request(WorkspacePaths.list, dir),
         request(WorkspacePaths.status, dir),
       ])
 
+<<<<<<< HEAD
       expect(adapters.status).toBe(200)
       expect(yield* Effect.promise(() => adapters.json())).toContainEqual({
+=======
+      expect(adaptors.status).toBe(200)
+      expect(yield* Effect.promise(() => adaptors.json())).toContainEqual({
+>>>>>>> 430d158d0
         type: "worktree",
         name: "Worktree",
         description: "Create a git worktree",
@@ -163,7 +200,11 @@ describe("workspace HttpApi", () => {
       Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = true
       const dir = yield* tmpdirScoped({ git: true })
       const project = yield* Project.use.fromDirectory(dir)
+<<<<<<< HEAD
       registerAdapter(project.project.id, "local-test", localAdapter(path.join(dir, ".workspace")))
+=======
+      registerAdaptor(project.project.id, "local-test", localAdaptor(path.join(dir, ".workspace")))
+>>>>>>> 430d158d0
 
       const created = yield* request(WorkspacePaths.list, dir, {
         method: "POST",
@@ -195,6 +236,7 @@ describe("workspace HttpApi", () => {
     }),
   )
 
+<<<<<<< HEAD
   it.live("creates workspace with the TUI payload shape", () =>
     Effect.gen(function* () {
       Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = true
@@ -262,13 +304,19 @@ describe("workspace HttpApi", () => {
     }),
   )
 
+=======
+>>>>>>> 430d158d0
   it.live("routes local workspace requests through the workspace target directory", () =>
     Effect.gen(function* () {
       Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = true
       const dir = yield* tmpdirScoped({ git: true })
       const workspaceDir = path.join(dir, ".workspace-local")
       const project = yield* Project.use.fromDirectory(dir)
+<<<<<<< HEAD
       registerAdapter(project.project.id, "local-target", localAdapter(workspaceDir))
+=======
+      registerAdaptor(project.project.id, "local-target", localAdaptor(workspaceDir))
+>>>>>>> 430d158d0
       const created = yield* request(WorkspacePaths.list, dir, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -317,10 +365,17 @@ describe("workspace HttpApi", () => {
       })
 
       const project = yield* Project.use.fromDirectory(dir)
+<<<<<<< HEAD
       registerAdapter(
         project.project.id,
         "remote-target",
         remoteAdapter(path.join(dir, ".remote"), `http://127.0.0.1:${remote.port}/base`, {
+=======
+      registerAdaptor(
+        project.project.id,
+        "remote-target",
+        remoteAdaptor(path.join(dir, ".remote"), `http://127.0.0.1:${remote.port}/base`, {
+>>>>>>> 430d158d0
           "x-target-auth": "secret",
         }),
       )
@@ -386,10 +441,17 @@ describe("workspace HttpApi", () => {
       })
 
       const project = yield* Project.use.fromDirectory(dir)
+<<<<<<< HEAD
       registerAdapter(
         project.project.id,
         "remote-session-target",
         remoteAdapter(path.join(dir, ".remote-session"), `http://127.0.0.1:${remote.port}/base`),
+=======
+      registerAdaptor(
+        project.project.id,
+        "remote-session-target",
+        remoteAdaptor(path.join(dir, ".remote-session"), `http://127.0.0.1:${remote.port}/base`),
+>>>>>>> 430d158d0
       )
       const created = yield* request(WorkspacePaths.list, dir, {
         method: "POST",

@@ -6,7 +6,11 @@ import { Effect } from "effect"
 import { Snapshot } from "../../src/snapshot"
 import { Instance } from "../../src/project/instance"
 import { Filesystem } from "@/util/filesystem"
+<<<<<<< HEAD
 import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
+=======
+import { provideInstance, tmpdir } from "../fixture/fixture"
+>>>>>>> 430d158d0
 
 // Git always outputs /-separated paths internally. Snapshot.patch() joins them
 // with path.join (which produces \ on Windows) then normalizes back to /.
