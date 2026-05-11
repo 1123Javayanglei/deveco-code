@@ -1,0 +1,131 @@
+{
+  "active_plan": "D:\\HYL\\eline\\sig_cli\\.sisyphus\\plans\\sync-1.14.32.md",
+  "started_at": "2026-05-11T03:34:47.577Z",
+  "session_ids": [
+    "ses_1eafdfe5affe7P2iS91VApcOW6"
+  ],
+  "session_origins": {
+    "ses_1eafdfe5affe7P2iS91VApcOW6": "direct"
+  },
+  "plan_name": "sync-1.14.32",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "**Execute git merge v1.14.32**",
+      "session_id": "ses_1eae4e6deffeQ4HB0wyJ1R99iK",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-11T03:37:27.333Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "**Resolve Logo component conflict**",
+      "session_id": "ses_1eae27dceffeXLwi0sJmr2yT19",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-05-11T03:41:18.510Z"
+    },
+    "todo:3": {
+      "task_key": "todo:3",
+      "task_label": "3",
+      "task_title": "**Handle workspace adapters rename**",
+      "session_id": "ses_1eadefe09ffe2L8II8XiFL7exq",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-05-11T04:08:29.510Z"
+    },
+    "todo:5": {
+      "task_key": "todo:5",
+      "task_label": "5",
+      "task_title": "**Handle package.json version conflicts**",
+      "session_id": "ses_1eac01481ffedD81inhoZw4A6L",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-11T04:20:16.818Z"
+    },
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "**Batch fix test file brand identifiers**",
+      "session_id": "ses_1eabbb578ffe0TVa0odBqrWH3L",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-11T04:22:04.641Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "**Add brand identifiers to HTTPAPI new files**",
+      "session_id": "ses_1eab9fe28ffe1TUmCy55eIw9xr",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-11T04:28:04.744Z"
+    },
+    "todo:8": {
+      "task_key": "todo:8",
+      "task_label": "8",
+      "task_title": "**Resolve remaining functional conflicts** (Batch: 9 sub-conflicts)",
+      "session_id": "ses_1eab46bfbffe3I1XwpfGHdTkyB",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-11T04:38:39.736Z"
+    },
+    "todo:9": {
+      "task_key": "todo:9",
+      "task_label": "9",
+      "task_title": "**Regenerate bun.lock and update extension.toml**",
+      "session_id": "ses_1eaaab065ffepVFbfDGiwkME3D",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-11T04:43:39.848Z"
+    },
+    "todo:10": {
+      "task_key": "todo:10",
+      "task_label": "10",
+      "task_title": "**Update UPSTREAM-SYNC-CHANGELOG.md**",
+      "session_id": "ses_1ea9a5a51ffeMozzHY8BHEnHxG",
+      "agent": "Sisyphus-Junior",
+      "category": "writing",
+      "updated_at": "2026-05-11T04:58:53.146Z"
+    },
+    "todo:11": {
+      "task_key": "todo:11",
+      "task_label": "11",
+      "task_title": "**Verify build and typecheck**",
+      "session_id": "ses_1ea97857affe7Fns05y55tWnve",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-11T05:15:35.521Z"
+    },
+    "todo:12": {
+      "task_key": "todo:12",
+      "task_label": "12",
+      "task_title": "**Check brand residue**",
+      "session_id": "ses_1ea7641a1ffeNv3fh79O6naYBh",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-11T05:50:52.798Z"
+    },
+    "todo:13": {
+      "task_key": "todo:13",
+      "task_label": "13",
+      "task_title": "**Verify TUI startup**",
+      "session_id": "ses_1ea617c87ffe5v06PZtKe4T3r4",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-11T06:00:51.504Z"
+    },
+    "todo:14": {
+      "task_key": "todo:14",
+      "task_label": "14",
+      "task_title": "**Run test suite**",
+      "session_id": "ses_1ea5f462dffeVITKVGbx7BF7mp",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-11T06:09:26.038Z"
+    }
+  }
+}

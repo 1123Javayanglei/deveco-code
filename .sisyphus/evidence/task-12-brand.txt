@@ -1,0 +1,108 @@
+# Task 12: Brand Residue Verification Report
+# Date: 2026-05-11
+# Status: FAILED - Residue Found
+
+## Summary
+
+- OPENCODE_ residue count: 51 occurrences (excluding test files)
+- x-opencode headers count: 15 occurrences (excluding test files)
+- **VERIFICATION FAILED**: Both patterns have residue in source files
+
+---
+
+## OPENCODE_ Residue (51 occurrences in 21 files)
+
+### Files with OPENCODE_ pattern:
+
+1. packages/app/playwright.config.ts
+2. packages/app/src/env.d.ts
+3. packages/app/src/pages/layout/deep-links.ts
+4. packages/core/src/util/opencode-process.ts
+5. packages/desktop/scripts/prepare.ts
+6. packages/desktop/src/updater.ts
+7. packages/desktop-electron/electron.vite.config.ts
+8. packages/desktop-electron/src/main/index.ts
+9. packages/desktop-electron/src/main/server.ts
+10. packages/desktop-electron/src/renderer/env.d.ts
+11. packages/enterprise/src/core/storage.ts
+12. packages/enterprise/vite.config.ts
+13. packages/opencode/script/generate.ts
+14. packages/opencode/src/cli/cmd/tui/context/editor.ts
+15. packages/opencode/src/cli/cmd/tui/context/editor-zed.ts
+16. packages/opencode/src/cli/cmd/tui/thread.ts
+17. packages/opencode/src/effect/config-service.ts
+18. packages/sdk/js/script/build.ts
+19. packages/sdk/js/src/server.ts
+20. packages/sdk/js/src/v2/server.ts
+21. packages/ui/vite.config.ts
+
+### Sample patterns found:
+- VITE_OPENCODE_SERVER_HOST
+- VITE_OPENCODE_SERVER_PORT
+- __OPENCODE__
+- OPENCODE_RUN_ID
+- OPENCODE_PROCESS_ROLE
+- OPENCODE_CLI_ARTIFACT
+- OPENCODE_SERVER_DIST
+- OPENCODE_DISABLE_EMBEDDED_WEB_UI
+- OPENCODE_PORT
+- OPENCODE_EXPERIMENTAL_ICON_DISCOVERY
+- OPENCODE_EXPERIMENTAL_FILEWATCHER
+- OPENCODE_CLIENT
+- OPENCODE_SERVER_USERNAME
+- OPENCODE_SERVER_PASSWORD
+- OPENCODE_DEPLOYMENT_TARGET
+- OPENCODE_BASE_URL
+- OPENCODE_STORAGE_BUCKET
+- OPENCODE_STORAGE_REGION
+- OPENCODE_STORAGE_ACCESS_KEY_ID
+- OPENCODE_STORAGE_SECRET_ACCESS_KEY
+- OPENCODE_STORAGE_ACCOUNT_ID
+- OPENCODE_STORAGE_ADAPTER
+- OPENCODE_MODELS_URL
+- OPENCODE_ZED_DB
+- OPENCODE_EDITOR_SSE_PORT
+- OPENCODE_CONFIG_CONTENT
+- OPENCODE_SDK_OPENAPI
+
+---
+
+## x-opencode Headers (15 occurrences in 6 files)
+
+### Files with x-opencode pattern:
+
+1. packages/console/app/src/lib/language.ts
+2. packages/console/app/src/routes/zen/util/handler.ts
+3. packages/console/app/src/routes/zen/util/provider/openai-compatible.ts
+4. packages/opencode/src/server/routes/instance/middleware.ts
+5. packages/opencode/src/server/workspace.ts
+6. packages/sdk/js/src/client.ts
+
+### Sample patterns found:
+- x-opencode-locale
+- x-opencode-session
+- x-opencode-request
+- x-opencode-project
+- x-opencode-client
+- x-opencode-directory
+- x-opencode-workspace
+
+---
+
+## Conclusion
+
+**VERIFICATION FAILED**
+
+Both OPENCODE_ environment variables and x-opencode HTTP headers remain in the codebase.
+These need to be migrated to the new brand (CODEGENIE_ and x-codegenie respectively).
+
+### Recommended Actions:
+1. Migrate OPENCODE_* environment variables to CODEGENIE_*
+2. Migrate x-opencode headers to x-codegenie
+3. Update all related configuration files
+4. Re-run this verification to confirm zero residue
+
+---
+
+## Exclusion Criteria Applied:
+- Excluded files matching: test, .spec., .test., __tests__, node_modules

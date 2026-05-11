@@ -1,0 +1,82 @@
+# Task 8: Functional Conflicts Resolution Evidence
+
+## Summary
+Resolved 9 functional conflicts with brand preservation.
+
+## Conflicts Resolved
+
+### 8a. tui/app.tsx
+- **Resolution**: Accepted upstream's `renderer.waitForThemeMode()` + prewarm palette
+- **Brand preserved**: `Flag.CODEGENIE_*` identifiers retained
+
+### 8b. workspace.ts
+- **Resolution**: Accepted upstream's `getAdapter` rename + `EffectBridge.fromPromise`
+- **Brand preserved**: `Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES`, `CODEGENIE_AUTH_CONTENT`, `CODEGENIE_WORKSPACE_ID`
+
+### 8c. config.ts
+- **Resolution**: Accepted upstream's `containsPath()` simplification + `InstanceStore.runtime`
+- **Brand preserved**: `CODEGENIE_CONFIG_CONTENT`, `codegenie.json/codegenie.jsonc` config files
+
+### 8d. skill/index.ts
+- **Resolution**: Merged `CLAUDE_EXTERNAL_DIR` support from upstream
+- **Brand preserved**: `Defaults.ensure()`, `Flag.CODEGENIE_*` identifiers
+
+### 8e. tool/registry.ts
+- **Resolution**: Kept `PlanWriteTool`, `PlanEnterTool` imports
+- **Brand preserved**: `Flag.CODEGENIE_ENABLE_EXA`, HarmonyOS tools (HdcLogTool, SwitchCwdTool, OhKnowledgeTool)
+
+### 8f. llm.ts
+- **Resolution**: Accepted upstream's `crypto` import for chatId
+- **Brand preserved**: `x-codegenie-*` headers, `User-Agent: codegenie/*`
+
+### 8g. tool/bash.ts
+- **Resolution**: Accepted upstream's `containsPath` from instance-context
+- **Brand preserved**: `Flag.CODEGENIE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS`
+
+### 8h. plugin/index.ts
+- **Resolution**: Kept local plugins in INTERNAL_PLUGINS array
+- **Brand preserved**: `CodegenieAuthPlugin`, `AnalyticsPlugin`, `HarmonyNapiDynamicToolsPlugin`
+
+### 8i. instruction.ts
+- **Resolution**: Merged config.instructions handling
+- **Brand preserved**: `Flag.CODEGENIE_DISABLE_CLAUDE_CODE_PROMPT`, `Flag.CODEGENIE_DISABLE_PROJECT_CONFIG`
+
+## Verification Results
+
+### HarmonyOS Tools Preserved
+```
+grep "HdcLogTool|SwitchCwdTool|OhKnowledgeTool" packages/opencode/src/tool/registry.ts
+Count: 6 (expected: > 0) ✓
+```
+
+### x-codegenie Headers Preserved
+```
+grep "x-codegenie" packages/opencode/src/session/llm.ts
+Count: 4 (expected: > 0) ✓
+```
+
+### CODEGENIE Identifiers Preserved
+```
+grep "CODEGENIE" packages/opencode/src/config/config.ts
+Count: 25 (expected: > 0) ✓
+```
+
+## Files Added to Git
+- packages/opencode/src/cli/cmd/tui/app.tsx
+- packages/opencode/src/control-plane/workspace.ts
+- packages/opencode/src/config/config.ts
+- packages/opencode/src/skill/index.ts
+- packages/opencode/src/tool/registry.ts
+- packages/opencode/src/session/llm.ts
+- packages/opencode/src/tool/bash.ts
+- packages/opencode/src/plugin/index.ts
+- packages/opencode/src/session/instruction.ts
+
+## Remaining Conflicts
+36 conflicts remain for subsequent tasks (Tasks 9-27).
+
+## Status
+✓ All 9 sub-conflicts resolved
+✓ HarmonyOS tools preserved
+✓ Brand identifiers present in all files
+✓ Evidence saved

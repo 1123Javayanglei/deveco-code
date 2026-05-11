@@ -1,0 +1,113 @@
+# Test Suite Results - v1.14.32 Sync Merge Verification
+
+## Summary
+
+**Test Run Status:** FAILED (timeout after 5 minutes)
+**Total Failures:** 276
+**Total Passes:** 0 (output truncated)
+**Total Timeouts:** 24
+
+## Critical Issues Identified
+
+### 1. Instance Context Architecture Changes (CRITICAL)
+The most significant issue is that tests expecting `Instance.directory` and `Instance.worktree` to be set to temp directories are receiving the actual project directory instead.
+
+**Example failures:**
+- `httpapi-instance.test.ts`: Expected `directory: C:\Users\zyc\AppData\Local\Temp\opencode-test-xxx`, Received `directory: D:\HYL\eline\sig_cli\packages\opencode`
+- `httpapi-instance.legacy.test.ts`: Expected `worktree: C:\Users\zyc\AppData\Local\Temp\opencode-test-xxx`, Received `worktree: D:\HYL\eline\sig_cli`
+- `httpapi-instance-context.test.ts`: Same pattern
+
+**Root Cause:** The v1.14.32 sync introduced InstanceStore/InstanceContext modules that changed how instance context is managed. Tests using `Instance.provide()` with temp directories are not properly isolating the instance context.
+
+### 2. Config Loading Failures (HIGH)
+Tests expecting config values from `opencode.json` are failing:
+
+**Example failures:**
+- `config.test.ts`: Expected `config.model: "test/model"`, Received `undefined`
+- `config.test.ts`: Expected `config.shell: "bash"`, Received `undefined`
+- `config.test.ts`: Expected `config.agent?.["test_agent"]`, Received `undefined`
+
+**Root Cause:** Config loading is not working properly, likely related to instance context issues.
+
+### 3. Permission Evaluation Failures (HIGH)
+Tests expecting permission evaluations are failing:
+
+**Example failures:**
+- `permission-task.test.ts`: Expected `action: "allow"`, Received `"ask"`
+- `agent.test.ts`: Expected `Permission.evaluate("edit", path, plan.permission).action: "allow"`, Received `"deny"`
+
+### 4. Agent Configuration Failures (HIGH)
+Tests expecting agent configurations from config are failing:
+
+**Example failures:**
+- `agent.test.ts`: Expected `custom` agent to be defined, Received `undefined`
+- `agent.test.ts`: Expected `build.model?.providerID: "anthropic"`, Received `"undefined"`
+- `agent.test.ts`: Expected `build?.steps: 50`, Received `undefined`
+
+### 5. HttpApi Failures (HIGH)
+Multiple HttpApi tests failing due to instance context issues:
+
+**Affected test files:**
+- `httpapi-file.test.ts`
+- `httpapi-instance.test.ts`
+- `httpapi-instance.legacy.test.ts`
+- `httpapi-instance-context.test.ts`
+- `httpapi-json-parity.test.ts`
+- `httpapi-mcp.test.ts`
+- `httpapi-provider.test.ts`
+- `httpapi-sdk.test.ts`
+- `httpapi-session.test.ts`
+- `httpapi-workspace-routing.test.ts`
+- `httpapi-workspace.test.ts`
+
+### 6. Timeout Failures (HIGH)
+24 tests timed out after 5000ms:
+
+**Affected test files:**
+- `file/index.test.ts` - 12 timeouts (search() tests)
+- `file/ripgrep.test.ts` - 5 timeouts
+- `file/watcher.test.ts` - 4 timeouts
+- `mcp/oauth-browser.test.ts` - 3 timeouts
+
+### 7. LSP/Format Failures (MEDIUM)
+Tests expecting LSP and formatter functionality are failing:
+
+**Example failures:**
+- `lsp/index.test.ts`: Expected LSP hover to be called, Received 0 calls
+- `lsp/lifecycle.test.ts`: Expected `hasClients()` to return true, Received false
+- `format/format.test.ts`: Expected `gofmt` formatter to be defined, Received undefined
+
+### 8. MCP Failures (MEDIUM)
+Tests expecting MCP server status are failing:
+
+**Example failures:**
+- `mcp/lifecycle.test.ts`: Expected `status["server"]?.status: "connected"`, Received `undefined`
+- `httpapi-mcp.test.ts`: Expected `{ demo: { status: "disabled" } }`, Received `{}`
+
+## Test Files with Most Failures
+
+1. `test/config/config.test.ts` - ~50 failures
+2. `test/agent/agent.test.ts` - ~30 failures
+3. `test/server/httpapi-*.test.ts` - ~40 failures combined
+4. `test/permission-task.test.ts` - 6 failures
+5. `test/file/index.test.ts` - 12 timeouts
+6. `test/session/compaction.test.ts` - 2 failures
+
+## Recommendations
+
+1. **CRITICAL:** Fix InstanceStore/InstanceContext architecture to properly isolate test instances
+2. **HIGH:** Investigate why `Instance.provide()` is not setting the correct directory/worktree
+3. **HIGH:** Fix config loading to work with isolated test instances
+4. **MEDIUM:** Review permission evaluation logic changes
+5. **MEDIUM:** Review agent configuration loading changes
+
+## Evidence
+
+Full test output saved to:
+`C:\Users\zyc\.local\share\opencode\tool-output\tool_e15a0f6820017t8KTM1IGi6PNW`
+
+## Conclusion
+
+The test suite has significant failures related to the v1.14.32 sync merge. The primary issue is the InstanceStore/InstanceContext architecture changes that are not properly isolating test instances. This is a **CRITICAL** issue that needs to be addressed before the merge can be considered complete.
+
+**Status: FAILED - Critical issues require investigation and fixing**
