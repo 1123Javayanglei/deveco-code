@@ -21,6 +21,10 @@ import { Effect } from "effect"
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
+const PLUGIN_PROVIDER_CONFIG: Record<string, { name: string; type?: string }> = {
+  codegenie: { name: "CodeGenie OAuth", type: "OAuth" },
+}
+
 const put = (key: string, info: Auth.Info) =>
   AppRuntime.runPromise(
     Effect.gen(function* () {
@@ -98,7 +102,7 @@ async function handlePluginAuth(plugin: { auth: PluginAuth }, provider: string, 
       spinner.start("Waiting for authorization...")
       const result = await authorize.callback()
       if (result.type === "failed") {
-        spinner.stop("Failed to authorize", 1)
+        spinner.stop(result.error || "Login cancelled", 1)
       }
       if (result.type === "success") {
         const saveProvider = result.provider ?? provider
@@ -216,7 +220,7 @@ export function resolvePluginProviders(input: {
     if (input.enabled && !input.enabled.has(id)) continue
     result.push({
       id,
-      name: input.providerNames[id] ?? id,
+      name: PLUGIN_PROVIDER_CONFIG[id]?.name ?? input.providerNames[id] ?? id,
     })
   }
 
@@ -251,8 +255,13 @@ export const ProvidersListCommand = cmd({
     const database = await getModels()
 
     for (const [providerID, result] of results) {
-      const name = database[providerID]?.name || providerID
-      prompts.log.info(`${name} ${UI.Style.TEXT_DIM}${result.type}`)
+      const pluginName = PLUGIN_PROVIDER_CONFIG[providerID]?.name
+      if (pluginName) {
+        prompts.log.info(pluginName)
+      } else {
+        const name = database[providerID]?.name || providerID
+        prompts.log.info(`${name} ${UI.Style.TEXT_DIM}${result.type}`)
+      }
     }
 
     prompts.outro(`${results.length} credentials`)
@@ -289,7 +298,7 @@ export const ProvidersLoginCommand = cmd({
   builder: (yargs) =>
     yargs
       .positional("url", {
-        describe: "opencode auth provider",
+        describe: "codegenie auth provider",
         type: "string",
       })
       .option("provider", {
@@ -361,6 +370,7 @@ export const ProvidersLoginCommand = cmd({
         )
 
         const priority: Record<string, number> = {
+          codegenie: -1,
           opencode: 0,
           openai: 1,
           "github-copilot": 2,
@@ -369,6 +379,9 @@ export const ProvidersLoginCommand = cmd({
           openrouter: 5,
           vercel: 6,
         }
+        const PLUGIN_HINT: Record<string, string> = {
+          codegenie: "recommended",
+        }
         const pluginProviders = resolvePluginProviders({
           hooks,
           existingProviders: providers,
@@ -376,29 +389,30 @@ export const ProvidersLoginCommand = cmd({
           enabled,
           providerNames: Object.fromEntries(Object.entries(config.provider ?? {}).map(([id, p]) => [id, p.name])),
         })
-        const options = [
-          ...pipe(
-            providers,
-            values(),
-            sortBy(
-              (x) => priority[x.id] ?? 99,
-              (x) => x.name ?? x.id,
+        const options = sortBy(
+          [
+            ...pipe(
+              providers,
+              values(),
+              map((x) => ({
+                label: x.name,
+                value: x.id,
+                hint: {
+                    opencode: "recommended",
+                    openai: "ChatGPT Plus/Pro or API key",
+                    codegenie: "recommended",
+                  }[x.id],
+              })),
             ),
-            map((x) => ({
+            ...pluginProviders.map((x) => ({
               label: x.name,
               value: x.id,
-              hint: {
-                opencode: "recommended",
-                openai: "ChatGPT Plus/Pro or API key",
-              }[x.id],
+              hint: PLUGIN_HINT[x.id] ?? "plugin",
             })),
-          ),
-          ...pluginProviders.map((x) => ({
-            label: x.name,
-            value: x.id,
-            hint: "plugin",
-          })),
-        ]
+          ],
+          (x) => priority[x.value] ?? 99,
+          (x) => x.label ?? x.value,
+        )
 
         let provider: string
         if (args.provider) {
@@ -448,7 +462,7 @@ export const ProvidersLoginCommand = cmd({
           }
 
           prompts.log.warn(
-            `This only stores a credential for ${provider} - you will need configure it in opencode.json, check the docs for examples.`,
+            `This only stores a credential for ${provider} - you will need configure it in codegenie.json, check the docs for examples.`,
           )
         }
 
@@ -457,7 +471,7 @@ export const ProvidersLoginCommand = cmd({
             "Amazon Bedrock authentication priority:\n" +
               "  1. Bearer token (AWS_BEARER_TOKEN_BEDROCK or /connect)\n" +
               "  2. AWS credential chain (profile, access keys, IAM roles, EKS IRSA)\n\n" +
-              "Configure via opencode.json options (profile, region, endpoint) or\n" +
+              "Configure via codegenie.json options (profile, region, endpoint) or\n" +
               "AWS environment variables (AWS_PROFILE, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_WEB_IDENTITY_TOKEN_FILE).",
           )
         }
@@ -511,10 +525,11 @@ export const ProvidersLogoutCommand = cmd({
     const database = await getModels()
     const selected = await prompts.select({
       message: "Select provider",
-      options: credentials.map(([key, value]) => ({
-        label: (database[key]?.name || key) + UI.Style.TEXT_DIM + " (" + value.type + ")",
-        value: key,
-      })),
+      options: credentials.map(([key, value]) => {
+        const pluginName = PLUGIN_PROVIDER_CONFIG[key]?.name
+        const label = pluginName ?? ((database[key]?.name || key) + UI.Style.TEXT_DIM + " (" + value.type + ")")
+        return { label, value: key }
+      }),
     })
     if (prompts.isCancel(selected)) throw new UI.CancelledError()
     const providerID = selected as string

@@ -1,4 +1,4 @@
-import { BusEvent } from "@/bus/bus-event"
+﻿import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
@@ -191,7 +191,7 @@ export const layer = Layer.effect(
         ...input.env,
         ...shell.env,
         TERM: "xterm-256color",
-        OPENCODE_TERMINAL: "1",
+        CODEGENIE_TERMINAL: "1",
       } as Record<string, string>
 
       if (process.platform === "win32") {

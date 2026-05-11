@@ -32,6 +32,7 @@ import type {
   TextPart,
   ReasoningPart,
 } from "@opencode-ai/sdk/v2"
+import { QueuePart } from "@/session/message-v2"
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util/locale"
 import type { Tool } from "@/tool/tool"
@@ -280,13 +281,11 @@ export function Session() {
     const logo = UI.logo("  ").split(/\r?\n/)
     return exit.message.set(
       [
-        `${logo[0] ?? ""}`,
-        `${logo[1] ?? ""}`,
-        `${logo[2] ?? ""}`,
-        `${logo[3] ?? ""}`,
+        ``,
+        ...logo,
         ``,
         `  ${weak("Session")}${UI.Style.TEXT_NORMAL_BOLD}${title}${UI.Style.TEXT_NORMAL}`,
-        `  ${weak("Continue")}${UI.Style.TEXT_NORMAL_BOLD}opencode -s ${session()?.id}${UI.Style.TEXT_NORMAL}`,
+        `  ${weak("Continue")}${UI.Style.TEXT_NORMAL_BOLD}codegenie -s ${session()?.id}${UI.Style.TEXT_NORMAL}`,
         ``,
       ].join("\n"),
     )
@@ -1444,6 +1443,27 @@ const PART_MAPPING = {
   text: TextPart,
   tool: ToolPart,
   reasoning: ReasoningPart,
+  queue: QueuePartComponent,
+}
+
+function QueuePartComponent(props: { last: boolean; part: QueuePart; message: AssistantMessage }) {
+  const { theme } = useTheme()
+  return (
+    <Show when={true}>
+      <box
+        id={"queue-" + props.part.id}
+        paddingLeft={3}
+        marginTop={1}
+        flexDirection="row"
+        gap={1}
+      >
+        <text fg={theme.info}>ℹ</text>
+        <text fg={theme.text}>
+          当前模型访问量较高，您目前排在第{props.part.position}位，请耐心等待或处理其他任务
+        </text>
+      </box>
+    </Show>
+  )
 }
 
 function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: AssistantMessage }) {
@@ -1486,7 +1506,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
     <Show when={props.part.text.trim()}>
       <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
         <Switch>
-          <Match when={Flag.OPENCODE_EXPERIMENTAL_MARKDOWN}>
+          <Match when={Flag.CODEGENIE_EXPERIMENTAL_MARKDOWN}>
             <markdown
               syntaxStyle={syntax()}
               streaming={true}
@@ -1496,7 +1516,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
               bg={theme.background}
             />
           </Match>
-          <Match when={!Flag.OPENCODE_EXPERIMENTAL_MARKDOWN}>
+          <Match when={!Flag.CODEGENIE_EXPERIMENTAL_MARKDOWN}>
             <code
               filetype="markdown"
               drawUnstyledText={false}

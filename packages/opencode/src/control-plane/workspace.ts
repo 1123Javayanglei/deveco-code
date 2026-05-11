@@ -88,6 +88,7 @@ export const CreateInput = Schema.Struct({
 }).pipe(withStatics((s) => ({ zod: effectZod(s), zodObject: zodObject(s) })))
 export type CreateInput = Schema.Schema.Type<typeof CreateInput>
 
+
 export const SessionRestoreInput = Schema.Struct({
   workspaceID: WorkspaceID,
   sessionID: SessionID,
@@ -418,7 +419,7 @@ export const layer = Layer.effect(
     })
 
     const startSync = Effect.fn("Workspace.startSync")(function* (space: Info) {
-      if (!Flag.OPENCODE_EXPERIMENTAL_WORKSPACES) return
+      if (!Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES) return
 
       const adapter = getAdapter(space.projectID, space.type)
       const target = yield* EffectBridge.fromPromise(() => adapter.target(space))
@@ -489,9 +490,9 @@ export const layer = Layer.effect(
       })
 
       const env = {
-        OPENCODE_AUTH_CONTENT: JSON.stringify(yield* auth.all()),
-        OPENCODE_WORKSPACE_ID: config.id,
-        OPENCODE_EXPERIMENTAL_WORKSPACES: "true",
+        CODEGENIE_AUTH_CONTENT: JSON.stringify(yield* auth.all()),
+        CODEGENIE_WORKSPACE_ID: config.id,
+        CODEGENIE_EXPERIMENTAL_WORKSPACES: "true",
         OTEL_EXPORTER_OTLP_HEADERS: process.env.OTEL_EXPORTER_OTLP_HEADERS,
         OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
         OTEL_RESOURCE_ATTRIBUTES: process.env.OTEL_RESOURCE_ATTRIBUTES,

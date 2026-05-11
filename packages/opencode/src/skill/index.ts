@@ -16,13 +16,16 @@ import { Config } from "@/config/config"
 import { ConfigMarkdown } from "@/config/markdown"
 import { Glob } from "@opencode-ai/core/util/glob"
 import * as Log from "@opencode-ai/core/util/log"
+import { Defaults } from "./defaults"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Discovery } from "./discovery"
 
 const log = Log.create({ service: "skill" })
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
+const EXTERNAL_DIRS = [AGENTS_EXTERNAL_DIR]
 const EXTERNAL_SKILL_PATTERN = "skills/**/SKILL.md"
-const OPENCODE_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
+const CODEGENIE_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
 const SKILL_PATTERN = "**/SKILL.md"
 
 export const Info = Schema.Struct({
@@ -153,9 +156,15 @@ const discoverSkills = Effect.fnUntraced(function* (
 ) {
   const state: ScanState = { matches: new Set(), dirs: new Set() }
 
+  // Extract and scan default (embedded) skills
+  if (!Flag.CODEGENIE_DISABLE_DEFAULT_SKILLS) {
+    const defaultDir = yield* Defaults.ensure(InstallationVersion, fsys).pipe(Effect.orDie)
+    yield* scan(state, defaultDir, SKILL_PATTERN)
+  }
+
   const externalDirs: string[] = []
-  if (!Flag.OPENCODE_DISABLE_EXTERNAL_SKILLS) {
-    if (!Flag.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS) externalDirs.push(CLAUDE_EXTERNAL_DIR)
+  if (!Flag.CODEGENIE_DISABLE_EXTERNAL_SKILLS) {
+    if (!Flag.CODEGENIE_DISABLE_CLAUDE_CODE_SKILLS) externalDirs.push(CLAUDE_EXTERNAL_DIR)
     externalDirs.push(AGENTS_EXTERNAL_DIR)
 
     for (const dir of externalDirs) {
@@ -175,7 +184,7 @@ const discoverSkills = Effect.fnUntraced(function* (
 
   const configDirs = yield* config.directories()
   for (const dir of configDirs) {
-    yield* scan(state, dir, OPENCODE_SKILL_PATTERN)
+    yield* scan(state, dir, CODEGENIE_SKILL_PATTERN)
   }
 
   const cfg = yield* config.get()

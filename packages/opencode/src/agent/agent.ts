@@ -8,6 +8,9 @@ import { Auth } from "../auth"
 import { ProviderTransform } from "@/provider/transform"
 
 import PROMPT_GENERATE from "./generate.txt"
+import PROMPT_BUILD from "./prompt/build.txt"
+import PROMPT_PLAN from "./prompt/plan.txt"
+import PROMPT_DEBUG from "./prompt/debug.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
@@ -97,6 +100,10 @@ export const layer = Layer.effect(
           question: "deny",
           plan_enter: "deny",
           plan_exit: "deny",
+          bash: {
+            "hdc *": "deny",
+            "*hvigorw*": "deny",
+ 	       },
           // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
           read: {
             "*": "allow",
@@ -111,41 +118,50 @@ export const layer = Layer.effect(
         const agents: Record<string, Info> = {
           build: {
             name: "build",
-            description: "The default agent. Executes tools based on configured permissions.",
+            description: "ArkTS build-focused primary agent.",
             options: {},
             permission: Permission.merge(
               defaults,
               Permission.fromConfig({
                 question: "allow",
-                plan_enter: "allow",
+                plan_enter: "ask",
+                plan_write: "deny",
               }),
               user,
             ),
             mode: "primary",
             native: true,
+            prompt: PROMPT_BUILD,
           },
           plan: {
             name: "plan",
-            description: "Plan mode. Disallows all edit tools.",
+            description: "ArkTS planning agent with external plan-file workflow.",
             options: {},
             permission: Permission.merge(
               defaults,
               Permission.fromConfig({
                 question: "allow",
-                plan_exit: "allow",
+                plan_exit: "ask",
+                plan_write: "allow",
+                bash: "deny",
+                build_project: "deny",
+                check_ets_files: "deny",
+                perform_ui_action: "deny",
+                get_app_ui_tree: "deny",
+                start_app: "deny",
+                hdc_log: "deny",
+                switch_cwd: "deny",
+                arkts_knowledge_search: "deny",
                 external_directory: {
                   [path.join(Global.Path.data, "plans", "*")]: "allow",
                 },
-                edit: {
-                  "*": "deny",
-                  [path.join(".opencode", "plans", "*.md")]: "allow",
-                  [path.relative(ctx.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
-                },
+                edit: "deny",
               }),
               user,
             ),
             mode: "primary",
             native: true,
+            prompt: PROMPT_PLAN,
           },
           general: {
             name: "general",

@@ -58,7 +58,7 @@ const args = hideBin(process.argv)
 
 function show(out: string) {
   const text = out.trimStart()
-  if (!text.startsWith("opencode ")) {
+  if (!text.startsWith("codegenie ")) {
     process.stderr.write(UI.logo() + EOL + EOL)
     process.stderr.write(text)
     return
@@ -68,7 +68,7 @@ function show(out: string) {
 
 const cli = yargs(args)
   .parserConfiguration({ "populate--": true })
-  .scriptName("opencode")
+  .scriptName("codegenie")
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
@@ -89,7 +89,7 @@ const cli = yargs(args)
   })
   .middleware(async (opts) => {
     if (opts.pure) {
-      process.env.OPENCODE_PURE = "1"
+      process.env.CODEGENIE_PURE = "1"
     }
 
     await Log.init({
@@ -105,17 +105,17 @@ const cli = yargs(args)
     Heap.start()
 
     process.env.AGENT = "1"
-    process.env.OPENCODE = "1"
-    process.env.OPENCODE_PID = String(process.pid)
+    process.env.CODEGENIE = "1"
+    process.env.CODEGENIE_PID = String(process.pid)
 
-    Log.Default.info("opencode", {
+    Log.Default.info("codegenie", {
       version: InstallationVersion,
       args: process.argv.slice(2),
       process_role: processMetadata.processRole,
       run_id: processMetadata.runID,
     })
 
-    const marker = path.join(Global.Path.data, "opencode.db")
+    const marker = path.join(Global.Path.data, "codegenie.db")
     if (!(await Filesystem.exists(marker))) {
       const tty = process.stderr.isTTY
       process.stderr.write("Performing one time database migration, may take a few minutes..." + EOL)
@@ -239,6 +239,12 @@ try {
   }
   process.exitCode = 1
 } finally {
+  try {
+    const { napiBridgeStop } = await import("./tool/lib/harmony_napi")
+    await napiBridgeStop()
+  } catch {
+    // Native MCP bridge may be absent or stop may fail; proceed to exit.
+  }
   // Some subprocesses don't react properly to SIGTERM and similar signals.
   // Most notably, some docker-container-based MCP servers don't handle such signals unless
   // run using `docker run --init`.

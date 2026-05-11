@@ -4,6 +4,7 @@ import { zod } from "@/util/effect-zod"
 import { NonNegativeInt } from "@/util/schema"
 import { Global } from "@opencode-ai/core/global"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { LocalCrypto } from "@/security/local-crypto"
 
 export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
 
@@ -57,13 +58,14 @@ export const layer = Layer.effect(
     const decode = Schema.decodeUnknownOption(Info)
 
     const all = Effect.fn("Auth.all")(function* () {
-      if (process.env.OPENCODE_AUTH_CONTENT) {
+      if (process.env.CODEGENIE_AUTH_CONTENT) {
         try {
-          return JSON.parse(process.env.OPENCODE_AUTH_CONTENT)
+          return JSON.parse(process.env.CODEGENIE_AUTH_CONTENT)
         } catch (err) {}
       }
 
-      const data = (yield* fsys.readJson(file).pipe(Effect.orElseSucceed(() => ({})))) as Record<string, unknown>
+      const encrypted = (yield* fsys.readJson(file).pipe(Effect.orElseSucceed(() => ({})))) as Record<string, unknown>
+      const data = LocalCrypto.decryptAuthData(encrypted)
       return Record.filterMap(data, (value) => Result.fromOption(decode(value), () => undefined))
     })
 
@@ -76,9 +78,8 @@ export const layer = Layer.effect(
       const data = yield* all()
       if (norm !== key) delete data[key]
       delete data[norm + "/"]
-      yield* fsys
-        .writeJson(file, { ...data, [norm]: info }, 0o600)
-        .pipe(Effect.mapError(fail("Failed to write auth data")))
+      const next = LocalCrypto.encryptAuthData({ ...data, [norm]: info })
+      yield* fsys.writeJson(file, next, 0o600).pipe(Effect.mapError(fail("Failed to write auth data")))
     })
 
     const remove = Effect.fn("Auth.remove")(function* (key: string) {
@@ -86,7 +87,9 @@ export const layer = Layer.effect(
       const data = yield* all()
       delete data[key]
       delete data[norm]
-      yield* fsys.writeJson(file, data, 0o600).pipe(Effect.mapError(fail("Failed to write auth data")))
+      yield* fsys
+        .writeJson(file, LocalCrypto.encryptAuthData(data), 0o600)
+        .pipe(Effect.mapError(fail("Failed to write auth data")))
     })
 
     return Service.of({ get, all, set, remove })

@@ -1,4 +1,4 @@
-import type { MiddlewareHandler } from "hono"
+﻿import type { MiddlewareHandler } from "hono"
 import type { UpgradeWebSocket } from "hono/ws"
 import { getAdapter } from "@/control-plane/adapters"
 import { WorkspaceID } from "@/control-plane/schema"
@@ -67,7 +67,7 @@ export function WorkspaceRouterMiddleware(upgrade: UpgradeWebSocket): Middleware
     const sessionWorkspaceID = await getSessionWorkspace(url)
     const workspaceID = sessionWorkspaceID || url.searchParams.get("workspace")
 
-    if (!workspaceID || url.pathname.startsWith("/console") || Flag.OPENCODE_WORKSPACE_ID) {
+    if (!workspaceID || url.pathname.startsWith("/console") || Flag.CODEGENIE_WORKSPACE_ID) {
       return next()
     }
 
