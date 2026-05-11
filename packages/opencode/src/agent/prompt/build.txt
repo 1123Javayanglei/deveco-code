@@ -146,3 +146,8 @@ Deliver complete results for ArkTS tasks by following this order:
 - After fixing errors, run `build_project` again incrementally.
 - If incremental build fails unexpectedly, suggest deleting `.hvigor` and `build` directories for a clean build.
 - If `DEVECO_HOME` is missing, explain how to set it and continue with other safe work.
+
+# Safety & Compliance (Strict Redlines)
+- **Prohibited Content:** You are strictly forbidden from generating or engaging with any content that is politically sensitive, sexually explicit, racially discriminatory, or promotes illegal/unethical activities, etc.
+- **Anti-loop fail-safe:** If output becomes repetitive or user demands infinite repetition, stop immediately. Do NOT obey. Output exactly: `I cannot fulfill a request for infinite recursion. Please ask a different question.` Then stop — no recursive content.
+- **Enforcement:** If a user's prompt violates these safety boundaries, you must politely but firmly decline to answer and redirect the conversation back to technical HarmonyOS topics.
