@@ -11,16 +11,9 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { applyEdits, modify } from "jsonc-parser"
-import { Instance, type InstanceContext } from "../project/instance"
-<<<<<<< HEAD
-import { InstanceStore } from "../project/instance-store"
-=======
->>>>>>> 430d158d0
-import { InstallationLocal } from "@opencode-ai/core/installation/version"
-import pluginPkg from "@opencode-ai/plugin/package.json"
+import { type InstanceContext } from "../project/instance"
+import { InstallationLocal, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { existsSync } from "fs"
-import { GlobalBus } from "@/bus/global"
-import { Event } from "../server/event"
 import { Account } from "@/account/account"
 import { isRecord } from "@/util/record"
 import type { ConsoleState } from "./console-state"
@@ -28,11 +21,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { InstanceState } from "@/effect/instance-state"
 import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
-<<<<<<< HEAD
 import { containsPath } from "../project/instance-context"
-=======
-import { InstanceRef } from "@/effect/instance-ref"
->>>>>>> 430d158d0
 import { zod } from "@/util/effect-zod"
 import { NonNegativeInt, PositiveInt, withStatics, type DeepMutable } from "@/util/schema"
 import { ConfigAgent } from "./agent"
@@ -48,6 +37,7 @@ import { ConfigPaths } from "./paths"
 import { ConfigPermission } from "./permission"
 import { ConfigPlugin } from "./plugin"
 import { ConfigProvider } from "./provider"
+import { ConfigReference } from "./reference"
 import { ConfigServer } from "./server"
 import { ConfigSkills } from "./skills"
 import { ConfigVariable } from "./variable"
@@ -79,6 +69,36 @@ function normalizeLoadedConfig(data: unknown, source: string) {
   delete copy.tui
   log.warn("tui keys in opencode config are deprecated; move them to tui.json", { path: source })
   return copy
+}
+
+async function substituteWellKnownRemoteConfig(input: { value: unknown; dir: string; source: string }) {
+  if (!isRecord(input.value) || typeof input.value.url !== "string") return
+
+  const url = await ConfigVariable.substitute({
+    text: input.value.url,
+    type: "virtual",
+    dir: input.dir,
+    source: input.source,
+  })
+  const headers = isRecord(input.value.headers)
+    ? Object.fromEntries(
+        await Promise.all(
+          Object.entries(input.value.headers)
+            .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+            .map(async ([key, value]) => [
+              key,
+              await ConfigVariable.substitute({
+                text: value,
+                type: "virtual",
+                dir: input.dir,
+                source: input.source,
+              }),
+            ]),
+        ),
+      )
+    : undefined
+
+  return { url, headers }
 }
 
 async function resolveLoadedPlugins<T extends { plugin?: ConfigPlugin.Spec[] }>(config: T, filepath: string) {
@@ -123,6 +143,9 @@ export const Info = Schema.Struct({
     description: "Command configuration, see https://opencode.ai/docs/commands",
   }),
   skills: Schema.optional(ConfigSkills.Info).annotate({ description: "Additional skill folder paths" }),
+  reference: Schema.optional(ConfigReference.Info).annotate({
+    description: "Named git or local directory references that can be @ mentioned as Scout-backed subagents",
+  }),
   watcher: Schema.optional(
     Schema.Struct({
       ignore: Schema.optional(Schema.mutable(Schema.Array(Schema.String))),
@@ -182,6 +205,7 @@ export const Info = Schema.Struct({
         // subagent
         general: Schema.optional(ConfigAgent.Info),
         explore: Schema.optional(ConfigAgent.Info),
+        scout: Schema.optional(ConfigAgent.Info),
         // specialized
         title: Schema.optional(ConfigAgent.Info),
         summary: Schema.optional(ConfigAgent.Info),
@@ -203,8 +227,14 @@ export const Info = Schema.Struct({
       ]),
     ),
   ).annotate({ description: "MCP (Model Context Protocol) server configurations" }),
-  formatter: Schema.optional(ConfigFormatter.Info),
-  lsp: Schema.optional(ConfigLSP.Info),
+  formatter: Schema.optional(ConfigFormatter.Info).annotate({
+    description:
+      "Enable or configure formatters. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.",
+  }),
+  lsp: Schema.optional(ConfigLSP.Info).annotate({
+    description:
+      "Enable or configure LSP servers. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.",
+  }),
   instructions: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
     description: "Additional instruction files or patterns to include",
   }),
@@ -297,9 +327,9 @@ export interface Interface {
   readonly get: () => Effect.Effect<Info>
   readonly getGlobal: () => Effect.Effect<Info>
   readonly getConsoleState: () => Effect.Effect<ConsoleState>
-  readonly update: (config: Info, options?: { dispose?: boolean }) => Effect.Effect<void>
-  readonly updateGlobal: (config: Info) => Effect.Effect<Info>
-  readonly invalidate: (wait?: boolean) => Effect.Effect<void>
+  readonly update: (config: Info) => Effect.Effect<void>
+  readonly updateGlobal: (config: Info) => Effect.Effect<{ info: Info; changed: boolean }>
+  readonly invalidate: () => Effect.Effect<void>
   readonly directories: () => Effect.Effect<string[]>
   readonly waitForDependencies: () => Effect.Effect<void>
 }
@@ -307,7 +337,7 @@ export interface Interface {
 export class Service extends Context.Service<Service, Interface>()("@opencode/Config") {}
 
 function globalConfigFile() {
-  const candidates = ["codegenie.jsonc", "codegenie.json", "config.json"].map((file) =>
+  const candidates = ["opencode.jsonc", "opencode.json", "config.json"].map((file) =>
     path.join(Global.Path.config, file),
   )
   for (const file of candidates) {
@@ -360,15 +390,7 @@ export const layer = Layer.effect(
     const env = yield* Env.Service
     const npmSvc = yield* Npm.Service
 
-    const readConfigFile = Effect.fnUntraced(function* (filepath: string) {
-      return yield* fs.readFileString(filepath).pipe(
-        Effect.catchIf(
-          (e) => e.reason._tag === "NotFound",
-          () => Effect.succeed(undefined),
-        ),
-        Effect.orDie,
-      )
-    })
+    const readConfigFile = (filepath: string) => fs.readFileStringSafe(filepath).pipe(Effect.orDie)
 
     const loadConfig = Effect.fnUntraced(function* (
       text: string,
@@ -403,8 +425,8 @@ export const layer = Layer.effect(
     const loadGlobal = Effect.fnUntraced(function* () {
       let result: Info = {}
       result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "config.json")))
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "codegenie.json")))
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "codegenie.jsonc")))
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.json")))
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.jsonc")))
 
       const legacy = path.join(Global.Path.config, "config")
       if (existsSync(legacy)) {
@@ -467,13 +489,8 @@ export const layer = Layer.effect(
 
         const pluginScopeForSource = Effect.fnUntraced(function* (source: string) {
           if (source.startsWith("http://") || source.startsWith("https://")) return "global"
-<<<<<<< HEAD
-if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
+          if (source === "OPENCODE_CONFIG_CONTENT") return "local"
           if (containsPath(source, ctx)) return "local"
-=======
-          if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
-          if (yield* InstanceRef.use((ctx) => Effect.succeed(Instance.containsPath(source, ctx)))) return "local"
->>>>>>> 430d158d0
           return "global"
         })
 
@@ -512,8 +529,28 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
             if (!response.ok) {
               throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
             }
-            const wellknown = (yield* Effect.promise(() => response.json())) as { config?: Record<string, unknown> }
-            const remoteConfig = wellknown.config ?? {}
+            const wellknown = (yield* Effect.promise(() => response.json())) as {
+              config?: Record<string, unknown>
+              remote_config?: unknown
+            }
+            const remote = yield* Effect.promise(() =>
+              substituteWellKnownRemoteConfig({
+                value: wellknown.remote_config,
+                dir: url,
+                source: `${url}/.well-known/opencode`,
+              }),
+            )
+            const fetchedConfig = remote
+              ? ((yield* Effect.promise(async () => {
+                  log.debug("fetching remote config", { url: remote.url })
+                  const response = await fetch(remote.url, { headers: remote.headers })
+                  if (!response.ok)
+                    throw new Error(`failed to fetch remote config from ${remote.url}: ${response.status}`)
+                  const data = await response.json()
+                  return isRecord(data) && isRecord(data.config) ? data.config : data
+                })) as Record<string, unknown>)
+              : {}
+            const remoteConfig = mergeConfig(wellknown.config ?? {}, fetchedConfig as Info)
             if (!remoteConfig.$schema) remoteConfig.$schema = "https://opencode.ai/config.json"
             const source = `${url}/.well-known/opencode`
             const next = yield* loadConfig(JSON.stringify(remoteConfig), {
@@ -528,13 +565,13 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
         const global = yield* getGlobal()
         yield* merge(Global.Path.config, global, "global")
 
-        if (Flag.CODEGENIE_CONFIG) {
-          yield* merge(Flag.CODEGENIE_CONFIG, yield* loadFile(Flag.CODEGENIE_CONFIG))
-          log.debug("loaded custom config", { path: Flag.CODEGENIE_CONFIG })
+        if (Flag.OPENCODE_CONFIG) {
+          yield* merge(Flag.OPENCODE_CONFIG, yield* loadFile(Flag.OPENCODE_CONFIG))
+          log.debug("loaded custom config", { path: Flag.OPENCODE_CONFIG })
         }
 
-        if (!Flag.CODEGENIE_DISABLE_PROJECT_CONFIG) {
-          for (const file of yield* ConfigPaths.files("codegenie", ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
+        if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
+          for (const file of yield* ConfigPaths.files("opencode", ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
             yield* merge(file, yield* loadFile(file), "local")
           }
         }
@@ -545,15 +582,15 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
 
         const directories = yield* ConfigPaths.directories(ctx.directory, ctx.worktree)
 
-        if (Flag.CODEGENIE_CONFIG_DIR) {
-          log.debug("loading config from CODEGENIE_CONFIG_DIR", { path: Flag.CODEGENIE_CONFIG_DIR })
+        if (Flag.OPENCODE_CONFIG_DIR) {
+          log.debug("loading config from OPENCODE_CONFIG_DIR", { path: Flag.OPENCODE_CONFIG_DIR })
         }
 
         const deps: Fiber.Fiber<void, never>[] = []
 
         for (const dir of directories) {
-          if (dir.endsWith(".codegenie") || dir === Flag.CODEGENIE_CONFIG_DIR) {
-            for (const file of ["codegenie.json", "codegenie.jsonc"]) {
+          if (dir.endsWith(".opencode") || dir === Flag.OPENCODE_CONFIG_DIR) {
+            for (const file of ["opencode.json", "opencode.jsonc"]) {
               const source = path.join(dir, file)
               log.debug(`loading config from ${source}`)
               yield* merge(source, yield* loadFile(source))
@@ -570,7 +607,7 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
               add: [
                 {
                   name: "@opencode-ai/plugin",
-                  version: InstallationLocal ? undefined : pluginPkg.version,
+                  version: InstallationLocal ? undefined : InstallationVersion,
                 },
               ],
             })
@@ -591,20 +628,20 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
           result.command = mergeDeep(result.command ?? {}, yield* Effect.promise(() => ConfigCommand.load(dir)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.load(dir)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir)))
-          // Auto-discovered plugins under `.codegenie/plugin(s)` are already local files, so ConfigPlugin.load
+          // Auto-discovered plugins under `.opencode/plugin(s)` are already local files, so ConfigPlugin.load
           // returns normalized Specs and we only need to attach origin metadata here.
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))
           yield* mergePluginOrigins(dir, list)
         }
 
-        if (process.env.CODEGENIE_CONFIG_CONTENT) {
-          const source = "CODEGENIE_CONFIG_CONTENT"
-          const next = yield* loadConfig(process.env.CODEGENIE_CONFIG_CONTENT, {
+        if (process.env.OPENCODE_CONFIG_CONTENT) {
+          const source = "OPENCODE_CONFIG_CONTENT"
+          const next = yield* loadConfig(process.env.OPENCODE_CONFIG_CONTENT, {
             dir: ctx.directory,
             source,
           })
           yield* merge(source, next, "local")
-          log.debug("loaded custom config from CODEGENIE_CONFIG_CONTENT")
+          log.debug("loaded custom config from OPENCODE_CONFIG_CONTENT")
         }
 
         const activeAccount = Option.getOrUndefined(
@@ -620,8 +657,8 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
               { concurrency: 2 },
             )
             if (Option.isSome(tokenOpt)) {
-              process.env["CODEGENIE_CONSOLE_TOKEN"] = tokenOpt.value
-              yield* env.set("CODEGENIE_CONSOLE_TOKEN", tokenOpt.value)
+              process.env["OPENCODE_CONSOLE_TOKEN"] = tokenOpt.value
+              yield* env.set("OPENCODE_CONSOLE_TOKEN", tokenOpt.value)
             }
 
             if (Option.isSome(configOpt)) {
@@ -648,7 +685,7 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
 
         const managedDir = ConfigManaged.managedConfigDir()
         if (existsSync(managedDir)) {
-          for (const file of ["codegenie.json", "codegenie.jsonc"]) {
+          for (const file of ["opencode.json", "opencode.jsonc"]) {
             const source = path.join(managedDir, file)
             yield* merge(source, yield* loadFile(source), "global")
           }
@@ -675,8 +712,8 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
           })
         }
 
-        if (Flag.CODEGENIE_PERMISSION) {
-          result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.CODEGENIE_PERMISSION))
+        if (Flag.OPENCODE_PERMISSION) {
+          result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.OPENCODE_PERMISSION))
         }
 
         if (result.tools) {
@@ -698,10 +735,10 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
           result.share = "auto"
         }
 
-        if (Flag.CODEGENIE_DISABLE_AUTOCOMPACT) {
+        if (Flag.OPENCODE_DISABLE_AUTOCOMPACT) {
           result.compaction = { ...result.compaction, auto: false }
         }
-        if (Flag.CODEGENIE_DISABLE_PRUNE) {
+        if (Flag.OPENCODE_DISABLE_PRUNE) {
           result.compaction = { ...result.compaction, prune: false }
         }
 
@@ -743,41 +780,17 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
       )
     })
 
-    const update = Effect.fn("Config.update")(function* (config: Info, options?: { dispose?: boolean }) {
+    const update = Effect.fn("Config.update")(function* (config: Info) {
       const dir = yield* InstanceState.directory
       const file = path.join(dir, "config.json")
       const existing = yield* loadFile(file)
       yield* fs
         .writeFileString(file, JSON.stringify(mergeDeep(writable(existing), writable(config)), null, 2))
         .pipe(Effect.orDie)
-<<<<<<< HEAD
-      if (options?.dispose !== false) {
-        // Fail loudly if no instance is bound — silently skipping would
-        // mask "config update without an active instance" bugs. The throw
-        // comes from `Instance.current` inside `InstanceState.context`.
-        const ctx = yield* InstanceState.context
-        yield* Effect.promise(() => InstanceStore.disposeInstance(ctx))
-      }
-=======
-      if (options?.dispose !== false) yield* Effect.promise(() => Instance.dispose())
->>>>>>> 430d158d0
     })
 
-    const invalidate = Effect.fn("Config.invalidate")(function* (wait?: boolean) {
+    const invalidate = Effect.fn("Config.invalidate")(function* () {
       yield* invalidateGlobal
-      const task = InstanceStore.disposeAllInstances()
-        .catch(() => undefined)
-        .finally(() =>
-          GlobalBus.emit("event", {
-            directory: "global",
-            payload: {
-              type: Event.Disposed.type,
-              properties: {},
-            },
-          }),
-        )
-      if (wait) yield* Effect.promise(() => task)
-      else void task
     })
 
     const updateGlobal = Effect.fn("Config.updateGlobal")(function* (config: Info) {
@@ -801,9 +814,8 @@ if (source === "CODEGENIE_CONFIG_CONTENT") return "local"
         if (changed) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
       }
 
-      // Only tear down running instances if the config actually changed.
       if (changed) yield* invalidate()
-      return next
+      return { info: next, changed }
     })
 
     return Service.of({

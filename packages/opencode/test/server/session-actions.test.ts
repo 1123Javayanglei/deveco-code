@@ -1,15 +1,12 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import { Effect } from "effect"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Server } from "../../src/server/server"
 import { Session as SessionNs } from "@/session/session"
 import type { SessionID } from "../../src/session/schema"
 import * as Log from "@opencode-ai/core/util/log"
-<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
-=======
-import { tmpdir } from "../fixture/fixture"
->>>>>>> 430d158d0
 
 void Log.init({ print: false })
 
@@ -35,7 +32,7 @@ afterEach(async () => {
 describe("session action routes", () => {
   test("abort route returns success", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})

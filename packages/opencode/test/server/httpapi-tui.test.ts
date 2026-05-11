@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import type { Context } from "hono"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { GlobalBus } from "../../src/bus/global"
 import { TuiEvent } from "../../src/cli/cmd/tui/event"
 import { SessionID } from "../../src/session/schema"
 import { Instance } from "../../src/project/instance"
@@ -11,30 +10,22 @@ import { Server } from "../../src/server/server"
 import * as Log from "@opencode-ai/core/util/log"
 import { OpenApi } from "effect/unstable/httpapi"
 import { resetDatabase } from "../fixture/db"
-<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
-=======
-import { tmpdir } from "../fixture/fixture"
->>>>>>> 430d158d0
+import { waitGlobalBusEventPromise } from "./global-bus"
 
 void Log.init({ print: false })
 
-const original = Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI
+const original = Flag.OPENCODE_EXPERIMENTAL_HTTPAPI
 
 function app(experimental = true) {
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = experimental
+  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = experimental
   return experimental ? Server.Default().app : Server.Legacy().app
 }
 
 function nextCommandExecute() {
-  return new Promise<unknown>((resolve) => {
-    const listener = (event: { payload: { type?: string; properties?: { command?: unknown } } }) => {
-      if (event.payload.type !== TuiEvent.CommandExecute.type) return
-      GlobalBus.off("event", listener)
-      resolve(event.payload.properties?.command)
-    }
-    GlobalBus.on("event", listener)
-  })
+  return waitGlobalBusEventPromise({
+    predicate: (event) => event.payload.type === TuiEvent.CommandExecute.type,
+  }).then((event) => event.payload.properties?.command)
 }
 
 async function expectTrue(path: string, headers: Record<string, string>, body?: unknown) {
@@ -48,18 +39,14 @@ async function expectTrue(path: string, headers: Record<string, string>, body?: 
 }
 
 afterEach(async () => {
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original
-<<<<<<< HEAD
+  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = original
   await disposeAllInstances()
-=======
-  await Instance.disposeAll()
->>>>>>> 430d158d0
   await resetDatabase()
 })
 
 describe("tui HttpApi bridge", () => {
   test("documents legacy bad request responses", async () => {
-    const legacy = await Server.openapi()
+    const legacy = await Server.openapiHono()
     const effect = OpenApi.fromApi(TuiApi)
     for (const path of [TuiPaths.appendPrompt, TuiPaths.executeCommand, TuiPaths.publish, TuiPaths.selectSession]) {
       expect(legacy.paths[path].post?.responses?.[400]).toBeDefined()
@@ -85,12 +72,25 @@ describe("tui HttpApi bridge", () => {
       properties: { text: "from publish" },
     })
 
+    const missingSessionID = SessionID.descending()
     const missing = await app().request(TuiPaths.selectSession, {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ sessionID: SessionID.descending() }),
+      body: JSON.stringify({ sessionID: missingSessionID }),
     })
     expect(missing.status).toBe(404)
+  })
+
+  test("matches Hono missing selected session error body", async () => {
+    await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
+    const headers = { "x-opencode-directory": tmp.path, "content-type": "application/json" }
+    const body = JSON.stringify({ sessionID: SessionID.descending() })
+
+    const hono = await app(false).request(TuiPaths.selectSession, { method: "POST", headers, body })
+    const httpapi = await app().request(TuiPaths.selectSession, { method: "POST", headers, body })
+
+    expect(httpapi.status).toBe(hono.status)
+    expect(await httpapi.json()).toEqual(await hono.json())
   })
 
   test("matches legacy unknown execute command behavior", async () => {

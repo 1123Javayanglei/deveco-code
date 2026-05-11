@@ -6,33 +6,29 @@ import { Snapshot } from "../snapshot"
 import * as Project from "./project"
 import * as Vcs from "./vcs"
 import { Bus } from "../bus"
-import { Command } from "../command"
 import { InstanceState } from "@/effect/instance-state"
-<<<<<<< HEAD
 import { FileWatcher } from "@/file/watcher"
 import { ShareNext } from "@/share/share-next"
-import { Context, Effect, Layer } from "effect"
+import { Effect, Layer } from "effect"
 import { Config } from "@/config/config"
+import { Service } from "./bootstrap-service"
 
-export interface Interface {
-  readonly run: Effect.Effect<void>
-}
-
-export class Service extends Context.Service<Service, Interface>()("@opencode/InstanceBootstrap") {}
+export { Service } from "./bootstrap-service"
+export type { Interface } from "./bootstrap-service"
 
 export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     // Yield each bootstrap dep at layer init so `run` itself has R = never.
-    // This breaks the circular declaration loop through Config → Instance → InstanceStore
-    // (instance-store.ts only yields this Service tag, never the impl-side services).
-    const bus = yield* Bus.Service
+    // InstanceStore imports only the lightweight tag from bootstrap-service.ts,
+    // so it can depend on bootstrap without importing this implementation graph.
     const config = yield* Config.Service
     const file = yield* File.Service
     const fileWatcher = yield* FileWatcher.Service
     const format = yield* Format.Service
     const lsp = yield* LSP.Service
     const plugin = yield* Plugin.Service
+    const project = yield* Project.Service
     const shareNext = yield* ShareNext.Service
     const snapshot = yield* Snapshot.Service
     const vcs = yield* Vcs.Service
@@ -44,16 +40,13 @@ export const layer = Layer.effect(
       yield* config.get()
       // Plugin can mutate config so it has to be initialized before anything else.
       yield* plugin.init()
-      yield* Effect.all(
-        [lsp, shareNext, format, file, fileWatcher, vcs, snapshot].map((s) => Effect.forkDetach(s.init())),
+      // Each service self-manages its own slow work via Effect.forkScoped against
+      // its per-instance state scope. We just await materialization here.
+      yield* Effect.forEach(
+        [lsp, shareNext, format, file, fileWatcher, vcs, snapshot, project],
+        (s) => s.init().pipe(Effect.catchCause((cause) => Effect.logWarning("init failed", { cause }))),
+        { concurrency: "unbounded", discard: true },
       ).pipe(Effect.withSpan("InstanceBootstrap.init"))
-
-      const projectID = ctx.project.id
-      yield* bus.subscribeCallback(Command.Event.Executed, async (payload) => {
-        if (payload.properties.name === Command.Default.INIT) {
-          Project.setInitialized(projectID)
-        }
-      })
     }).pipe(Effect.withSpan("InstanceBootstrap"))
 
     return Service.of({ run })
@@ -77,39 +70,3 @@ export const defaultLayer: Layer.Layer<Service> = layer.pipe(
 )
 
 export * as InstanceBootstrap from "./bootstrap"
-=======
-import * as Log from "@opencode-ai/core/util/log"
-import { FileWatcher } from "@/file/watcher"
-import { ShareNext } from "@/share/share-next"
-import * as Effect from "effect/Effect"
-import { Config } from "@/config/config"
-
-export const InstanceBootstrap = Effect.gen(function* () {
-  const ctx = yield* InstanceState.context
-  Log.Default.info("bootstrapping", { directory: ctx.directory })
-  // everything depends on config so eager load it for nice traces
-  yield* Config.Service.use((svc) => svc.get())
-  // Plugin can mutate config so it has to be initialized before anything else.
-  yield* Plugin.Service.use((svc) => svc.init())
-  yield* Effect.all(
-    [
-      LSP.Service,
-      ShareNext.Service,
-      Format.Service,
-      File.Service,
-      FileWatcher.Service,
-      Vcs.Service,
-      Snapshot.Service,
-    ].map((s) => Effect.forkDetach(s.use((i) => i.init()))),
-  ).pipe(Effect.withSpan("InstanceBootstrap.init"))
-
-  const projectID = ctx.project.id
-  yield* Bus.Service.use((svc) =>
-    svc.subscribeCallback(Command.Event.Executed, async (payload) => {
-      if (payload.properties.name === Command.Default.INIT) {
-        Project.setInitialized(projectID)
-      }
-    }),
-  )
-}).pipe(Effect.withSpan("InstanceBootstrap"))
->>>>>>> 430d158d0

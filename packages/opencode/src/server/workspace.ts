@@ -1,56 +1,17 @@
-﻿import type { MiddlewareHandler } from "hono"
+import type { MiddlewareHandler } from "hono"
 import type { UpgradeWebSocket } from "hono/ws"
 import { getAdapter } from "@/control-plane/adapters"
 import { WorkspaceID } from "@/control-plane/schema"
 import { WorkspaceContext } from "@/control-plane/workspace-context"
 import { Workspace } from "@/control-plane/workspace"
 import { Flag } from "@opencode-ai/core/flag/flag"
-<<<<<<< HEAD
-import { getBootstrapRunEffect, AppRuntime } from "@/effect/app-runtime"
-=======
-import { InstanceBootstrap } from "@/project/bootstrap"
->>>>>>> 430d158d0
-import { Instance } from "@/project/instance"
+import { AppRuntime } from "@/effect/app-runtime"
+import { WithInstance } from "@/project/with-instance"
 import { Session } from "@/session/session"
-import { SessionID } from "@/session/schema"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { ServerProxy } from "./proxy"
-
-type Rule = { method?: string; path: string; exact?: boolean; action: "local" | "forward" }
-
-const RULES: Array<Rule> = [
-  { path: "/experimental/workspace", action: "local" },
-  { path: "/session/status", action: "forward" },
-  { method: "GET", path: "/session", action: "local" },
-]
-
-export function isLocalWorkspaceRoute(method: string, path: string) {
-  for (const rule of RULES) {
-    if (rule.method && rule.method !== method) continue
-    const match = rule.exact ? path === rule.path : path === rule.path || path.startsWith(rule.path + "/")
-    if (match) return rule.action === "local"
-  }
-  return false
-}
-
-export function getWorkspaceRouteSessionID(url: URL) {
-  if (url.pathname === "/session/status") return null
-
-  const id = url.pathname.match(/^\/session\/([^/]+)(?:\/|$)/)?.[1]
-  if (!id) return null
-
-  return SessionID.make(id)
-}
-
-export function workspaceProxyURL(target: string | URL, requestURL: URL) {
-  const proxyURL = new URL(target)
-  proxyURL.pathname = `${proxyURL.pathname.replace(/\/$/, "")}${requestURL.pathname}`
-  proxyURL.search = requestURL.search
-  proxyURL.hash = requestURL.hash
-  proxyURL.searchParams.delete("workspace")
-  return proxyURL
-}
+import { getWorkspaceRouteSessionID, isLocalWorkspaceRoute, workspaceProxyURL } from "./shared/workspace-routing"
 
 async function getSessionWorkspace(url: URL) {
   const id = getWorkspaceRouteSessionID(url)
@@ -71,7 +32,7 @@ export function WorkspaceRouterMiddleware(upgrade: UpgradeWebSocket): Middleware
     const sessionWorkspaceID = await getSessionWorkspace(url)
     const workspaceID = sessionWorkspaceID || url.searchParams.get("workspace")
 
-    if (!workspaceID || url.pathname.startsWith("/console") || Flag.CODEGENIE_WORKSPACE_ID) {
+    if (!workspaceID || url.pathname.startsWith("/console") || Flag.OPENCODE_WORKSPACE_ID) {
       return next()
     }
 
@@ -94,22 +55,15 @@ export function WorkspaceRouterMiddleware(upgrade: UpgradeWebSocket): Middleware
       return next()
     }
 
-<<<<<<< HEAD
     const adapter = getAdapter(workspace.projectID, workspace.type)
     const target = await adapter.target(workspace)
-=======
-    const adaptor = getAdaptor(workspace.projectID, workspace.type)
-    const target = await adaptor.target(workspace)
->>>>>>> 430d158d0
 
     if (target.type === "local") {
-      const init = await getBootstrapRunEffect()
       return WorkspaceContext.provide({
         workspaceID: WorkspaceID.make(workspaceID),
         fn: () =>
-          Instance.provide({
+          WithInstance.provide({
             directory: target.directory,
-            init,
             async fn() {
               return next()
             },

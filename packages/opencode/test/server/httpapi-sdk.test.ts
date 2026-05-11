@@ -4,7 +4,9 @@ import type * as Scope from "effect/Scope"
 import { HttpRouter } from "effect/unstable/http"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { createOpencodeClient } from "@opencode-ai/sdk/v2"
+import { validateSession } from "../../src/cli/cmd/tui/validate-session"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { ExperimentalHttpApiServer } from "../../src/server/routes/instance/httpapi/server"
 import { Server } from "../../src/server/server"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
@@ -12,26 +14,17 @@ import { MessageV2 } from "../../src/session/message-v2"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import type { Config } from "@/config/config"
 import { Session as SessionNs } from "@/session/session"
+import { errorMessage } from "../../src/util/error"
 import { TestLLMServer } from "../lib/llm-server"
 import path from "path"
 import { resetDatabase } from "../fixture/db"
-<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 import { it } from "../lib/effect"
 
 const original = {
-  OPENCODE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
-  OPENCODE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
-  OPENCODE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
-=======
-import { tmpdir } from "../fixture/fixture"
-import { it } from "../lib/effect"
-
-const original = {
-  CODEGENIE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
-  CODEGENIE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
-  CODEGENIE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
->>>>>>> 430d158d0
+  OPENCODE_EXPERIMENTAL_HTTPAPI: Flag.OPENCODE_EXPERIMENTAL_HTTPAPI,
+  OPENCODE_SERVER_PASSWORD: Flag.OPENCODE_SERVER_PASSWORD,
+  OPENCODE_SERVER_USERNAME: Flag.OPENCODE_SERVER_USERNAME,
 }
 
 type Backend = "legacy" | "httpapi"
@@ -42,9 +35,9 @@ type ProjectFixture = { sdk: Sdk; directory: string }
 type LlmProjectFixture = ProjectFixture & { llm: TestLLMServer["Service"] }
 
 function app(backend: Backend, input?: { password?: string; username?: string }) {
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = backend === "httpapi"
-  Flag.CODEGENIE_SERVER_PASSWORD = input?.password
-  Flag.CODEGENIE_SERVER_USERNAME = input?.username
+  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = backend === "httpapi"
+  Flag.OPENCODE_SERVER_PASSWORD = input?.password
+  Flag.OPENCODE_SERVER_USERNAME = input?.username
   if (backend === "legacy") return Server.Legacy().app
 
   const handler = HttpRouter.toWebHandler(
@@ -52,13 +45,8 @@ function app(backend: Backend, input?: { password?: string; username?: string })
       Layer.provide(
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
-<<<<<<< HEAD
             OPENCODE_SERVER_PASSWORD: input?.password,
             OPENCODE_SERVER_USERNAME: input?.username,
-=======
-            CODEGENIE_SERVER_PASSWORD: input?.password,
-            CODEGENIE_SERVER_USERNAME: input?.username,
->>>>>>> 430d158d0
           }),
         ),
       ),
@@ -78,18 +66,21 @@ function client(
   directory?: string,
   input?: { password?: string; username?: string; headers?: Record<string, string> },
 ) {
-  const serverApp = app(backend, input)
-  const fetch = Object.assign(
-    async (request: RequestInfo | URL, init?: RequestInit) =>
-      await serverApp.fetch(request instanceof Request ? request : new Request(request, init)),
-    { preconnect: globalThis.fetch.preconnect },
-  ) satisfies typeof globalThis.fetch
   return createOpencodeClient({
     baseUrl: "http://localhost",
     directory,
     headers: input?.headers,
-    fetch,
+    fetch: serverFetch(backend, input),
   })
+}
+
+function serverFetch(backend: Backend, input?: { password?: string; username?: string }) {
+  const serverApp = app(backend, input)
+  return Object.assign(
+    async (request: RequestInfo | URL, init?: RequestInit) =>
+      await serverApp.fetch(request instanceof Request ? request : new Request(request, init)),
+    { preconnect: globalThis.fetch.preconnect },
+  ) satisfies typeof globalThis.fetch
 }
 
 function authorization(username: string, password: string) {
@@ -143,6 +134,16 @@ function capture(request: () => Promise<SdkResult>) {
   )
 }
 
+function captureThrown(request: () => Promise<unknown>) {
+  return call(async () => {
+    try {
+      await request()
+    } catch (error) {
+      return error
+    }
+  })
+}
+
 function expectStatus(request: () => Promise<{ response: Response }>, status: number) {
   return call(request).pipe(
     Effect.tap((result) => Effect.sync(() => expect(result.response.status).toBe(status))),
@@ -184,11 +185,7 @@ function sessionTitles(value: unknown) {
 
 function resetState() {
   return Effect.promise(async () => {
-<<<<<<< HEAD
     await disposeAllInstances()
-=======
-    await Instance.disposeAll()
->>>>>>> 430d158d0
     await resetDatabase()
   })
 }
@@ -234,6 +231,24 @@ function withFakeLlm<A, E, R>(backend: Backend, run: (input: LlmProjectFixture) 
   }).pipe(Effect.provide(TestLLMServer.layer))
 }
 
+function withFakeLlmProject<A, E, R>(
+  backend: Backend,
+  options: { setup?: (dir: string) => Effect.Effect<void> },
+  run: (input: LlmProjectFixture) => Effect.Effect<A, E, R>,
+) {
+  return Effect.gen(function* () {
+    const llm = yield* TestLLMServer
+    return yield* withProject(
+      backend,
+      {
+        config: providerConfig(llm.url),
+        setup: options.setup,
+      },
+      (input) => run({ ...input, llm }),
+    )
+  }).pipe(Effect.provide(TestLLMServer.layer))
+}
+
 function writeStandardFiles(dir: string) {
   return Effect.all([
     call(() => Bun.write(path.join(dir, "hello.txt"), "hello")),
@@ -241,11 +256,26 @@ function writeStandardFiles(dir: string) {
   ]).pipe(Effect.asVoid)
 }
 
+function writeProjectSkill(dir: string) {
+  return call(() =>
+    Bun.write(
+      path.join(dir, ".opencode", "skills", "project-rest-skill", "SKILL.md"),
+      `---
+name: project-rest-skill
+description: A project skill visible to REST API prompts.
+---
+
+# Project REST Skill
+`,
+    ),
+  ).pipe(Effect.asVoid)
+}
+
 function seedMessage(directory: string, sessionID: string) {
   const id = SessionID.make(sessionID)
   return call(
     async () =>
-      await Instance.provide({
+      await WithInstance.provide({
         directory,
         fn: () =>
           Effect.runPromise(
@@ -276,17 +306,10 @@ function seedMessage(directory: string, sessionID: string) {
 }
 
 afterEach(async () => {
-<<<<<<< HEAD
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.OPENCODE_EXPERIMENTAL_HTTPAPI
-  Flag.CODEGENIE_SERVER_PASSWORD = original.OPENCODE_SERVER_PASSWORD
-  Flag.CODEGENIE_SERVER_USERNAME = original.OPENCODE_SERVER_USERNAME
+  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = original.OPENCODE_EXPERIMENTAL_HTTPAPI
+  Flag.OPENCODE_SERVER_PASSWORD = original.OPENCODE_SERVER_PASSWORD
+  Flag.OPENCODE_SERVER_USERNAME = original.OPENCODE_SERVER_USERNAME
   await disposeAllInstances()
-=======
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.CODEGENIE_EXPERIMENTAL_HTTPAPI
-  Flag.CODEGENIE_SERVER_PASSWORD = original.CODEGENIE_SERVER_PASSWORD
-  Flag.CODEGENIE_SERVER_USERNAME = original.CODEGENIE_SERVER_USERNAME
-  await Instance.disposeAll()
->>>>>>> 430d158d0
   await resetDatabase()
 })
 
@@ -360,6 +383,46 @@ describe("HttpApi SDK", () => {
       firstEvent(() => sdk.event.subscribe(undefined, { signal: AbortSignal.timeout(1_000) })).pipe(
         Effect.map((event) => ({ type: record(record(event).payload).type })),
       ),
+    ),
+  )
+
+  parity("matches generated SDK missing session errors across backends", (backend) =>
+    withStandardProject(backend, ({ sdk }) =>
+      Effect.gen(function* () {
+        const sessionID = "ses_missing"
+        const expected = {
+          name: "NotFoundError",
+          data: { message: `Session not found: ${sessionID}` },
+        }
+        const missing = yield* capture(() => sdk.session.get({ sessionID }))
+        const thrown = yield* captureThrown(() => sdk.session.get({ sessionID }, { throwOnError: true }))
+
+        expect(missing.error).toEqual(expected)
+        expect(thrown).toEqual(expected)
+        return {
+          status: missing.status,
+          error: missing.error,
+          thrown,
+        }
+      }),
+    ),
+  )
+
+  parity("formats missing session validation errors for -s", (backend) =>
+    withStandardProject(backend, ({ directory }) =>
+      Effect.gen(function* () {
+        const sessionID = "ses_206f84f18ffeZ6hhD7pFYAiW5T"
+        const thrown = yield* captureThrown(() =>
+          validateSession({
+            url: "http://localhost",
+            directory,
+            sessionID,
+            fetch: serverFetch(backend),
+          }),
+        )
+        expect(errorMessage(thrown)).toBe(`Session not found: ${sessionID}`)
+        return errorMessage(thrown)
+      }),
     ),
   )
 
@@ -613,6 +676,36 @@ describe("HttpApi SDK", () => {
           persistedText: JSON.stringify(messages.data).includes("fake world"),
           userText: JSON.stringify(messages.data).includes("hello llm"),
         }
+      }),
+    ),
+  )
+
+  httpapi(
+    "includes project skills in REST API async prompt context",
+    withFakeLlmProject("httpapi", { setup: writeProjectSkill }, ({ sdk, llm }) =>
+      Effect.gen(function* () {
+        yield* llm.text("skill context ok", { usage: { input: 11, output: 7 } })
+        const session = yield* capture(() =>
+          sdk.session.create({
+            title: "project skill prompt",
+            permission: [{ permission: "*", pattern: "*", action: "allow" }],
+          }),
+        )
+        const sessionID = String(record(session.data).id)
+        const prompt = yield* capture(() =>
+          sdk.session.promptAsync({
+            sessionID,
+            agent: "build",
+            model: { providerID: "test", modelID: "test-model" },
+            parts: [{ type: "text", text: "hello skill context" }],
+          }),
+        )
+        yield* llm.wait(1)
+        const inputs = yield* llm.inputs
+
+        expect(session.status).toBe(200)
+        expect(prompt.status).toBe(204)
+        expect(JSON.stringify(inputs[0])).toContain("project-rest-skill")
       }),
     ),
   )

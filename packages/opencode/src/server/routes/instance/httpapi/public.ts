@@ -39,10 +39,7 @@ type OpenApiSchema = {
   maximum?: number
   minimum?: number
   oneOf?: OpenApiSchema[]
-<<<<<<< HEAD
   pattern?: string
-=======
->>>>>>> 430d158d0
   prefixItems?: OpenApiSchema[]
   properties?: Record<string, OpenApiSchema>
   required?: string[]
@@ -78,7 +75,6 @@ const QueryNumberParameters = new Set(["start", "cursor", "limit", "method"])
 const QueryBooleanParameters = new Set(["roots", "archived"])
 const QueryParameterSchemas = {
   "GET /find/file limit": { type: "integer", minimum: 1, maximum: 200 },
-<<<<<<< HEAD
   "GET /session/{sessionID}/diff messageID": { type: "string", pattern: "^msg.*" },
   "GET /session/{sessionID}/message limit": { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
 } satisfies Record<string, OpenApiSchema>
@@ -91,11 +87,6 @@ const PathParameterSchemas = {
   ptyID: { type: "string", pattern: "^pty.*" },
 } satisfies Record<string, OpenApiSchema>
 
-=======
-  "GET /session/{sessionID}/message limit": { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
-} satisfies Record<string, OpenApiSchema>
-
->>>>>>> 430d158d0
 const LegacyComponentDescriptions = {
   LogLevel: "Log level",
   ServerConfig: "Server configuration for opencode serve and web commands",
@@ -154,6 +145,16 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
             : operation.requestBody.content?.["application/json"]?.schema?.properties
           if (properties?.branch) properties.branch = { anyOf: [properties.branch, { type: "null" }] }
           if (properties?.extra) properties.extra = { anyOf: [properties.extra, { type: "null" }] }
+        }
+        if (path === "/experimental/workspace/warp" && method === "post") {
+          const ref = operation.requestBody.content?.["application/json"]?.schema?.$ref?.replace(
+            "#/components/schemas/",
+            "",
+          )
+          const properties = ref
+            ? spec.components?.schemas?.[ref]?.properties
+            : operation.requestBody.content?.["application/json"]?.schema?.properties
+          if (properties?.id) properties.id = { anyOf: [properties.id, { type: "null" }] }
         }
       }
       for (const response of Object.values(operation.responses ?? {})) {
@@ -447,14 +448,11 @@ function fixSelfReferencingComponents(spec: OpenApiSpec) {
 
 /** Strip `{type:"null"}` arms that Effect's `Schema.optional` adds to OpenAPI unions. */
 function stripOptionalNull(schema: OpenApiSchema): OpenApiSchema {
-<<<<<<< HEAD
   if (schema.allOf?.length === 1) {
     const [constraint] = schema.allOf
     delete schema.allOf
     return stripOptionalNull({ ...schema, ...constraint })
   }
-=======
->>>>>>> 430d158d0
   if (isEmptyObjectUnion(schema)) return { type: "object", properties: {} }
   const options = flattenOptions(schema.anyOf ?? schema.oneOf)
   if (options) {
@@ -503,7 +501,6 @@ function flattenOptions(options: OpenApiSchema[] | undefined): OpenApiSchema[] |
 }
 
 function normalizeParameter(param: OpenApiParameter, route: string) {
-<<<<<<< HEAD
   if (!param.schema || typeof param.schema !== "object") return
   if (param.in === "path") {
     param.schema = pathParameterSchema(route, param.name) ?? stripOptionalNull(param.schema)
@@ -525,28 +522,10 @@ function normalizeParameter(param: OpenApiParameter, route: string) {
       }
       return
     }
-=======
-  if (param.in !== "query" || !param.schema || typeof param.schema !== "object") return
-  const override = QueryParameterSchemas[`${route} ${param.name}` as keyof typeof QueryParameterSchemas]
-  if (override) {
-    param.schema = override
-    return
-  }
-  if (QueryNumberParameters.has(param.name)) {
-    param.schema = { type: "number" }
-    return
-  }
-  if (QueryBooleanParameters.has(param.name)) {
-    param.schema = {
-      anyOf: [{ type: "boolean" }, { type: "string", enum: ["true", "false"] }],
-    }
-    return
->>>>>>> 430d158d0
   }
   param.schema = stripOptionalNull(param.schema)
 }
 
-<<<<<<< HEAD
 function pathParameterSchema(route: string, name: string) {
   if (name in PathParameterSchemas) return PathParameterSchemas[name as keyof typeof PathParameterSchemas]
   if (name === "id" && route.startsWith("DELETE /experimental/workspace/")) return { type: "string", pattern: "^wrk.*" }
@@ -556,8 +535,6 @@ function pathParameterSchema(route: string, name: string) {
   return undefined
 }
 
-=======
->>>>>>> 430d158d0
 export const PublicApi = OpenCodeHttpApi.annotateMerge(
   OpenApi.annotations({
     title: "opencode",

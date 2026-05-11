@@ -1,29 +1,8 @@
-<<<<<<< HEAD
-import { Effect } from "effect"
 import { context, type InstanceContext } from "./instance-context"
-import { InstanceStore } from "./instance-store"
-=======
-import { GlobalBus } from "@/bus/global"
-import { disposeInstance } from "@/effect/instance-registry"
-import { makeRuntime } from "@/effect/run-service"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
-import { iife } from "@/util/iife"
-import * as Log from "@opencode-ai/core/util/log"
-import { LocalContext } from "@/util/local-context"
-import * as Project from "./project"
-import { WorkspaceContext } from "@/control-plane/workspace-context"
->>>>>>> 430d158d0
 
 export type { InstanceContext } from "./instance-context"
-export type { LoadInput } from "./instance-store"
 
 export const Instance = {
-  async provide<R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }): Promise<R> {
-    const ctx = await InstanceStore.runtime.runPromise((store) =>
-      store.load({ directory: input.directory, init: input.init }),
-    )
-    return context.provide(ctx, async () => input.fn())
-  },
   get current() {
     return context.use()
   },

@@ -1,20 +1,13 @@
-<<<<<<< HEAD
 import { getAdapter } from "@/control-plane/adapters"
 import { WorkspaceID } from "@/control-plane/schema"
 import type { Target } from "@/control-plane/types"
 import { Workspace } from "@/control-plane/workspace"
 import { EffectBridge } from "@/effect/bridge"
-=======
-import { getAdaptor } from "@/control-plane/adaptors"
-import { WorkspaceID } from "@/control-plane/schema"
-import type { Target } from "@/control-plane/types"
-import { Workspace } from "@/control-plane/workspace"
-import { Instance } from "@/project/instance"
->>>>>>> 430d158d0
 import { Session } from "@/session/session"
 import { HttpApiProxy } from "./proxy"
-import * as Fence from "@/server/fence"
-import { getWorkspaceRouteSessionID, isLocalWorkspaceRoute, workspaceProxyURL } from "@/server/workspace"
+import * as Fence from "@/server/shared/fence"
+import { getWorkspaceRouteSessionID, isLocalWorkspaceRoute, workspaceProxyURL } from "@/server/shared/workspace-routing"
+import { NotFoundError } from "@/storage/storage"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Context, Data, Effect, Layer } from "effect"
 import { HttpClient, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
@@ -51,23 +44,12 @@ export class WorkspaceRoutingMiddleware extends HttpApiMiddleware.Service<
   }
 >()("@opencode/ExperimentalHttpApiWorkspaceRouting") {}
 
-<<<<<<< HEAD
-=======
-function currentDirectory(): string {
-  try {
-    return Instance.directory
-  } catch {
-    return process.cwd()
-  }
-}
-
->>>>>>> 430d158d0
 function requestURL(request: HttpServerRequest.HttpServerRequest): URL {
   return new URL(request.url, "http://localhost")
 }
 
 function configuredWorkspaceID(): WorkspaceID | undefined {
-  return Flag.CODEGENIE_WORKSPACE_ID ? WorkspaceID.make(Flag.CODEGENIE_WORKSPACE_ID) : undefined
+  return Flag.OPENCODE_WORKSPACE_ID ? WorkspaceID.make(Flag.OPENCODE_WORKSPACE_ID) : undefined
 }
 
 function selectedWorkspaceID(url: URL, sessionWorkspaceID?: WorkspaceID): WorkspaceID | undefined {
@@ -76,11 +58,7 @@ function selectedWorkspaceID(url: URL, sessionWorkspaceID?: WorkspaceID): Worksp
 }
 
 function defaultDirectory(request: HttpServerRequest.HttpServerRequest, url: URL): string {
-<<<<<<< HEAD
-return url.searchParams.get("directory") || request.headers["x-codegenie-directory"] || process.cwd()
-=======
-  return url.searchParams.get("directory") || request.headers["x-codegenie-directory"] || currentDirectory()
->>>>>>> 430d158d0
+  return url.searchParams.get("directory") || request.headers["x-opencode-directory"] || process.cwd()
 }
 
 function shouldStayOnControlPlane(request: HttpServerRequest.HttpServerRequest, url: URL): boolean {
@@ -103,15 +81,8 @@ function missingWorkspaceResponse(id: WorkspaceID): HttpServerResponse.HttpServe
 }
 
 function resolveTarget(workspace: Workspace.Info): Effect.Effect<Target> {
-<<<<<<< HEAD
   const adapter = getAdapter(workspace.projectID, workspace.type)
   return EffectBridge.fromPromise(() => adapter.target(workspace))
-=======
-  return Effect.gen(function* () {
-    const adaptor = yield* Effect.sync(() => getAdaptor(workspace.projectID, workspace.type))
-    return yield* Effect.promise(() => Promise.resolve(adaptor.target(workspace)))
-  })
->>>>>>> 430d158d0
 }
 
 function proxyRemote(
@@ -208,7 +179,10 @@ function routeHttpApiWorkspace<E>(
     const request = yield* HttpServerRequest.HttpServerRequest
     const sessionID = getWorkspaceRouteSessionID(requestURL(request))
     const session = sessionID
-      ? yield* Session.Service.use((svc) => svc.get(sessionID)).pipe(Effect.catchDefect(() => Effect.void))
+      ? yield* Session.Service.use((svc) => svc.get(sessionID)).pipe(
+          Effect.catchIf(NotFoundError.isInstance, () => Effect.succeed(undefined)),
+          Effect.catchDefect(() => Effect.succeed(undefined)),
+        )
       : undefined
     const plan = yield* planRequest(request, session?.workspaceID)
     return yield* routeWorkspace(client, effect, plan)

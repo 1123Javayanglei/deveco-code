@@ -1,11 +1,9 @@
 import { Config } from "@/config/config"
 import { GlobalBus, type GlobalEvent as GlobalBusEvent } from "@/bus/global"
+import { EffectBridge } from "@/effect/bridge"
+import { Bus } from "@/bus"
 import { Installation } from "@/installation"
-<<<<<<< HEAD
-import { InstanceStore } from "@/project/instance-store"
-=======
-import { Instance } from "@/project/instance"
->>>>>>> 430d158d0
+import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect, Queue, Schema } from "effect"
@@ -46,11 +44,11 @@ function eventResponse() {
   })
   const heartbeat = Stream.tick("10 seconds").pipe(
     Stream.drop(1),
-    Stream.map(() => ({ payload: { type: "server.heartbeat", properties: {} } })),
+    Stream.map(() => ({ payload: { id: Bus.createID(), type: "server.heartbeat", properties: {} } })),
   )
 
   return HttpServerResponse.stream(
-    Stream.make({ payload: { type: "server.connected", properties: {} } }).pipe(
+    Stream.make({ payload: { id: Bus.createID(), type: "server.connected", properties: {} } }).pipe(
       Stream.concat(events.pipe(Stream.merge(heartbeat, { haltStrategy: "left" }))),
       Stream.map(eventData),
       Stream.pipeThroughChannel(Sse.encode()),
@@ -72,10 +70,7 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
   Effect.gen(function* () {
     const config = yield* Config.Service
     const installation = yield* Installation.Service
-<<<<<<< HEAD
-    const store = yield* InstanceStore.Service
-=======
->>>>>>> 430d158d0
+    const bridge = yield* EffectBridge.make()
 
     const health = Effect.fn("GlobalHttpApi.health")(function* () {
       return { healthy: true as const, version: InstallationVersion }
@@ -90,19 +85,13 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
     })
 
     const configUpdate = Effect.fn("GlobalHttpApi.configUpdate")(function* (ctx) {
-      return yield* config.updateGlobal(ctx.payload)
+      const result = yield* config.updateGlobal(ctx.payload)
+      if (result.changed) bridge.fork(disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }))
+      return result.info
     })
 
     const dispose = Effect.fn("GlobalHttpApi.dispose")(function* () {
-<<<<<<< HEAD
-      yield* store.disposeAll()
-=======
-      yield* Effect.promise(() => Instance.disposeAll())
->>>>>>> 430d158d0
-      GlobalBus.emit("event", {
-        directory: "global",
-        payload: { type: "global.disposed", properties: {} },
-      })
+      yield* disposeAllInstancesAndEmitGlobalDisposed()
       return true
     })
 

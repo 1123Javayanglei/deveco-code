@@ -1,5 +1,4 @@
 import { Global } from "@opencode-ai/core/global"
-<<<<<<< HEAD
 import path from "path"
 import { Context, Duration, Effect, Layer, Option, Schedule, Schema } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
@@ -10,30 +9,6 @@ import { Hash } from "@opencode-ai/core/util/hash"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 
-=======
-import * as Log from "@opencode-ai/core/util/log"
-import path from "path"
-import { Schema } from "effect"
-import { Installation } from "../installation"
-import { Flag } from "@opencode-ai/core/flag/flag"
-import { lazy } from "@/util/lazy"
-import { Filesystem } from "@/util/filesystem"
-import { Flock } from "@opencode-ai/core/util/flock"
-import { Hash } from "@opencode-ai/core/util/hash"
-
-// Try to import bundled snapshot (generated at build time)
-// Falls back to undefined in dev mode when snapshot doesn't exist
-/* @ts-ignore */
-
-const log = Log.create({ service: "models.dev" })
-const source = url()
-const filepath = path.join(
-  Global.Path.cache,
-  source === "https://models.dev" ? "models.json" : `models-${Hash.fast(source)}.json`,
-)
-const ttl = 5 * 60 * 1000
-
->>>>>>> 430d158d0
 const Cost = Schema.Struct({
   input: Schema.Finite,
   output: Schema.Finite,
@@ -102,7 +77,6 @@ export const Model = Schema.Struct({
   ),
 })
 export type Model = Schema.Schema.Type<typeof Model>
-<<<<<<< HEAD
 
 export const Provider = Schema.Struct({
   api: Schema.optional(Schema.String),
@@ -128,7 +102,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
     const fs = yield* AppFileSystem.Service
     const http = HttpClient.filterStatusOk(withTransientReadRetry(yield* HttpClient.HttpClient))
 
-    const source = Flag.CODEGENIE_MODELS_URL || "https://models.dev"
+    const source = Flag.OPENCODE_MODELS_URL || "https://models.dev"
     const filepath = path.join(
       Global.Path.cache,
       source === "https://models.dev" ? "models.json" : `models-${Hash.fast(source)}.json`,
@@ -152,7 +126,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
       )
     })
 
-    const loadFromDisk = fs.readJson(Flag.CODEGENIE_MODELS_PATH ?? filepath).pipe(
+    const loadFromDisk = fs.readJson(Flag.OPENCODE_MODELS_PATH ?? filepath).pipe(
       Effect.catch(() => Effect.succeed(undefined)),
       Effect.map((v) => v as Record<string, Provider> | undefined),
     )
@@ -163,23 +137,6 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
       try: () => import("./models-snapshot.js").then((m) => m.snapshot as Record<string, Provider> | undefined),
       catch: () => undefined,
     }).pipe(Effect.catch(() => Effect.succeed(undefined)))
-=======
-
-export const Provider = Schema.Struct({
-  api: Schema.optional(Schema.String),
-  name: Schema.String,
-  env: Schema.Array(Schema.String),
-  id: Schema.String,
-  npm: Schema.optional(Schema.String),
-  models: Schema.Record(Schema.String, Model),
-})
-
-export type Provider = Schema.Schema.Type<typeof Provider>
-
-function url() {
-  return Flag.CODEGENIE_MODELS_URL || "https://models.dev"
-}
->>>>>>> 430d158d0
 
     const fetchAndWrite = Effect.fn("ModelsDev.fetchAndWrite")(function* () {
       const text = yield* fetchApi()
@@ -192,7 +149,7 @@ function url() {
       if (fromDisk) return fromDisk
       const snapshot = yield* loadSnapshot
       if (snapshot) return snapshot
-      if (Flag.CODEGENIE_DISABLE_MODELS_FETCH) return {}
+      if (Flag.OPENCODE_DISABLE_MODELS_FETCH) return {}
       // Flock is cross-process: concurrent opencode CLIs can race on this cache file.
       const text = yield* Effect.scoped(
         Effect.gen(function* () {
@@ -205,7 +162,6 @@ function url() {
 
     const [cachedGet, invalidate] = yield* Effect.cachedInvalidateWithTTL(populate, Duration.infinity)
 
-<<<<<<< HEAD
     const get = (): Effect.Effect<Record<string, Provider>> => cachedGet
 
     const refresh = Effect.fn("ModelsDev.refresh")(function* (force = false) {
@@ -225,28 +181,9 @@ function url() {
       )
     })
 
-    if (!Flag.CODEGENIE_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-completions")) {
+    if (!Flag.OPENCODE_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-completions")) {
       // Schedule.spaced runs the effect once, then waits between completions.
       yield* Effect.forkScoped(refresh().pipe(Effect.repeat(Schedule.spaced("60 minutes")), Effect.ignore))
-=======
-export const Data = lazy(async () => {
-  const result = await Filesystem.readJson(Flag.CODEGENIE_MODELS_PATH ?? filepath).catch(() => {})
-  if (result) return result
-  // @ts-ignore
-  const snapshot = await import("./models-snapshot.js")
-    .then((m) => m.snapshot as Record<string, unknown>)
-    .catch(() => undefined)
-  if (snapshot) return snapshot
-  if (Flag.CODEGENIE_DISABLE_MODELS_FETCH) return {}
-  return Flock.withLock(`models-dev:${filepath}`, async () => {
-    const result = await Filesystem.readJson(Flag.CODEGENIE_MODELS_PATH ?? filepath).catch(() => {})
-    if (result) return result
-    const result2 = await fetchApi()
-    if (result2.ok) {
-      await Filesystem.write(filepath, result2.text).catch((e) => {
-        log.error("Failed to write models cache", { error: e })
-      })
->>>>>>> 430d158d0
     }
 
     return Service.of({ get, refresh })
@@ -258,18 +195,4 @@ export const defaultLayer: Layer.Layer<Service> = layer.pipe(
   Layer.provide(AppFileSystem.defaultLayer),
 )
 
-<<<<<<< HEAD
 export * as ModelsDev from "./models"
-=======
-if (!Flag.CODEGENIE_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-completions")) {
-  void refresh()
-  setInterval(
-    async () => {
-      await refresh()
-    },
-    60 * 1000 * 60,
-  ).unref()
-}
-
-export * as ModelsDev from "./models"
->>>>>>> 430d158d0

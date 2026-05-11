@@ -12,24 +12,14 @@ import { ConfigProvider, Layer } from "effect"
 import { HttpRouter } from "effect/unstable/http"
 import { OpenApi } from "effect/unstable/httpapi"
 import { resetDatabase } from "../fixture/db"
-<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
-=======
-import { tmpdir } from "../fixture/fixture"
->>>>>>> 430d158d0
 
 void Log.init({ print: false })
 
 const original = {
-<<<<<<< HEAD
-  OPENCODE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
-  OPENCODE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
-  OPENCODE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
-=======
-  CODEGENIE_EXPERIMENTAL_HTTPAPI: Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI,
-  CODEGENIE_SERVER_PASSWORD: Flag.CODEGENIE_SERVER_PASSWORD,
-  CODEGENIE_SERVER_USERNAME: Flag.CODEGENIE_SERVER_USERNAME,
->>>>>>> 430d158d0
+  OPENCODE_EXPERIMENTAL_HTTPAPI: Flag.OPENCODE_EXPERIMENTAL_HTTPAPI,
+  OPENCODE_SERVER_PASSWORD: Flag.OPENCODE_SERVER_PASSWORD,
+  OPENCODE_SERVER_USERNAME: Flag.OPENCODE_SERVER_USERNAME,
 }
 
 const methods = ["get", "post", "put", "delete", "patch"] as const
@@ -40,22 +30,17 @@ function effectOpenApi() {
 }
 
 function app(input?: { password?: string; username?: string }) {
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = true
-  Flag.CODEGENIE_SERVER_PASSWORD = input?.password
-  Flag.CODEGENIE_SERVER_USERNAME = input?.username
+  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = true
+  Flag.OPENCODE_SERVER_PASSWORD = input?.password
+  Flag.OPENCODE_SERVER_USERNAME = input?.username
 
   const handler = HttpRouter.toWebHandler(
     ExperimentalHttpApiServer.routes.pipe(
       Layer.provide(
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
-<<<<<<< HEAD
             OPENCODE_SERVER_PASSWORD: input?.password,
             OPENCODE_SERVER_USERNAME: input?.username,
-=======
-            CODEGENIE_SERVER_PASSWORD: input?.password,
-            CODEGENIE_SERVER_USERNAME: input?.username,
->>>>>>> 430d158d0
           }),
         ),
       ),
@@ -134,7 +119,6 @@ type RequestBody = {
 function parameterKey(param: unknown): string | undefined {
   if (!param || typeof param !== "object" || !("in" in param) || !("name" in param)) return undefined
   if (typeof param.in !== "string" || typeof param.name !== "string") return undefined
-<<<<<<< HEAD
   return `${param.in}:${param.name}:${"required" in param && param.required === true}:${stableSchema(
     "schema" in param ? param.schema : undefined,
   )}`
@@ -152,9 +136,6 @@ function sortSchema(input: unknown): unknown {
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, value]) => [key, sortSchema(value)]),
   )
-=======
-  return `${param.in}:${param.name}:${"required" in param && param.required === true}`
->>>>>>> 430d158d0
 }
 
 function parameterSchema(input: {
@@ -224,39 +205,39 @@ function fileUrl(input?: { directory?: string; token?: string }) {
 }
 
 afterEach(async () => {
-<<<<<<< HEAD
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.OPENCODE_EXPERIMENTAL_HTTPAPI
-  Flag.CODEGENIE_SERVER_PASSWORD = original.OPENCODE_SERVER_PASSWORD
-  Flag.CODEGENIE_SERVER_USERNAME = original.OPENCODE_SERVER_USERNAME
+  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = original.OPENCODE_EXPERIMENTAL_HTTPAPI
+  Flag.OPENCODE_SERVER_PASSWORD = original.OPENCODE_SERVER_PASSWORD
+  Flag.OPENCODE_SERVER_USERNAME = original.OPENCODE_SERVER_USERNAME
   await disposeAllInstances()
-=======
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = original.CODEGENIE_EXPERIMENTAL_HTTPAPI
-  Flag.CODEGENIE_SERVER_PASSWORD = original.CODEGENIE_SERVER_PASSWORD
-  Flag.CODEGENIE_SERVER_USERNAME = original.CODEGENIE_SERVER_USERNAME
-  await Instance.disposeAll()
->>>>>>> 430d158d0
   await resetDatabase()
 })
 
 describe("HttpApi server", () => {
   test("keeps Effect HttpApi behind the feature flag", () => {
-    Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = false
+    Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = false
     expect(Server.backend()).toEqual({ backend: "hono", reason: "stable" })
 
-    Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = true
+    Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = true
     expect(Server.backend()).toEqual({ backend: "effect-httpapi", reason: "env" })
   })
 
   test("covers every generated OpenAPI route with Effect HttpApi contracts", async () => {
-    const honoRoutes = openApiRouteKeys(await Server.openapi())
+    const honoRoutes = openApiRouteKeys(await Server.openapiHono())
     const effectRoutes = openApiRouteKeys(effectOpenApi())
 
     expect(honoRoutes.filter((route) => !effectRoutes.includes(route))).toEqual([])
-    expect(effectRoutes.filter((route) => !honoRoutes.includes(route))).toEqual([])
+    expect(effectRoutes.filter((route) => !honoRoutes.includes(route))).toEqual([
+      "GET /api/session",
+      "GET /api/session/{sessionID}/context",
+      "GET /api/session/{sessionID}/message",
+      "POST /api/session/{sessionID}/compact",
+      "POST /api/session/{sessionID}/prompt",
+      "POST /api/session/{sessionID}/wait",
+    ])
   })
 
   test("matches generated OpenAPI route parameters", async () => {
-    const hono = openApiParameters(await Server.openapi())
+    const hono = openApiParameters(await Server.openapiHono())
     const effect = openApiParameters(effectOpenApi())
 
     expect(
@@ -267,7 +248,7 @@ describe("HttpApi server", () => {
   })
 
   test("matches generated OpenAPI request body shape", async () => {
-    const hono = openApiRequestBodies(await Server.openapi())
+    const hono = openApiRequestBodies(await Server.openapiHono())
     const effect = openApiRequestBodies(effectOpenApi())
 
     expect(
@@ -300,7 +281,6 @@ describe("HttpApi server", () => {
     })
   })
 
-<<<<<<< HEAD
   test("matches SDK-affecting request schema details", () => {
     const effect = effectOpenApi()
     const sessionUpdate = effect.paths["/session/{sessionID}"]?.patch?.requestBody
@@ -313,8 +293,6 @@ describe("HttpApi server", () => {
     expect(time?.properties?.archived).toEqual({ type: "number" })
   })
 
-=======
->>>>>>> 430d158d0
   test("documents event routes as server-sent events", () => {
     const effect = effectOpenApi()
 
@@ -378,6 +356,64 @@ describe("HttpApi server", () => {
     expect(missing.status).toBe(401)
     expect(bad.status).toBe(401)
     expect(good.status).toBe(200)
+  })
+
+  test("requires credentials for root routes when auth is enabled", async () => {
+    const server = app({ password: "secret" })
+    const auth = { authorization: authorization("opencode", "secret") }
+    const wrongAuth = { authorization: authorization("opencode", "wrong") }
+
+    const [missingHealth, goodHealth, missingConfig, wrongConfig, goodConfig] = await Promise.all([
+      server.request(GlobalPaths.health),
+      server.request(GlobalPaths.health, { headers: auth }),
+      server.request(GlobalPaths.config),
+      server.request(GlobalPaths.config, { headers: wrongAuth }),
+      server.request(GlobalPaths.config, { headers: auth }),
+    ])
+
+    expect(missingHealth.status).toBe(401)
+    expect(goodHealth.status).toBe(200)
+    expect(missingConfig.status).toBe(401)
+    expect(wrongConfig.status).toBe(401)
+    expect(goodConfig.status).toBe(200)
+
+    const missingDispose = await server.request(GlobalPaths.dispose, { method: "POST" })
+    expect(missingDispose.status).toBe(401)
+
+    const missingUpgrade = await server.request(GlobalPaths.upgrade, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "not-json",
+    })
+    expect(missingUpgrade.status).toBe(401)
+
+    const invalidUpgrade = await server.request(GlobalPaths.upgrade, {
+      method: "POST",
+      headers: { ...auth, "content-type": "application/json" },
+      body: "not-json",
+    })
+    expect(invalidUpgrade.status).toBe(400)
+
+    const missingLog = await server.request(ControlPaths.log, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ service: "httpapi-auth-test", level: "info", message: "hello" }),
+    })
+    expect(missingLog.status).toBe(401)
+
+    const missingAuth = await server.request(ControlPaths.auth.replace(":providerID", "test"), {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "api", key: "secret" }),
+    })
+    expect(missingAuth.status).toBe(401)
+
+    const invalidAuth = await server.request(ControlPaths.auth.replace(":providerID", "test"), {
+      method: "PUT",
+      headers: { ...auth, "content-type": "application/json" },
+      body: JSON.stringify({ type: "api" }),
+    })
+    expect(invalidAuth.status).toBe(400)
   })
 
   test("accepts auth_token query credentials", async () => {

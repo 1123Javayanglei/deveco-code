@@ -1,13 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Session as SessionNs } from "@/session/session"
 import * as Log from "@opencode-ai/core/util/log"
-<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
-=======
-import { tmpdir } from "../fixture/fixture"
->>>>>>> 430d158d0
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { mkdir } from "fs/promises"
 import path from "path"
@@ -16,7 +13,7 @@ import { SessionTable } from "@/session/session.sql"
 import { eq } from "drizzle-orm"
 
 void Log.init({ print: false })
-const originalWorkspaces = Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES
+const originalWorkspaces = Flag.OPENCODE_EXPERIMENTAL_WORKSPACES
 
 function run<A, E>(fx: Effect.Effect<A, E, SessionNs.Service>) {
   return Effect.runPromise(fx.pipe(Effect.provide(SessionNs.defaultLayer)))
@@ -33,35 +30,31 @@ const svc = {
 }
 
 afterEach(async () => {
-  Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
-<<<<<<< HEAD
+  Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
   await disposeAllInstances()
-=======
-  await Instance.disposeAll()
->>>>>>> 430d158d0
 })
 
 describe("session.list", () => {
   test("does not filter by directory when directory is omitted", async () => {
-    Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = false
+    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = false
     await using tmp = await tmpdir({ git: true })
     await mkdir(path.join(tmp.path, "packages", "opencode"), { recursive: true })
     await mkdir(path.join(tmp.path, "packages", "app"), { recursive: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const root = await svc.create({ title: "root" })
 
-        const parent = await Instance.provide({
+        const parent = await WithInstance.provide({
           directory: path.join(tmp.path, "packages"),
           fn: async () => svc.create({ title: "parent" }),
         })
-        const current = await Instance.provide({
+        const current = await WithInstance.provide({
           directory: path.join(tmp.path, "packages", "opencode"),
           fn: async () => svc.create({ title: "current" }),
         })
-        const sibling = await Instance.provide({
+        const sibling = await WithInstance.provide({
           directory: path.join(tmp.path, "packages", "app"),
           fn: async () => svc.create({ title: "sibling" }),
         })
@@ -76,25 +69,25 @@ describe("session.list", () => {
   })
 
   test("filters by directory when directory is provided", async () => {
-    Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = false
+    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = false
     await using tmp = await tmpdir({ git: true })
     await mkdir(path.join(tmp.path, "packages", "opencode"), { recursive: true })
     await mkdir(path.join(tmp.path, "packages", "app"), { recursive: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const root = await svc.create({ title: "root" })
 
-        const parent = await Instance.provide({
+        const parent = await WithInstance.provide({
           directory: path.join(tmp.path, "packages"),
           fn: async () => svc.create({ title: "parent" }),
         })
-        const current = await Instance.provide({
+        const current = await WithInstance.provide({
           directory: path.join(tmp.path, "packages", "opencode"),
           fn: async () => svc.create({ title: "current" }),
         })
-        const sibling = await Instance.provide({
+        const sibling = await WithInstance.provide({
           directory: path.join(tmp.path, "packages", "app"),
           fn: async () => svc.create({ title: "sibling" }),
         })
@@ -109,27 +102,27 @@ describe("session.list", () => {
   })
 
   test("filters by path and ignores directory when path is provided", async () => {
-    Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = false
+    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = false
     await using tmp = await tmpdir({ git: true })
     await mkdir(path.join(tmp.path, "packages", "opencode", "src", "deep"), { recursive: true })
     await mkdir(path.join(tmp.path, "packages", "app"), { recursive: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        const parent = await Instance.provide({
+        const parent = await WithInstance.provide({
           directory: path.join(tmp.path, "packages", "opencode"),
           fn: async () => svc.create({ title: "parent" }),
         })
-        const current = await Instance.provide({
+        const current = await WithInstance.provide({
           directory: path.join(tmp.path, "packages", "opencode", "src"),
           fn: async () => svc.create({ title: "current" }),
         })
-        const deeper = await Instance.provide({
+        const deeper = await WithInstance.provide({
           directory: path.join(tmp.path, "packages", "opencode", "src", "deep"),
           fn: async () => svc.create({ title: "deeper" }),
         })
-        const sibling = await Instance.provide({
+        const sibling = await WithInstance.provide({
           directory: path.join(tmp.path, "packages", "app"),
           fn: async () => svc.create({ title: "sibling" }),
         })
@@ -149,19 +142,19 @@ describe("session.list", () => {
   })
 
   test("falls back to directory when filtering legacy sessions without path", async () => {
-    Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = false
+    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = false
     await using tmp = await tmpdir({ git: true })
     await mkdir(path.join(tmp.path, "packages", "opencode", "src"), { recursive: true })
     await mkdir(path.join(tmp.path, "packages", "app"), { recursive: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        const current = await Instance.provide({
+        const current = await WithInstance.provide({
           directory: path.join(tmp.path, "packages", "opencode", "src"),
           fn: async () => svc.create({ title: "legacy-current" }),
         })
-        const sibling = await Instance.provide({
+        const sibling = await WithInstance.provide({
           directory: path.join(tmp.path, "packages", "app"),
           fn: async () => svc.create({ title: "legacy-sibling" }),
         })
@@ -183,7 +176,7 @@ describe("session.list", () => {
 
   test("filters root sessions", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const root = await svc.create({ title: "root-session" })
@@ -200,7 +193,7 @@ describe("session.list", () => {
 
   test("filters by start time", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await svc.create({ title: "new-session" })
@@ -214,7 +207,7 @@ describe("session.list", () => {
 
   test("filters by search term", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await svc.create({ title: "unique-search-term-abc" })
@@ -231,7 +224,7 @@ describe("session.list", () => {
 
   test("respects limit parameter", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await svc.create({ title: "session-1" })

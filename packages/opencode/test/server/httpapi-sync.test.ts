@@ -1,25 +1,24 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
-import { Effect } from "effect"
+import { Context, Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Server } from "../../src/server/server"
 import { SyncPaths } from "../../src/server/routes/instance/httpapi/groups/sync"
+import { ExperimentalHttpApiServer } from "../../src/server/routes/instance/httpapi/server"
 import { Session } from "@/session/session"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
-<<<<<<< HEAD
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
-=======
-import { tmpdir } from "../fixture/fixture"
->>>>>>> 430d158d0
 
 void Log.init({ print: false })
 
-const originalHttpApi = Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI
-const originalWorkspaces = Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES
+const originalHttpApi = Flag.OPENCODE_EXPERIMENTAL_HTTPAPI
+const originalWorkspaces = Flag.OPENCODE_EXPERIMENTAL_WORKSPACES
+const context = Context.empty() as Context.Context<unknown>
 
 function app(httpapi = true) {
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = httpapi
+  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = httpapi
   return httpapi ? Server.Default().app : Server.Legacy().app
 }
 
@@ -29,24 +28,20 @@ function runSession<A, E>(fx: Effect.Effect<A, E, Session.Service>) {
 
 afterEach(async () => {
   mock.restore()
-  Flag.CODEGENIE_EXPERIMENTAL_HTTPAPI = originalHttpApi
-  Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
-<<<<<<< HEAD
+  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = originalHttpApi
+  Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
   await disposeAllInstances()
-=======
-  await Instance.disposeAll()
->>>>>>> 430d158d0
   await resetDatabase()
 })
 
 describe("sync HttpApi", () => {
   test("serves sync routes through Hono bridge", async () => {
-    Flag.CODEGENIE_EXPERIMENTAL_WORKSPACES = true
+    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = true
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
     const headers = { "x-opencode-directory": tmp.path, "content-type": "application/json" }
     const info = spyOn(Log.create({ service: "server.sync" }), "info")
 
-    const session = await Instance.provide({
+    const session = await WithInstance.provide({
       directory: tmp.path,
       fn: async () => runSession(Session.Service.use((svc) => svc.create({ title: "sync" }))),
     })
@@ -134,5 +129,23 @@ describe("sync HttpApi", () => {
       expect(httpapi.status).toBe(legacy.status)
       expect(httpapi.status).toBe(400)
     }
+  })
+
+  test("returns structured validation errors", async () => {
+    await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
+    const response = await ExperimentalHttpApiServer.webHandler().handler(
+      new Request(`http://localhost${SyncPaths.history}`, {
+        method: "POST",
+        headers: { "x-opencode-directory": tmp.path, "content-type": "application/json" },
+        body: JSON.stringify({ aggregate: -1 }),
+      }),
+      context,
+    )
+
+    expect(response.status).toBe(400)
+    expect(response.headers.get("content-type") ?? "").toContain("application/json")
+    const body = (await response.json()) as Record<string, unknown>
+    expect(body.success).toBe(false)
+    expect(Array.isArray(body.error) || Array.isArray(body.errors)).toBe(true)
   })
 })

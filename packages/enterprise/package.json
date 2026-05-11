@@ -1,10 +1,6 @@
 {
   "name": "@opencode-ai/enterprise",
-<<<<<<< HEAD
-  "version": "1.14.33",
-=======
-  "version": "1.14.31",
->>>>>>> 430d158d0
+  "version": "1.14.41",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -36,6 +32,7 @@
     "@cloudflare/workers-types": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "@types/bun": "catalog:",
     "@types/luxon": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",

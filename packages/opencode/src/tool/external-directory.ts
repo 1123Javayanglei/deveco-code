@@ -3,11 +3,7 @@ import { Effect } from "effect"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
 import type * as Tool from "./tool"
-<<<<<<< HEAD
 import { containsPath } from "../project/instance-context"
-=======
-import { Instance } from "../project/instance"
->>>>>>> 430d158d0
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 
 type Kind = "file" | "directory"

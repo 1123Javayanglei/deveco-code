@@ -1,16 +1,12 @@
 import fs from "fs/promises"
 import path from "path"
 import { describe, expect, test } from "bun:test"
-<<<<<<< HEAD
 import { NodeFileSystem } from "@effect/platform-node"
 import { Effect, Layer, Option } from "effect"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Global } from "@opencode-ai/core/global"
 import { Npm } from "@opencode-ai/core/npm"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
-=======
-import { Npm } from "@opencode-ai/core/npm"
->>>>>>> 430d158d0
 import { tmpdir } from "./fixture/tmpdir"
 
 const win = process.platform === "win32"
@@ -24,7 +20,6 @@ const writePackage = (dir: string, pkg: Record<string, unknown>) =>
     }),
   )
 
-<<<<<<< HEAD
 const npmLayer = (cache: string) =>
   Npm.layer.pipe(
     Layer.provide(EffectFlock.layer),
@@ -33,8 +28,6 @@ const npmLayer = (cache: string) =>
     Layer.provide(NodeFileSystem.layer),
   )
 
-=======
->>>>>>> 430d158d0
 describe("Npm.sanitize", () => {
   test("keeps normal scoped package specs unchanged", () => {
     expect(Npm.sanitize("@opencode/acme")).toBe("@opencode/acme")
@@ -49,7 +42,6 @@ describe("Npm.sanitize", () => {
   })
 })
 
-<<<<<<< HEAD
 describe("Npm.add", () => {
   test("reifies when package cache directory exists without the package installed", async () => {
     await using tmp = await tmpdir()
@@ -72,8 +64,6 @@ describe("Npm.add", () => {
   })
 })
 
-=======
->>>>>>> 430d158d0
 describe("Npm.install", () => {
   test("respects omit from project .npmrc", async () => {
     await using tmp = await tmpdir()

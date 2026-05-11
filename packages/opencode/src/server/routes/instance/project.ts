@@ -2,16 +2,12 @@ import { Hono } from "hono"
 import { describeRoute, validator } from "hono-openapi"
 import { resolver } from "hono-openapi"
 import { Instance } from "@/project/instance"
-<<<<<<< HEAD
-import { InstanceStore } from "@/project/instance-store"
-=======
->>>>>>> 430d158d0
+import { InstanceRuntime } from "@/project/instance-runtime"
 import { Project } from "@/project/project"
 import z from "zod"
 import { ProjectID } from "@/project/schema"
 import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
-import { getBootstrapRunEffect } from "@/effect/app-runtime"
 import { jsonRequest, runRequest } from "./trace"
 
 export const ProjectRoutes = lazy(() =>
@@ -85,7 +81,7 @@ export const ProjectRoutes = lazy(() =>
           Project.Service.use((svc) => svc.initGit({ directory: dir, project: prev })),
         )
         if (next.id === prev.id && next.vcs === prev.vcs && next.worktree === prev.worktree) return c.json(next)
-        await InstanceStore.reloadInstance({ directory: dir, worktree: dir, project: next, init: await getBootstrapRunEffect() })
+        await InstanceRuntime.reloadInstance({ directory: dir, worktree: dir, project: next })
         return c.json(next)
       },
     )

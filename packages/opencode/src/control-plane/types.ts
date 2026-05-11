@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Schema, Struct } from "effect"
 import { ProjectID } from "@/project/schema"
 import { WorkspaceID } from "./schema"
 import { zod } from "@/util/effect-zod"
@@ -17,20 +17,17 @@ export const WorkspaceInfo = Schema.Struct({
   .pipe(withStatics((s) => ({ zod: zod(s) })))
 export type WorkspaceInfo = DeepMutable<Schema.Schema.Type<typeof WorkspaceInfo>>
 
-<<<<<<< HEAD
+export const WorkspaceListedInfo = Schema.Struct(Struct.omit(WorkspaceInfo.fields, ["id"]))
+  .annotate({ identifier: "WorkspaceListedInfo" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type WorkspaceListedInfo = DeepMutable<Schema.Schema.Type<typeof WorkspaceListedInfo>>
+
 export const WorkspaceAdapterEntry = Schema.Struct({
-=======
-export const WorkspaceAdaptorEntry = Schema.Struct({
->>>>>>> 430d158d0
   type: Schema.String,
   name: Schema.String,
   description: Schema.String,
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
-<<<<<<< HEAD
 export type WorkspaceAdapterEntry = Schema.Schema.Type<typeof WorkspaceAdapterEntry>
-=======
-export type WorkspaceAdaptorEntry = Schema.Schema.Type<typeof WorkspaceAdaptorEntry>
->>>>>>> 430d158d0
 
 export type Target =
   | {
@@ -48,6 +45,7 @@ export type WorkspaceAdapter = {
   description: string
   configure(info: WorkspaceInfo): WorkspaceInfo | Promise<WorkspaceInfo>
   create(info: WorkspaceInfo, env: Record<string, string | undefined>, from?: WorkspaceInfo): Promise<void>
+  list?(): WorkspaceListedInfo[] | Promise<WorkspaceListedInfo[]>
   remove(info: WorkspaceInfo): Promise<void>
   target(info: WorkspaceInfo): Target | Promise<Target>
 }

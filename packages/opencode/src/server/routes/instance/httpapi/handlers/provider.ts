@@ -17,11 +17,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
 
     const list = Effect.fn("ProviderHttpApi.list")(function* () {
       const config = yield* cfg.get()
-<<<<<<< HEAD
       const all = yield* ModelsDev.Service.use((s) => s.get())
-=======
-      const all = yield* Effect.promise(() => ModelsDev.get())
->>>>>>> 430d158d0
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
       const filtered: Record<string, (typeof all)[string]> = {}
@@ -65,9 +61,11 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
       const payload = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(ProviderAuth.AuthorizeInput))(body).pipe(
         Effect.mapError(() => new HttpApiError.BadRequest({})),
       )
+      // Match legacy Hono behavior: when authorize() resolves without a
+      // result (e.g. no further redirect), serialize as JSON `null` instead
+      // of an empty body so clients can `.json()` parse the response.
       const result = yield* authorize({ params: ctx.params, payload })
-      if (result === undefined) return HttpServerResponse.empty({ status: 200 })
-      return HttpServerResponse.jsonUnsafe(result)
+      return HttpServerResponse.jsonUnsafe(result ?? null)
     })
 
     const callback = Effect.fn("ProviderHttpApi.callback")(function* (ctx: {
