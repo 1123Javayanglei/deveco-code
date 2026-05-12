@@ -1,5 +1,6 @@
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
+import * as prompts from "@clack/prompts"
 import { RunCommand } from "./cli/cmd/run"
 import { GenerateCommand } from "./cli/cmd/generate"
 import * as Log from "@opencode-ai/core/util/log"
@@ -39,6 +40,7 @@ import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 import { drizzle } from "drizzle-orm/bun-sqlite"
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process"
+import { findDevEcoHomes, resolveDevEcoHome } from "./tool/lib/env"
 
 const processMetadata = ensureProcessMetadata("main")
 
@@ -55,6 +57,8 @@ process.on("uncaughtException", (e) => {
 })
 
 const args = hideBin(process.argv)
+const customDevEcoHomeOption = "__custom_deveco_home__"
+const skipDevEcoHomeOption = "__skip_deveco_home__"
 
 function show(out: string) {
   const text = out.trimStart()
@@ -65,6 +69,57 @@ function show(out: string) {
   }
   process.stderr.write(out)
 }
+
+function isInfoCommand() {
+  return args.some((arg) => ["-h", "--help", "-v", "--version", "completion"].includes(arg))
+}
+
+async function inputDevEcoHome(): Promise<string> {
+  const home = await prompts.text({
+    message: "Enter DEVECO_HOME path",
+  })
+  if (prompts.isCancel(home)) process.exit(1)
+  const resolved = await resolveDevEcoHome(home)
+  if (resolved) return resolved
+  UI.println(
+    UI.Style.TEXT_DANGER_BOLD +
+      "Invalid DevEco Studio path. Please enter a directory that contains DevEco Studio tools." +
+      UI.Style.TEXT_NORMAL,
+  )
+  return inputDevEcoHome()
+}
+
+async function selectDevEcoHome(candidates: string[]): Promise<string | undefined> {
+  const selected = await prompts.select({
+    message: candidates.length ? "Please select DevEco Studio path" : "Please configure your DevEco Studio path:",
+    options: [
+      ...candidates.map((candidate) => ({
+        label: candidate,
+        value: candidate,
+      })),
+      {
+        label: "Enter a custom path",
+        value: customDevEcoHomeOption,
+      },
+      {
+        label: "Skip (DevEco Studio Tools will be unavailable.)",
+        value: skipDevEcoHomeOption,
+      },
+    ],
+    initialValue: candidates[0] ?? customDevEcoHomeOption,
+  })
+  if (prompts.isCancel(selected)) process.exit(1)
+  if (selected === customDevEcoHomeOption) return inputDevEcoHome()
+  if (selected === skipDevEcoHomeOption) return undefined
+  return selected
+}
+
+if (!isInfoCommand() && !process.env.DEVECO_HOME?.trim()) {
+  const devecoHomes = await findDevEcoHomes()
+  const devecoHome = process.stdin.isTTY && process.stdout.isTTY ? await selectDevEcoHome(devecoHomes) : devecoHomes[0]
+  if (devecoHome) process.env.DEVECO_HOME = devecoHome
+}
+
 
 const cli = yargs(args)
   .parserConfiguration({ "populate--": true })
