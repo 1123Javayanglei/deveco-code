@@ -2,6 +2,9 @@ import type { NamedError } from "@opencode-ai/core/util/error"
 import { Cause, Clock, Duration, Effect, Schedule } from "effect"
 import { MessageV2 } from "./message-v2"
 import { iife } from "@/util/iife"
+import * as Log from "@opencode-ai/core/util/log"
+
+const log = Log.create({ service: "session.retry" })
 
 export type Err = ReturnType<NamedError["toObject"]>
 
@@ -119,6 +122,12 @@ export function policy(opts: {
       return Effect.gen(function* () {
         const wait = delay(meta.attempt, MessageV2.APIError.isInstance(error) ? error : undefined)
         const now = yield* Clock.currentTimeMillis
+        log.warn("retrying request", {
+          attempt: meta.attempt,
+          delayMs: wait,
+          message,
+          errorType: error.data.name,
+        })
         yield* opts.set({ attempt: meta.attempt, message, next: now + wait })
         return [meta.attempt, Duration.millis(wait)] as [number, Duration.Duration]
       })
@@ -164,6 +173,11 @@ export function queuePolicy(opts: {
         const wait = queueDelay(meta.attempt)
         const now = yield* Clock.currentTimeMillis
         const message = MessageV2.QueueError.isInstance(error) ? error.data.message : "排队等待中..."
+        log.info("queue retry", {
+          attempt: meta.attempt,
+          position,
+          delayMs: wait,
+        })
         yield* opts.set({ attempt: meta.attempt, position, message, next: now + wait })
         return [meta.attempt, Duration.millis(wait)] as [number, Duration.Duration]
       })

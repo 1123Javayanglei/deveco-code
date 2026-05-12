@@ -26,6 +26,7 @@ import { BashTool } from "../../tool/bash"
 import { TodoWriteTool } from "../../tool/todo"
 import { Locale } from "@/util/locale"
 import { AppRuntime } from "@/effect/app-runtime"
+import * as Log from "@opencode-ai/core/util/log"
 
 type ToolProps<T> = {
   input: Tool.InferParameters<T>
@@ -623,6 +624,7 @@ export const RunCommand = cmd({
       await share(sdk, sessionID)
 
       loop().catch((e) => {
+        Log.Default.error("run command failed", { error: e instanceof Error ? e.message : String(e) })
         console.error(e)
         process.exit(1)
       })

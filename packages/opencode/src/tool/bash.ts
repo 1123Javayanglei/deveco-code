@@ -513,10 +513,19 @@ export const BashTool = Tool.define(
 
           if (exit.kind === "abort") {
             aborted = true
+            log.warn("bash command aborted by user", {
+              command: input.command.slice(0, 100),
+              timeout: input.timeout,
+            })
             yield* handle.kill({ forceKillAfter: "3 seconds" }).pipe(Effect.orDie)
           }
           if (exit.kind === "timeout") {
             expired = true
+            log.warn("bash command timeout", {
+              command: input.command.slice(0, 100),
+              timeout: input.timeout,
+              cwd: input.cwd,
+            })
             yield* handle.kill({ forceKillAfter: "3 seconds" }).pipe(Effect.orDie)
           }
 
