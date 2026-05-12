@@ -34,6 +34,7 @@ import { Git } from "@/git"
 import { setTimeout as sleep } from "node:timers/promises"
 import { Process } from "@/util/process"
 import { Effect } from "effect"
+import * as Log from "@opencode-ai/core/util/log"
 
 type GitHubAuthor = {
   login: string
@@ -688,7 +689,9 @@ export const GithubRunCommand = cmd({
         }
       } catch (e: any) {
         exitCode = 1
-        console.error(e instanceof Error ? e.message : String(e))
+        const errorMsg = e instanceof Error ? e.message : String(e)
+        Log.Default.error("github command failed", { error: errorMsg })
+        console.error(errorMsg)
         let msg = e
         if (e instanceof Process.RunFailedError) {
           msg = e.stderr.toString()
@@ -853,6 +856,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
             },
           })
           if (!res.ok) {
+            Log.Default.warn("Failed to download image from GitHub", { url, status: res.status })
             console.error(`Failed to download image: ${url}`)
             continue
           }
@@ -983,6 +987,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
 
             if (result.info.role === "assistant" && result.info.error) {
               const err = result.info.error
+              Log.Default.error("Agent error in chat", { error: err })
               console.error("Agent error:", err)
               if (err.name === "ContextOverflowError") throw new Error(formatPromptTooLargeError(files))
               const message = "message" in err.data ? err.data.message : ""
@@ -1013,6 +1018,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
 
             if (summary.info.role === "assistant" && summary.info.error) {
               const err = summary.info.error
+              Log.Default.error("Summary agent error in chat", { error: err })
               console.error("Summary agent error:", err)
               if (err.name === "ContextOverflowError") throw new Error(formatPromptTooLargeError(files))
               const message = "message" in err.data ? err.data.message : ""
@@ -1030,7 +1036,9 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
         try {
           return await core.getIDToken("opencode-github-action")
         } catch (error) {
-          console.error("Failed to get OIDC token:", error instanceof Error ? error.message : error)
+          const errorMsg = error instanceof Error ? error.message : String(error)
+          Log.Default.error("Failed to get OIDC token", { error: errorMsg })
+          console.error("Failed to get OIDC token:", errorMsg)
           throw new Error(
             "Could not fetch an OIDC token. Make sure to add `id-token: write` to your workflow permissions.",
             { cause: error },
@@ -1223,6 +1231,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
           permission = response.data.permission
           console.log(`  permission: ${permission}`)
         } catch (error) {
+          Log.Default.error("Failed to check permissions", { actor, error: error instanceof Error ? error.message : String(error) })
           console.error(`Failed to check permissions: ${error}`)
           throw new Error(`Failed to check permissions for user ${actor}: ${error}`, { cause: error })
         }
@@ -1349,6 +1358,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
           }
         } catch (e) {
           // If the check fails, proceed to create - we'll get a clear error if a PR already exists
+          Log.Default.warn("Failed to check for existing PR", { error: e instanceof Error ? e.message : String(e) })
           console.log(`Failed to check for existing PR: ${e}`)
         }
 
@@ -1377,6 +1387,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
           // This can happen when the branch was pushed but has no new commits
           // relative to the base (e.g. shallow clone edge cases).
           if (e instanceof Error && e.message.includes("No commits between")) {
+            Log.Default.warn("GitHub rejected PR: no commits between branches", { error: e.message })
             console.log(`GitHub rejected PR: ${e.message}`)
             return null
           }

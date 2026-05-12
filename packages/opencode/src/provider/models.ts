@@ -122,16 +122,25 @@ const fetchApi = async () => {
 }
 
 export const Data = lazy(async () => {
-  const result = await Filesystem.readJson(Flag.CODEGENIE_MODELS_PATH ?? filepath).catch(() => {})
+  const result = await Filesystem.readJson(Flag.CODEGENIE_MODELS_PATH ?? filepath).catch((e) => {
+    log.debug("Failed to read models cache, will fetch from remote", { error: e instanceof Error ? e.message : String(e) })
+    return undefined
+  })
   if (result) return result
   // @ts-ignore
   const snapshot = await import("./models-snapshot.js")
     .then((m) => m.snapshot as Record<string, unknown>)
-    .catch(() => undefined)
+    .catch((e) => {
+      log.debug("Failed to load models snapshot", { error: e instanceof Error ? e.message : String(e) })
+      return undefined
+    })
   if (snapshot) return snapshot
   if (Flag.CODEGENIE_DISABLE_MODELS_FETCH) return {}
   return Flock.withLock(`models-dev:${filepath}`, async () => {
-    const result = await Filesystem.readJson(Flag.CODEGENIE_MODELS_PATH ?? filepath).catch(() => {})
+    const result = await Filesystem.readJson(Flag.CODEGENIE_MODELS_PATH ?? filepath).catch((e) => {
+      log.debug("Failed to read models cache in lock", { error: e instanceof Error ? e.message : String(e) })
+      return undefined
+    })
     if (result) return result
     const result2 = await fetchApi()
     if (result2.ok) {
