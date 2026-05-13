@@ -1,4 +1,5 @@
 import path from "path"
+import fs from "fs/promises"
 import { Effect } from "effect"
 import type { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Global } from "@opencode-ai/core/global"
@@ -28,14 +29,33 @@ export namespace Defaults {
 
     log.info("extracting default skills", { version })
 
-    // Clean up old files
+    // Clean up built-in skill subdirectories only, preserving user skills
+    const data = typeof CODEGENIE_DEFAULT_SKILLS !== "undefined" ? CODEGENIE_DEFAULT_SKILLS : {}
+
     yield* Effect.tryPromise(() =>
-      import("fs/promises").then((fs) => fs.rm(dir, { recursive: true, force: true })),
-    ).pipe(Effect.catch(() => Effect.void))
+      fs.readdir(dir, { withFileTypes: true }),
+    ).pipe(
+      Effect.flatMap((entries) =>
+        Effect.forEach(
+          entries.filter((e) => e.isDirectory()),
+          (entry) =>
+            Effect.gen(function* () {
+              const subVersionFile = path.join(dir, entry.name, ".version")
+              const isBuiltin = yield* fsys.existsSafe(subVersionFile)
+              if (!isBuiltin) return
+              yield* Effect.tryPromise(() =>
+                fs.rm(path.join(dir, entry.name), { recursive: true, force: true }),
+              ).pipe(Effect.catch(() => Effect.void))
+            }),
+          { concurrency: "unbounded" },
+        ),
+      ),
+      Effect.catch(() => Effect.void),
+    )
 
     // Extract from embedded data
-    const data = typeof CODEGENIE_DEFAULT_SKILLS !== "undefined" ? CODEGENIE_DEFAULT_SKILLS : {}
     for (const [skillName, files] of Object.entries(data)) {
+      yield* fsys.writeWithDirs(path.join(dir, skillName, ".version"), skillName)
       for (const [fileName, content] of Object.entries(files)) {
         yield* fsys.writeWithDirs(
           path.join(dir, skillName, fileName),
