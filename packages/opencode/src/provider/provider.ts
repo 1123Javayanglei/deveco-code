@@ -13,7 +13,7 @@ import { Auth } from "../auth"
 import { Env } from "../env"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { zod } from "@/util/effect-zod"
+import { zod } from "@opencode-ai/core/effect-zod"
 import { namedSchemaError } from "@/util/named-schema-error"
 import { iife } from "@/util/iife"
 import { Global } from "@opencode-ai/core/global"
@@ -24,10 +24,11 @@ import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { isRecord } from "@/util/record"
-import { optionalOmitUndefined, withStatics } from "@/util/schema"
+import { optionalOmitUndefined, withStatics } from "@opencode-ai/core/schema"
 
 import * as ProviderTransform from "./transform"
 import { ModelID, ProviderID } from "./schema"
+import { ModelStatus } from "./model-status"
 
 const log = Log.create({ service: "provider" })
 
@@ -48,6 +49,10 @@ function wrapSSE(res: Response, ms: number, ctl: AbortController) {
       const part = await new Promise<Awaited<ReturnType<typeof reader.read>>>((resolve, reject) => {
         const id = setTimeout(() => {
           const err = new Error("SSE read timed out")
+          Log.Default.warn("SSE chunk timeout", {
+            timeoutMs: ms,
+            url: res.url?.slice(0, 200),
+          })
           ctl.abort(err)
           void reader.cancel(err)
           reject(err)
@@ -138,6 +143,14 @@ function useLanguageModel(sdk: any) {
   return sdk.responses === undefined && sdk.chat === undefined
 }
 
+function selectAzureLanguageModel(sdk: any, modelID: string, useChat: boolean) {
+  if (useChat && sdk.chat) return sdk.chat(modelID)
+  if (sdk.responses) return sdk.responses(modelID)
+  if (sdk.messages) return sdk.messages(modelID)
+  if (sdk.chat) return sdk.chat(modelID)
+  return sdk.languageModel(modelID)
+}
+
 function custom(dep: CustomDep): Record<string, CustomLoader> {
   return {
     anthropic: () =>
@@ -222,12 +235,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       return {
         autoload: false,
         async getModel(sdk: any, modelID: string, options?: Record<string, any>) {
-          if (useLanguageModel(sdk)) return sdk.languageModel(modelID)
-          if (options?.["useCompletionUrls"]) {
-            return sdk.chat(modelID)
-          } else {
-            return sdk.responses(modelID)
-          }
+          return selectAzureLanguageModel(sdk, modelID, Boolean(options?.["useCompletionUrls"]))
         },
         options: {
           resourceName: resource,
@@ -247,12 +255,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       return {
         autoload: false,
         async getModel(sdk: any, modelID: string, options?: Record<string, any>) {
-          if (useLanguageModel(sdk)) return sdk.languageModel(modelID)
-          if (options?.["useCompletionUrls"]) {
-            return sdk.chat(modelID)
-          } else {
-            return sdk.responses(modelID)
-          }
+          return selectAzureLanguageModel(sdk, modelID, Boolean(options?.["useCompletionUrls"]))
         },
         options: {
           baseURL: resourceName ? `https://${resourceName}.cognitiveservices.azure.com/openai` : undefined,
@@ -330,7 +333,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           }
 
           // Region resolution precedence (highest to lowest):
-          // 1. options.region from codegenie.json provider config
+          // 1. options.region from deveco.json provider config
           // 2. defaultRegion from AWS_REGION environment variable
           // 3. Default "us-east-1" (baked into defaultRegion)
           const region = options?.region ?? defaultRegion
@@ -414,8 +417,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "codegenie",
-            "X-Source": "opencode",
+            "X-Title": "deveco",
           },
         },
       }),
@@ -425,7 +427,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "codegenie",
+            "X-Title": "deveco",
           },
         },
       }),
@@ -435,7 +437,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "codegenie",
+            "X-Title": "deveco",
           },
         },
       }),
@@ -445,7 +447,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "http-referer": "https://opencode.ai/",
-            "x-title": "codegenie",
+            "x-title": "deveco",
           },
         },
       }),
@@ -543,7 +545,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "codegenie",
+            "X-Title": "deveco",
           },
         },
       }),
@@ -568,7 +570,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const directory = yield* InstanceState.directory
 
       const aiGatewayHeaders = {
-        "User-Agent": `codegenie/${InstallationVersion} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
+        "User-Agent": `deveco/${InstallationVersion} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
         "anthropic-beta": "context-1m-2025-08-07",
         ...providerConfig?.options?.aiGatewayHeaders,
       }
@@ -721,7 +723,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           apiKey,
           headers: {
-            "User-Agent": `codegenie/${InstallationVersion} cloudflare-workers-ai (${os.platform()} ${os.release()}; ${os.arch()})`,
+            "User-Agent": `deveco/${InstallationVersion} cloudflare-workers-ai (${os.platform()} ${os.release()}; ${os.arch()})`,
           },
         },
         async getModel(sdk: any, modelID: string) {
@@ -792,7 +794,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         skipCache: input.options?.skipCache,
         collectLog: input.options?.collectLog,
         headers: {
-          "User-Agent": `codegenie/${InstallationVersion} cloudflare-ai-gateway (${os.platform()} ${os.release()}; ${os.arch()})`,
+          "User-Agent": `deveco/${InstallationVersion} cloudflare-ai-gateway (${os.platform()} ${os.release()}; ${os.arch()})`,
         },
       }
 
@@ -828,24 +830,24 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "codegenie",
+            "X-Title": "deveco",
           },
         },
       }),
-    codegenie: Effect.fnUntraced(function* () {
-      const auth = yield* dep.auth("codegenie")
+    deveco: Effect.fnUntraced(function* () {
+      const auth = yield* dep.auth("deveco")
       if (!auth) return { autoload: false }
 
       if (auth.type === "oauth") {
         if (auth.expires && Date.now() >= auth.expires) {
-          log.info("codegenie token expired, attempting refresh")
-          const { codegenieAuth, ACCESS_TOKEN_EXPIRES_MS } = yield* Effect.promise(() => import("@/plugin/codegenie"))
-          const newTokens = yield* Effect.promise(() => codegenieAuth.refreshToken())
+          log.info("deveco token expired, attempting refresh")
+          const { devecoAuth, ACCESS_TOKEN_EXPIRES_MS } = yield* Effect.promise(() => import("@/plugin/codegenie"))
+          const newTokens = yield* Effect.promise(() => devecoAuth.refreshToken())
           if (newTokens) {
-            log.info("codegenie token refresh successful")
+            log.info("deveco token refresh successful")
             yield* Effect.promise(() =>
               import("@/plugin/codegenie").then((m) =>
-                m.saveAuthToDisk("codegenie", {
+                m.saveAuthToDisk("deveco", {
                   type: "oauth",
                   access: newTokens.accessToken,
                   refresh: newTokens.refreshToken,
@@ -860,7 +862,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
               },
             }
           }
-          log.warn("codegenie token refresh failed, user needs to re-login")
+          log.warn("deveco token refresh failed, user needs to re-login")
           return { autoload: false }
         }
 
@@ -941,7 +943,7 @@ export const Model = Schema.Struct({
   capabilities: ProviderCapabilities,
   cost: ProviderCost,
   limit: ProviderLimit,
-  status: Schema.Literals(["alpha", "beta", "deprecated", "active"]),
+  status: ModelStatus,
   options: Schema.Record(Schema.String, Schema.Any),
   headers: Schema.Record(Schema.String, Schema.String),
   release_date: Schema.String,
@@ -978,6 +980,16 @@ export const ConfigProvidersResult = Schema.Struct({
   default: DefaultModelIDs,
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 export type ConfigProvidersResult = Types.DeepMutable<Schema.Schema.Type<typeof ConfigProvidersResult>>
+
+export function toPublicInfo(provider: Info): Info {
+  return JSON.parse(
+    JSON.stringify(provider, (_, value) => {
+      if (typeof value === "function" || typeof value === "symbol" || value === undefined) return undefined
+      if (typeof value === "bigint") return value.toString()
+      return value
+    }),
+  )
+}
 
 export function defaultModelIDs<T extends { models: Record<string, { id: string }> }>(providers: Record<string, T>) {
   return mapValues(providers, (item) => sort(Object.values(item.models))[0].id)
@@ -1116,7 +1128,7 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
 const layer: Layer.Layer<
   Service,
   never,
-  Config.Service | Auth.Service | Plugin.Service | AppFileSystem.Service | Env.Service
+  Config.Service | Auth.Service | Plugin.Service | AppFileSystem.Service | Env.Service | ModelsDev.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -1125,13 +1137,14 @@ const layer: Layer.Layer<
     const auth = yield* Auth.Service
     const env = yield* Env.Service
     const plugin = yield* Plugin.Service
+    const modelsDevSvc = yield* ModelsDev.Service
 
     const state = yield* InstanceState.make<State>(() =>
       Effect.gen(function* () {
         using _ = log.time("state")
         const bridge = yield* EffectBridge.make()
         const cfg = yield* config.get()
-        const modelsDev = yield* Effect.promise(() => ModelsDev.get())
+        const modelsDev = yield* modelsDevSvc.get()
         const database = mapValues(modelsDev, fromModelsDevProvider)
 
         const providers: Record<ProviderID, Info> = {} as Record<ProviderID, Info>
@@ -1174,11 +1187,11 @@ const layer: Layer.Layer<
         // now read config providers - includes any modifications from plugin config() hook
         const configProviders = Object.entries(cfg.provider ?? {})
 
-        // === CodeGenie: inject provider config if authenticated ===
-        const codegenieAuth = yield* auth.get("codegenie").pipe(Effect.orElseSucceed(() => undefined))
-        if (codegenieAuth) {
-          const { CODEGENIE_PROVIDER_CONFIG } = yield* Effect.promise(() => import("@/plugin/codegenie-models"))
-          configProviders.push(["codegenie", CODEGENIE_PROVIDER_CONFIG])
+        // === DevEco Code: inject provider config if authenticated ===
+        const devecoAuth = yield* auth.get("deveco").pipe(Effect.orElseSucceed(() => undefined))
+        if (devecoAuth) {
+          const { DEVECO_PROVIDER_CONFIG } = yield* Effect.promise(() => import("@/plugin/codegenie-models"))
+          configProviders.push(["deveco", DEVECO_PROVIDER_CONFIG])
         }
 
         const disabled = new Set(cfg.disabled_providers ?? [])
@@ -1203,7 +1216,7 @@ const layer: Layer.Layer<
           const pluginAuth = yield* auth.get(providerID).pipe(Effect.orDie)
 
           provider.models = yield* Effect.promise(async () => {
-            const next = await models(provider, { auth: pluginAuth })
+            const next = await models(toPublicInfo(provider), { auth: pluginAuth })
             return Object.fromEntries(
               Object.entries(next).map(([id, model]) => [
                 id,
@@ -1350,7 +1363,7 @@ const layer: Layer.Layer<
           const options = yield* Effect.promise(() =>
             plugin.auth!.loader!(
               () => bridge.promise(auth.get(providerID).pipe(Effect.orDie)) as any,
-              database[plugin.auth!.provider],
+              toPublicInfo(database[plugin.auth!.provider]),
             ),
           )
           const opts = options ?? {}
@@ -1419,7 +1432,7 @@ const layer: Layer.Layer<
               (providerID === ProviderID.openrouter && modelID === "openai/gpt-5-chat")
             )
               delete provider.models[modelID]
-            if (model.status === "alpha" && !Flag.CODEGENIE_ENABLE_EXPERIMENTAL_MODELS) delete provider.models[modelID]
+            if (model.status === "alpha" && !Flag.DEVECO_ENABLE_EXPERIMENTAL_MODELS) delete provider.models[modelID]
             if (model.status === "deprecated") delete provider.models[modelID]
             if (
               (configProvider?.blacklist && configProvider.blacklist.includes(modelID)) ||
@@ -1695,7 +1708,7 @@ const layer: Layer.Layer<
       if (providerID.startsWith("opencode")) {
         priority = ["gpt-5-nano"]
       }
-      if (providerID.startsWith("codegenie")) {
+      if (providerID.startsWith("deveco")) {
         priority = ["deepseek-v3.2"]
       }
       if (providerID.startsWith("github-copilot")) {
@@ -1775,6 +1788,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Config.defaultLayer),
     Layer.provide(Auth.defaultLayer),
     Layer.provide(Plugin.defaultLayer),
+    Layer.provide(ModelsDev.defaultLayer),
   ),
 )
 

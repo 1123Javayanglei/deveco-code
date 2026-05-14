@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+﻿#!/usr/bin/env bun
 
 import { $ } from "bun"
 import fs from "fs"
@@ -223,7 +223,7 @@ if (!skipInstall) {
     }
     try {
       await $`mkdir -p ${cacheSubDir}`
-      await $`bun install --os="*" --cpu="*" ${pkgName}@${pkg.dependencies["@deveco-codegenie/mcp-bridge"]}`.quiet()
+      await $`bun install --os="*" --cpu="*" ${pkgName}@${(pkg.dependencies as Record<string, string>)["@deveco-codegenie/mcp-bridge"]}`.quiet()
       const nodeSrc = path.join(dir, "node_modules", pkgName, "napi_bridge.node")
       const pkgJsonSrc = path.join(dir, "node_modules", pkgName, "package.json")
       if (fs.existsSync(nodeSrc)) {
@@ -287,12 +287,12 @@ for (const item of targets) {
     files: embeddedFileMap ? { "opencode-web-ui.gen.ts": embeddedFileMap } : {},
     entrypoints: ["./src/index.ts", parserWorker, workerPath, ...(embeddedFileMap ? ["opencode-web-ui.gen.ts"] : [])],
     define: {
-      CODEGENIE_VERSION: `'${Script.version}'`,
-      CODEGENIE_MIGRATIONS: JSON.stringify(migrations),
-      CODEGENIE_DEFAULT_SKILLS: JSON.stringify(defaultSkillsData),
+      DEVECO_VERSION: `'${Script.version}'`,
+      DEVECO_MIGRATIONS: JSON.stringify(migrations),
+      DEVECO_DEFAULT_SKILLS: JSON.stringify(defaultSkillsData),
       OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
-      CODEGENIE_WORKER_PATH: workerPath,
-      CODEGENIE_CHANNEL: `'${Script.channel}'`,
+      DEVECO_WORKER_PATH: workerPath,
+      DEVECO_CHANNEL: `'${Script.channel}'`,
     },
   })
 

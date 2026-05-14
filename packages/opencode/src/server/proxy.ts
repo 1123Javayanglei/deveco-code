@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import type { UpgradeWebSocket } from "hono/ws"
 import * as Log from "@opencode-ai/core/util/log"
-import * as Fence from "./fence"
+import * as Fence from "./shared/fence"
 import type { WorkspaceID } from "@/control-plane/schema"
 import { Workspace } from "@/control-plane/workspace"
 import { AppRuntime } from "@/effect/app-runtime"
@@ -22,7 +22,7 @@ const app = (upgrade: UpgradeWebSocket) =>
   new Hono().get(
     "/__workspace_ws",
     upgrade((c) => {
-      const url = c.req.header("x-codegenie-proxy-url")
+      const url = c.req.header("x-deveco-proxy-url")
       const queue: Msg[] = []
       let remote: WebSocket | undefined
       return {
@@ -109,7 +109,10 @@ export function httpEffect(url: string | URL, extra: HeadersInit | undefined, re
     })
   }).pipe(
     Effect.provide(FetchHttpClient.layer),
-    Effect.catch(() => Effect.succeed(new Response(null, { status: 500 }))),
+    Effect.catch((err) => {
+      Log.Default.error("Proxy request failed", { url: String(url), error: err instanceof Error ? err.message : String(err) })
+      return Effect.succeed(new Response(null, { status: 500 }))
+    }),
   )
 }
 
@@ -128,7 +131,7 @@ export function websocket(
   proxy.pathname = "/__workspace_ws"
   proxy.search = ""
   const next = new Headers(req.headers)
-next.set("x-codegenie-proxy-url", ProxyUtil.websocketTargetURL(target))
+  next.set("x-deveco-proxy-url", ProxyUtil.websocketTargetURL(target))
   for (const [key, value] of new Headers(extra).entries()) {
     next.set(key, value)
   }

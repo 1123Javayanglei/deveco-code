@@ -1,9 +1,10 @@
-import { expect, spyOn, test } from "bun:test"
+﻿import { expect, spyOn, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { pathToFileURL } from "url"
 import { tmpdir } from "../../fixture/fixture"
 import { createTuiPluginApi } from "../../fixture/tui-plugin"
+import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
 import { TuiConfig } from "../../../src/cli/cmd/tui/config/tui"
 
 const { TuiPluginRuntime } = await import("../../../src/cli/cmd/tui/plugin/runtime")
@@ -49,11 +50,10 @@ test("installs plugin without loading it", async () => {
     },
   })
 
-  process.env.OPENCODE_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
-  const config: TuiConfig.Info = {
+  process.env.DEVECO_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
+  const config = createTuiResolvedConfig({
     plugin: [],
-    plugin_origins: undefined,
-  }
+  })
   const wait = spyOn(TuiConfig, "waitForDependencies").mockResolvedValue()
   const cwd = spyOn(process, "cwd").mockImplementation(() => tmp.path)
   const api = createTuiPluginApi({
@@ -82,6 +82,6 @@ test("installs plugin without loading it", async () => {
     await TuiPluginRuntime.dispose()
     cwd.mockRestore()
     wait.mockRestore()
-    delete process.env.OPENCODE_PLUGIN_META_FILE
+    delete process.env.DEVECO_PLUGIN_META_FILE
   }
 })

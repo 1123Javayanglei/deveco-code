@@ -99,6 +99,7 @@ const createEmbeddedWebUIBundle = async () => {
   await $`bun run --cwd ${appDir} build`
   const files = (await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: dist })))
     .map((file) => file.replaceAll("\\", "/"))
+    .filter((file) => !file.endsWith(".map"))
     .sort()
   const imports = files.map((file, i) => {
     const spec = path.relative(dir, path.join(dist, file)).replaceAll("\\", "/")
@@ -215,26 +216,26 @@ for (const item of targets) {
       autoloadTsconfig: true,
       autoloadPackageJson: true,
       target: name.replace(pkg.name, "bun") as any,
-      outfile: `dist/${name}/bin/codegenie`,
+      outfile: `dist/${name}/bin/deveco`,
       execArgv: [`--user-agent=opencode/${Script.version}`, "--use-system-ca", "--"],
       windows: {},
     },
     files: embeddedFileMap ? { "opencode-web-ui.gen.ts": embeddedFileMap } : {},
     entrypoints: ["./src/index.ts", parserWorker, workerPath, ...(embeddedFileMap ? ["opencode-web-ui.gen.ts"] : [])],
     define: {
-      CODEGENIE_VERSION: `'${Script.version}'`,
-      CODEGENIE_MIGRATIONS: JSON.stringify(migrations),
+      DEVECO_VERSION: `'${Script.version}'`,
+      DEVECO_MIGRATIONS: JSON.stringify(migrations),
       OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
-      CODEGENIE_WORKER_PATH: workerPath,
-      CODEGENIE_CHANNEL: `'${Script.channel}'`,
-      CODEGENIE_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
-      CODEGENIE_DEFAULT_SKILLS: JSON.stringify(defaultSkillsData),
+      DEVECO_WORKER_PATH: workerPath,
+      DEVECO_CHANNEL: `'${Script.channel}'`,
+      DEVECO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
+      DEVECO_DEFAULT_SKILLS: JSON.stringify(defaultSkillsData),
     },
   })
 
   // Smoke test: only run if binary is for current platform
   if (item.os === process.platform && item.arch === process.arch && !item.abi) {
-    const binaryPath = `dist/${name}/bin/codegenie`
+    const binaryPath = `dist/${name}/bin/deveco`
     console.log(`Running smoke test: ${binaryPath} --version`)
     try {
       const versionOutput = await $`${binaryPath} --version`.text()

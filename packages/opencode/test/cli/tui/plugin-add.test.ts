@@ -1,9 +1,10 @@
-import { expect, spyOn, test } from "bun:test"
+﻿import { expect, spyOn, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { pathToFileURL } from "url"
 import { tmpdir } from "../../fixture/fixture"
 import { createTuiPluginApi } from "../../fixture/tui-plugin"
+import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
 import { TuiConfig } from "../../../src/cli/cmd/tui/config/tui"
 
 const { TuiPluginRuntime } = await import("../../../src/cli/cmd/tui/plugin/runtime")
@@ -30,11 +31,10 @@ test("adds tui plugin at runtime from spec", async () => {
     },
   })
 
-  process.env.OPENCODE_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
-  const config: TuiConfig.Info = {
+  process.env.DEVECO_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
+  const config = createTuiResolvedConfig({
     plugin: [],
-    plugin_origins: undefined,
-  }
+  })
   const wait = spyOn(TuiConfig, "waitForDependencies").mockResolvedValue()
   const cwd = spyOn(process, "cwd").mockImplementation(() => tmp.path)
 
@@ -58,7 +58,7 @@ test("adds tui plugin at runtime from spec", async () => {
     await TuiPluginRuntime.dispose()
     cwd.mockRestore()
     wait.mockRestore()
-    delete process.env.OPENCODE_PLUGIN_META_FILE
+    delete process.env.DEVECO_PLUGIN_META_FILE
   }
 })
 
@@ -73,11 +73,10 @@ test("retries runtime add for file plugins after dependency wait", async () => {
     },
   })
 
-  process.env.OPENCODE_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
-  const config: TuiConfig.Info = {
+  process.env.DEVECO_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
+  const config = createTuiResolvedConfig({
     plugin: [],
-    plugin_origins: undefined,
-  }
+  })
   const wait = spyOn(TuiConfig, "waitForDependencies").mockImplementation(async () => {
     await Bun.write(
       path.join(tmp.extra.mod, "index.ts"),
@@ -106,6 +105,6 @@ test("retries runtime add for file plugins after dependency wait", async () => {
     await TuiPluginRuntime.dispose()
     cwd.mockRestore()
     wait.mockRestore()
-    delete process.env.OPENCODE_PLUGIN_META_FILE
+    delete process.env.DEVECO_PLUGIN_META_FILE
   }
 })

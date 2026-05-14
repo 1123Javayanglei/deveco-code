@@ -1,4 +1,4 @@
-import { Database } from "bun:sqlite"
+﻿import { Database } from "bun:sqlite"
 import { mkdir, symlink } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -73,14 +73,14 @@ test("resolveZedDbPath skips candidates that cannot be stated", async () => {
   const loop = path.join(tmp.path, "loop")
   await symlink(loop, loop)
   const home = spyOn(os, "homedir").mockImplementation(() => tmp.path)
-  const previous = process.env.OPENCODE_ZED_DB
-  process.env.OPENCODE_ZED_DB = loop
+  const previous = process.env.DEVECO_ZED_DB
+  process.env.DEVECO_ZED_DB = loop
 
   try {
     expect(resolveZedDbPath()).toBeUndefined()
   } finally {
-    if (previous === undefined) delete process.env.OPENCODE_ZED_DB
-    else process.env.OPENCODE_ZED_DB = previous
+    if (previous === undefined) delete process.env.DEVECO_ZED_DB
+    else process.env.DEVECO_ZED_DB = previous
     home.mockRestore()
   }
 })

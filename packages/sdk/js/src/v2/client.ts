@@ -1,8 +1,9 @@
-export * from "./gen/types.gen.js"
+﻿export * from "./gen/types.gen.js"
 
 import { createClient } from "./gen/client/client.gen.js"
 import { type Config } from "./gen/client/types.gen.js"
 import { OpencodeClient } from "./gen/sdk.gen.js"
+import { wrapClientError } from "../error-interceptor.js"
 export { type Config as OpencodeClientConfig, OpencodeClient }
 
 function pick(value: string | null, fallback?: string, encode?: (value: string) => string) {
@@ -20,8 +21,8 @@ function rewrite(request: Request, values: { directory?: string; workspace?: str
   let changed = false
 
   for (const [name, key] of [
-    ["x-codegenie-directory", "directory"],
-    ["x-codegenie-workspace", "workspace"],
+    ["x-deveco-directory", "directory"],
+    ["x-deveco-workspace", "workspace"],
   ] as const) {
     const value = pick(
       request.headers.get(name),
@@ -38,8 +39,8 @@ function rewrite(request: Request, values: { directory?: string; workspace?: str
   if (!changed) return request
 
   const next = new Request(url, request)
-  next.headers.delete("x-codegenie-directory")
-  next.headers.delete("x-codegenie-workspace")
+  next.headers.delete("x-deveco-directory")
+  next.headers.delete("x-deveco-workspace")
   return next
 }
 
@@ -59,14 +60,14 @@ export function createOpencodeClient(config?: Config & { directory?: string; exp
   if (config?.directory) {
     config.headers = {
       ...config.headers,
-      "x-codegenie-directory": encodeURIComponent(config.directory),
+      "x-deveco-directory": encodeURIComponent(config.directory),
     }
   }
 
   if (config?.experimental_workspaceID) {
     config.headers = {
       ...config.headers,
-      "x-codegenie-workspace": config.experimental_workspaceID,
+      "x-deveco-workspace": config.experimental_workspaceID,
     }
   }
 
@@ -84,5 +85,6 @@ export function createOpencodeClient(config?: Config & { directory?: string; exp
 
     return response
   })
+  client.interceptors.error.use(wrapClientError)
   return new OpencodeClient({ client })
 }

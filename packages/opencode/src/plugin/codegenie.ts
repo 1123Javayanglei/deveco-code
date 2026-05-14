@@ -14,8 +14,8 @@ import { LocalCrypto } from "@/security/local-crypto"
 import { URL } from "url"
 
 const execAsync = promisify(exec)
-const log = Log.create({ service: "codegenie" })
-const PROVIDER_ID = "codegenie"
+const log = Log.create({ service: "deveco" })
+const PROVIDER_ID = "deveco"
 export const sessionChatIdMap = new Map<string, string>()
 
 const authFilePath = path.join(Global.Path.data, "auth.json")
@@ -266,7 +266,7 @@ class LocalAuthServer {
         return actualPort
       } catch {
         if (port === portsToTry[portsToTry.length - 1]) {
-          throw new Error("All ports are in use. Please free up a port or close other CodeGenie instances.")
+          throw new Error("All ports are in use. Please free up a port or close other DevEco Code instances.")
         }
       }
     }
@@ -286,7 +286,7 @@ class LocalAuthServer {
           reject(err)
         }
       })
-      server.listen(port, "0.0.0.0", () => {
+      server.listen(port, "127.0.0.1", () => {
         this.server = server
         resolve(port)
       })
@@ -699,7 +699,7 @@ class LoginService {
 const loginService = new LoginService()
 
 // ============ Public API ============
-export interface CodeGenieSession {
+export interface DevEcoSession {
   userId: string
   userName: string
   accessToken: string
@@ -712,12 +712,12 @@ export interface CodeGenieSession {
   expiresAt: number
 }
 
-class CodeGenieAuth {
+class DevEcoAuth {
   async isLoggedIn(): Promise<boolean> {
     return loginService.isLoggedIn()
   }
 
-  async getSession(): Promise<CodeGenieSession | null> {
+  async getSession(): Promise<DevEcoSession | null> {
     const userInfo = loginService.getUserInfo()
     if (userInfo) {
       return {
@@ -788,20 +788,20 @@ class CodeGenieAuth {
   }
 }
 
-export const codegenieAuth = new CodeGenieAuth()
+export const devecoAuth = new DevEcoAuth()
 
 export { ACCESS_TOKEN_EXPIRES_MS }
 
 export async function requireLogin(): Promise<boolean> {
-  if (await codegenieAuth.isLoggedIn()) return true
+  if (await devecoAuth.isLoggedIn()) return true
 
-  prompts.intro("Welcome to CodeGenie")
+  prompts.intro("Welcome to DevEco Code")
 
   const choice = await prompts.select({
     message: "How would you like to continue?",
     options: [
       { label: "Login", value: "login", hint: "Sign in with your Huawei account" },
-      { label: "Don't use", value: "skip", hint: "Exit CodeGenie" },
+      { label: "Don't use", value: "skip", hint: "Exit DevEco Code" },
     ],
   })
 
@@ -821,7 +821,7 @@ export async function requireLogin(): Promise<boolean> {
   try {
     spinner.message("Opening browser for login...")
 
-    const result = await codegenieAuth.login()
+    const result = await devecoAuth.login()
 
     if (!result.success) {
       spinner.stop("Login failed")
@@ -841,7 +841,7 @@ export async function requireLogin(): Promise<boolean> {
     const accessToken = result.userInfo?.accessToken || ""
     const refreshToken = result.userInfo?.refreshToken || ""
     if (accessToken) {
-      await saveAuthToDisk("codegenie", {
+      await saveAuthToDisk("deveco", {
         type: "oauth",
         access: accessToken,
         refresh: refreshToken,
@@ -849,7 +849,7 @@ export async function requireLogin(): Promise<boolean> {
       })
     }
 
-    prompts.outro("Welcome to CodeGenie!")
+    prompts.outro("Welcome to DevEco Code!")
     return true
   } catch (error) {
     spinner.stop("Login failed")
@@ -861,7 +861,7 @@ export async function requireLogin(): Promise<boolean> {
 }
 
 // ============ Plugin ============
-export async function CodegenieAuthPlugin(_input: PluginInput): Promise<Hooks> {
+export async function DevEcoAuthPlugin(_input: PluginInput): Promise<Hooks> {
   return {
     auth: {
       provider: PROVIDER_ID,
@@ -887,9 +887,9 @@ export async function CodegenieAuthPlugin(_input: PluginInput): Promise<Hooks> {
             const currentAuth = await getAuth()
             if (currentAuth?.type === "oauth") {
               if (!currentAuth.access || currentAuth.expires < Date.now()) {
-                const newTokens = await codegenieAuth.refreshToken()
+                const newTokens = await devecoAuth.refreshToken()
                 if (newTokens) {
-                  await saveAuthToDisk("codegenie", {
+                  await saveAuthToDisk("deveco", {
                     type: "oauth",
                     access: newTokens.accessToken,
                     refresh: newTokens.refreshToken,
@@ -919,14 +919,32 @@ export async function CodegenieAuthPlugin(_input: PluginInput): Promise<Hooks> {
               headers.set("authorization", `Bearer ${currentAuth.access}`)
             }
 
-            const sessionId = headers.get("x-codegenie-session") || headers.get("x-session-affinity")
+            const sessionId = headers.get("x-deveco-session") || headers.get("x-session-affinity")
             const chatId = (sessionId && sessionChatIdMap.get(sessionId)) || crypto.randomUUID().replace(/-/g, "")
             headers.set("Chat-Id", chatId)
             if (sessionId) {
               headers.set("Session-Id", sessionId)
             }
 
-            return fetch(requestInput, {
+            // DevEco API requires /no-stream in URL path for non-streaming requests
+            // e.g. /v2/chat/completions → /v2/no-stream/chat/completions
+            let finalInput: RequestInfo | URL = requestInput
+            if (typeof init?.body === "string") {
+              try {
+                const body = JSON.parse(init.body)
+                if (body?.stream !== true) {
+                  const url = requestInput instanceof URL
+                    ? new URL(requestInput.toString())
+                    : new URL(typeof requestInput === "string" ? requestInput : requestInput.url)
+                  url.pathname = url.pathname.replace(/\/$/, "").replace(/\/chat\/completions$/, "/no-stream/chat/completions")
+                  finalInput = url
+                }
+              } catch {
+                log.error("Failed to rewrite URL for non-streaming request", { requestInput: String(requestInput) })
+              }
+            }
+
+            return fetch(finalInput, {
               ...init,
               headers,
             })
@@ -943,7 +961,7 @@ export async function CodegenieAuthPlugin(_input: PluginInput): Promise<Hooks> {
               instructions: "Opening browser for login...",
               method: "auto" as const,
               async callback() {
-                const result = await codegenieAuth.login()
+                const result = await devecoAuth.login()
 
                 if (!result.success) {
                   if (result.unsupportedRegion) {

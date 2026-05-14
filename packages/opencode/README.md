@@ -8,9 +8,9 @@
 
 ## 简介
 
-CodeGenie CLI 是一款面向 HarmonyOS 开发场景的 AI CLI 工具，支持代码编写、编译构建、设备运行、文档查阅、运行时调试和 ArkTS 问题修复等能力。
+DevEco Code CLI 是一款面向 HarmonyOS 开发场景的 AI CLI 工具，支持代码编写、编译构建、设备运行、文档查阅、运行时调试和 ArkTS 问题修复等能力。
 
-CodeGenie 基于开源项目 OpenCode 扩展开发，保留了 OpenCode 的终端交互、配置体系、 Provider / MCP / Skill / Plugin 等能力，并针对鸿蒙工程增加了 DevEco Studio、`hvigorw`、`hdc`、ArkTS 检查和设备调试相关集成。
+DevEco Code 基于开源项目 OpenCode 扩展开发，保留了 OpenCode 的终端交互、配置体系、 Provider / MCP / Skill / Plugin 等能力，并针对鸿蒙工程增加了 DevEco Studio、`hvigorw`、`hdc`、ArkTS 检查和设备调试相关集成。
 
 ## 支持平台
 
@@ -20,7 +20,7 @@ CodeGenie 基于开源项目 OpenCode 扩展开发，保留了 OpenCode 的终�
 
 ## 安装前置
 
-CodeGenie 通过 npm 分发，安装前请先准备以下环境：
+DevEco Code 通过 npm 分发，安装前请先准备以下环境：
 
 1. 安装 [Node.js LTS](https://nodejs.org)
 2. 如需使用鸿蒙工程的编译、运行和调试能力，请安装 [DevEco Studio](https://developer.huawei.com/consumer/cn/deveco-studio/)
@@ -40,16 +40,16 @@ npm -v
 npm install -g @codegenie-ai/codegenie-cli --registry=https://registry.npmjs.org
 
 # 查看版本
-codegenie --version
+deveco --version
 
 # 启动
-codegenie
+deveco
 
 # 更新
-codegenie upgrade
+deveco upgrade
 
 # 卸载运行时数据
-codegenie uninstall
+deveco uninstall
 
 # 卸载 npm 全局包
 npm uninstall -g @codegenie-ai/codegenie-cli
@@ -59,16 +59,16 @@ npm uninstall -g @codegenie-ai/codegenie-cli
 
 ## 登录与模型
 
-启动 `codegenie` 后可使用华为账号登录。登录后可使用 CodeGenie 提供的免费模型通道；不登录时也可以沿用 OpenCode 的 Provider 配置体系，自行配置模型。
+启动 `deveco` 后可使用华为账号登录。登录后可使用 DevEco Code 提供的免费模型通道；不登录时也可以沿用 OpenCode 的 Provider 配置体系，自行配置模型。
 
 ```bash
 # 退出登录
-codegenie auth logout
+deveco auth logout
 ```
 
-在 CodeGenie 中输入 `/models` 可进入模型配置界面。当前免费提供 `glm-5`、`deepseek-v3.2` 两款模型，单账号默认每分钟 50 次请求。也可以通过 `Ctrl+A` 进入 Provider 选择界面，配置智谱、阿里等 OpenAI-compatible 模型。
+在 DevEco Code 中输入 `/models` 可进入模型配置界面。当前免费提供 `glm-5`、`deepseek-v3.2` 两款模型，单账号默认每分钟 50 次请求。也可以通过 `Ctrl+A` 进入 Provider 选择界面，配置智谱、阿里等 OpenAI-compatible 模型。
 
-也可以通过 `codegenie.jsonc` 配置模型：
+也可以通过 `deveco.jsonc` 配置模型：
 
 ```jsonc
 {
@@ -87,7 +87,7 @@ codegenie auth logout
       },
       "options": {
         "baseURL": "https://api.openbitfun.com/v1",
-        "apiKey": "{env:CODEGENIE_API_KEY}"
+        "apiKey": "{env:DEVECO_API_KEY}"
       }
     }
   }
@@ -96,13 +96,13 @@ codegenie auth logout
 
 配置文件读取优先级：
 
-1. 项目目录下 `.codegenie/codegenie.jsonc`
-2. 项目目录下 `codegenie.jsonc`
-3. 用户目录下 `.config/codegenie/codegenie.jsonc`
+1. 项目目录下 `.deveco/deveco.jsonc`
+2. 项目目录下 `deveco.jsonc`
+3. 用户目录下 `.config/deveco/deveco.jsonc`
 
 ## Agent 模式
 
-CodeGenie 面向鸿蒙开发提供以下 Agent 模式：
+DevEco Code 面向鸿蒙开发提供以下 Agent 模式：
 
 - `build`：默认模式，适合工程生成、代码生成、配置修正、测试执行、推包运行和发布执行
 - `plan`：适合需求拆解、技术方案、发布规划、测试规划和文档生成
@@ -110,7 +110,7 @@ CodeGenie 面向鸿蒙开发提供以下 Agent 模式：
 
 ## 鸿蒙场景能力
 
-CodeGenie 集成了常用鸿蒙开发工具能力：
+DevEco Code 集成了常用鸿蒙开发工具能力：
 
 | 工具 | 说明 |
 | --- | --- |
@@ -126,7 +126,7 @@ CodeGenie 集成了常用鸿蒙开发工具能力：
 
 ## 扩展能力
 
-CodeGenie 兼容 OpenCode 的 Skill、MCP 和 Plugin 扩展方式。
+DevEco Code 兼容 OpenCode 的 Skill、MCP 和 Plugin 扩展方式。
 
 ### Skills
 
@@ -134,11 +134,11 @@ CodeGenie 兼容 OpenCode 的 Skill、MCP 和 Plugin 扩展方式。
 npx skills add vercel-labs/agent-skills
 ```
 
-也可以把 Skill 放到 `~/.config/codegenie/skills`，重启 CodeGenie 后加载。
+也可以把 Skill 放到 `~/.config/deveco/skills`，重启 DevEco Code 后加载。
 
 ### MCP
 
-可在 `~/.config/codegenie/codegenie.jsonc` 中配置 MCP：
+可在 `~/.config/deveco/deveco.jsonc` 中配置 MCP：
 
 ```jsonc
 {
@@ -159,7 +159,7 @@ npx skills add vercel-labs/agent-skills
 npm install -g oh-my-opencode
 ```
 
-然后在 `codegenie.jsonc` 中配置插件入口：
+然后在 `deveco.jsonc` 中配置插件入口：
 
 ```jsonc
 {
@@ -171,22 +171,22 @@ npm install -g oh-my-opencode
 
 ## 从 OpenCode 迁移
 
-如果需要从 OpenCode 迁移到 CodeGenie，请将配置文件迁移到 CodeGenie 目录。主配置文件可参考：
+如果需要从 OpenCode 迁移到 DevEco Code，请将配置文件迁移到 DevEco Code 目录。主配置文件可参考：
 
 ```powershell
 # Windows PowerShell
-Copy-Item -Force "{源路径}\opencode.jsonc" "~\.config\codegenie\codegenie.jsonc"
+Copy-Item -Force "{源路径}\opencode.jsonc" "~\.config\deveco\deveco.jsonc"
 ```
 
 ```bash
 # macOS
-cp {源路径}/opencode.jsonc ~/.config/codegenie/codegenie.jsonc
+cp {源路径}/opencode.jsonc ~/.config/deveco/deveco.jsonc
 ```
 
-Skills、Agents、Plugins 也可以迁移到 `~/.config/codegenie` 下的对应目录；MCP 配置项可迁移到 `codegenie.jsonc` 中。
+Skills、Agents、Plugins 也可以迁移到 `~/.config/deveco` 下的对应目录；MCP 配置项可迁移到 `deveco.jsonc` 中。
 
 ## FAQ
 
 ### 这和 OpenCode 有什么关系？
 
-CodeGenie 基于 OpenCode 扩展开发，保留其终端 UI、Provider、MCP、Skill、Plugin 和配置体系，并额外针对 HarmonyOS 开发链路加入编译构建、设备运行、日志采集、ArkTS 检查和运行时调试等能力。
+DevEco Code 基于 OpenCode 扩展开发，保留其终端 UI、Provider、MCP、Skill、Plugin 和配置体系，并额外针对 HarmonyOS 开发链路加入编译构建、设备运行、日志采集、ArkTS 检查和运行时调试等能力。

@@ -2,8 +2,8 @@ import path from "path"
 import { pathToFileURL } from "url"
 import z from "zod"
 import { Effect, Layer, Context, Schema } from "effect"
-import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics } from "@opencode-ai/core/schema"
 import { NamedError } from "@opencode-ai/core/util/error"
 import type { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
@@ -19,18 +19,27 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Defaults } from "./defaults"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Discovery } from "./discovery"
+import CUSTOMIZE_OPENCODE_SKILL_BODY from "./prompt/customize-opencode.md" with { type: "text" }
 
 const log = Log.create({ service: "skill" })
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
-const EXTERNAL_DIRS = [AGENTS_EXTERNAL_DIR]
 const EXTERNAL_SKILL_PATTERN = "skills/**/SKILL.md"
-const CODEGENIE_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
+const DEVECO_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
 const SKILL_PATTERN = "**/SKILL.md"
+
+// Built-in skill that ships with opencode. The model's intuition for what an
+// opencode.json should look like is often wrong, and opencode hard-fails on
+// invalid config, so users hit cryptic startup errors. Loading this skill
+// when the model is asked to touch opencode's own config files gives it the
+// actual schemas instead of guesses.
+const CUSTOMIZE_OPENCODE_SKILL_NAME = "customize-opencode"
+const CUSTOMIZE_OPENCODE_SKILL_DESCRIPTION =
+  "Use ONLY when the user is editing or creating opencode's own configuration: opencode.json, opencode.jsonc, files under .opencode/, or files under ~/.config/opencode/. Also use when creating or fixing opencode agents, subagents, skills, plugins, MCP servers, or permission rules. Do not use for the user's own application code, or for any project that is not configuring opencode itself."
 
 export const Info = Schema.Struct({
   name: Schema.String,
-  description: Schema.String,
+  description: Schema.optional(Schema.String),
   location: Schema.String,
   content: Schema.String,
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
@@ -96,7 +105,7 @@ const add = Effect.fnUntraced(function* (state: State, match: string, bus: Bus.I
 
   if (!md) return
 
-  const parsed = z.object({ name: z.string(), description: z.string() }).safeParse(md.data)
+  const parsed = z.object({ name: z.string(), description: z.string().optional() }).safeParse(md.data)
   if (!parsed.success) return
 
   if (state.skills[parsed.data.name]) {
@@ -157,14 +166,12 @@ const discoverSkills = Effect.fnUntraced(function* (
   const state: ScanState = { matches: new Set(), dirs: new Set() }
 
   // Extract and scan default (embedded) skills
-  if (!Flag.CODEGENIE_DISABLE_DEFAULT_SKILLS) {
-    const defaultDir = yield* Defaults.ensure(InstallationVersion, fsys).pipe(Effect.orDie)
-    yield* scan(state, defaultDir, SKILL_PATTERN)
-  }
+  const defaultDir = yield* Defaults.ensure(InstallationVersion, fsys).pipe(Effect.orDie)
+  yield* scan(state, defaultDir, SKILL_PATTERN)
 
   const externalDirs: string[] = []
-  if (!Flag.CODEGENIE_DISABLE_EXTERNAL_SKILLS) {
-    if (!Flag.CODEGENIE_DISABLE_CLAUDE_CODE_SKILLS) externalDirs.push(CLAUDE_EXTERNAL_DIR)
+  if (!Flag.DEVECO_DISABLE_EXTERNAL_SKILLS) {
+    if (!Flag.DEVECO_DISABLE_CLAUDE_CODE_SKILLS) externalDirs.push(CLAUDE_EXTERNAL_DIR)
     externalDirs.push(AGENTS_EXTERNAL_DIR)
 
     for (const dir of externalDirs) {
@@ -184,7 +191,7 @@ const discoverSkills = Effect.fnUntraced(function* (
 
   const configDirs = yield* config.directories()
   for (const dir of configDirs) {
-    yield* scan(state, dir, CODEGENIE_SKILL_PATTERN)
+    yield* scan(state, dir, DEVECO_SKILL_PATTERN)
   }
 
   const cfg = yield* config.get()
@@ -239,6 +246,16 @@ export const layer = Layer.effect(
     const state = yield* InstanceState.make(
       Effect.fn("Skill.state")(function* () {
         const s: State = { skills: {}, dirs: new Set() }
+        // Register the built-in skill BEFORE disk discovery so a user-disk
+        // skill with the same name can override it.
+        if (Flag.DEVECO_EXPERIMENTAL_CUSTOMIZE_SKILL) {
+          s.skills[CUSTOMIZE_OPENCODE_SKILL_NAME] = {
+            name: CUSTOMIZE_OPENCODE_SKILL_NAME,
+            description: CUSTOMIZE_OPENCODE_SKILL_DESCRIPTION,
+            location: "<built-in>",
+            content: CUSTOMIZE_OPENCODE_SKILL_BODY,
+          }
+        }
         yield* loadSkills(s, yield* InstanceState.get(discovered), bus)
         return s
       }),
@@ -278,12 +295,13 @@ export const defaultLayer = layer.pipe(
 )
 
 export function fmt(list: Info[], opts: { verbose: boolean }) {
-  if (list.length === 0) return "No skills are currently available."
+  const described = list.filter((skill) => skill.description !== undefined)
+  if (described.length === 0) return "No skills are currently available."
   if (opts.verbose) {
     return [
       "<available_skills>",
-      ...list
-        .sort((a, b) => a.name.localeCompare(b.name))
+      ...described
+        .toSorted((a, b) => a.name.localeCompare(b.name))
         .flatMap((skill) => [
           "  <skill>",
           `    <name>${skill.name}</name>`,
@@ -297,7 +315,7 @@ export function fmt(list: Info[], opts: { verbose: boolean }) {
 
   return [
     "## Available Skills",
-    ...list
+    ...described
       .toSorted((a, b) => a.name.localeCompare(b.name))
       .map((skill) => `- **${skill.name}**: ${skill.description}`),
   ].join("\n")

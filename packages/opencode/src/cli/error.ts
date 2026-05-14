@@ -15,9 +15,16 @@ function isTaggedError(error: unknown, tag: string): boolean {
 }
 
 export function FormatError(input: unknown) {
+  // CliError: domain failure surfaced from an effectCmd handler via fail("...")
+  if (isTaggedError(input, "CliError")) {
+    const data = input as ErrorLike & { exitCode?: number }
+    if (data.exitCode != null) process.exitCode = data.exitCode
+    return data.message ?? ""
+  }
+
   // MCPFailed: { name: string }
   if (NamedError.hasName(input, "MCPFailed")) {
-    return `MCP server "${(input as ErrorLike).data?.name}" failed. Note, codegenie does not support MCP authentication yet.`
+    return `MCP server "${(input as ErrorLike).data?.name}" failed. Note, deveco does not support MCP authentication yet.`
   }
 
   // AccountServiceError, AccountTransportError: TaggedErrorClass
@@ -32,8 +39,8 @@ export function FormatError(input: unknown) {
     return [
       `Model not found: ${data?.providerID}/${data?.modelID}`,
       ...(suggestions.length ? ["Did you mean: " + suggestions.join(", ")] : []),
-      `Try: \`codegenie models\` to list available models`,
-      `Or check your config (codegenie.json) provider/model names`,
+      `Try: \`deveco models\` to list available models`,
+      `Or check your config (deveco.json) provider/model names`,
     ].join("\n")
   }
 

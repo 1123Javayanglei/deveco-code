@@ -13,8 +13,8 @@ import { spawn as lspspawn } from "./launch"
 import { Effect, Layer, Context, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
-import { NonNegativeInt, withStatics } from "@/util/schema"
-import { zod, ZodOverride } from "@/util/effect-zod"
+import { NonNegativeInt, withStatics } from "@opencode-ai/core/schema"
+import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
 
 const log = Log.create({ service: "lsp" })
 
@@ -111,9 +111,9 @@ const kinds = [
 ]
 
 const filterExperimentalServers = (servers: Record<string, LSPServer.Info>) => {
-  if (Flag.CODEGENIE_EXPERIMENTAL_LSP_TY) {
+  if (Flag.DEVECO_EXPERIMENTAL_LSP_TY) {
     if (servers["pyright"]) {
-      log.info("LSP server pyright is disabled because CODEGENIE_EXPERIMENTAL_LSP_TY is enabled")
+      log.info("LSP server pyright is disabled because DEVECO_EXPERIMENTAL_LSP_TY is enabled")
       delete servers["pyright"]
     }
   } else {

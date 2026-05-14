@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test"
+﻿import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Skill } from "../../src/skill"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -31,14 +31,14 @@ This skill is loaded from the global home directory.
 const withHome = <A, E, R>(home: string, self: Effect.Effect<A, E, R>) =>
   Effect.acquireUseRelease(
     Effect.sync(() => {
-      const prev = process.env.OPENCODE_TEST_HOME
-      process.env.OPENCODE_TEST_HOME = home
+      const prev = process.env.DEVECO_TEST_HOME
+      process.env.DEVECO_TEST_HOME = home
       return prev
     }),
     () => self,
     (prev) =>
       Effect.sync(() => {
-        process.env.OPENCODE_TEST_HOME = prev
+        process.env.DEVECO_TEST_HOME = prev
       }),
   )
 
@@ -158,6 +158,37 @@ Just some content without YAML frontmatter.
 
           const skill = yield* Skill.Service
           expect(yield* skill.all()).toEqual([])
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("discovers skills without descriptions", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            Bun.write(
+              path.join(dir, ".opencode", "skill", "manual-skill", "SKILL.md"),
+              `---
+name: manual-skill
+---
+
+# Manual Skill
+
+Instructions here.
+`,
+            ),
+          )
+
+          const skill = yield* Skill.Service
+          const list = yield* skill.all()
+          expect(list.length).toBe(1)
+          const item = list.find((x) => x.name === "manual-skill")
+          expect(item).toBeDefined()
+          expect(item!.description).toBeUndefined()
+          expect(Skill.fmt(list, { verbose: false })).toBe("No skills are currently available.")
+          expect(Skill.fmt(list, { verbose: true })).toBe("No skills are currently available.")
         }),
       { git: true },
     ),

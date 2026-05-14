@@ -5,8 +5,8 @@ import { Schema } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { Bus } from "@/bus"
-import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics } from "@opencode-ai/core/schema"
 import { configEntryNameFromPath } from "./entry-name"
 import { InvalidError } from "./error"
 import * as ConfigMarkdown from "./markdown"
@@ -43,7 +43,7 @@ export async function load(dir: string) {
     })
     if (!md) continue
 
-    const patterns = ["/.codegenie/command/", "/.codegenie/commands/", "/.opencode/command/", "/.opencode/commands/", "/command/", "/commands/"]
+    const patterns = ["/.deveco/command/", "/.deveco/commands/", "/.opencode/command/", "/.opencode/commands/", "/command/", "/commands/"]
     const name = configEntryNameFromPath(item, patterns)
 
     const config = {

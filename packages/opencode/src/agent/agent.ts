@@ -6,18 +6,20 @@ import { generateObject, streamObject, type ModelMessage } from "ai"
 import { Truncate } from "@/tool/truncate"
 import { Auth } from "../auth"
 import { ProviderTransform } from "@/provider/transform"
+import * as Log from "@opencode-ai/core/util/log"
+
+const log = Log.create({ service: "agent" })
 
 import PROMPT_GENERATE from "./generate.txt"
-import PROMPT_BUILD from "./prompt/build.txt"
-import PROMPT_PLAN from "./prompt/plan.txt"
-import PROMPT_DEBUG from "./prompt/debug.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
+import PROMPT_SCOUT from "./prompt/scout.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@opencode-ai/core/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import path from "path"
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
@@ -25,8 +27,9 @@ import { Effect, Context, Layer, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import * as Option from "effect/Option"
 import * as OtelTracer from "@effect/opentelemetry/Tracer"
-import { zod } from "@/util/effect-zod"
-import { withStatics, type DeepMutable } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics, type DeepMutable } from "@opencode-ai/core/schema"
+import { Reference } from "@/reference/reference"
 
 export const Info = Schema.Struct({
   name: Schema.String,
@@ -89,6 +92,10 @@ export const layer = Layer.effect(
           path.join(Global.Path.tmp, "*"),
           ...skillDirs.map((dir) => path.join(dir, "*")),
         ]
+        const readonlyExternalDirectory = {
+          "*": "ask",
+          ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
+        } satisfies Record<string, "allow" | "ask" | "deny">
 
         const defaults = Permission.fromConfig({
           "*": "allow",
@@ -100,10 +107,8 @@ export const layer = Layer.effect(
           question: "deny",
           plan_enter: "deny",
           plan_exit: "deny",
-          bash: {
-            "hdc *": "deny",
-            "*hvigorw*": "deny",
- 	       },
+          repo_clone: "deny",
+          repo_overview: "deny",
           // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
           read: {
             "*": "allow",
@@ -118,50 +123,41 @@ export const layer = Layer.effect(
         const agents: Record<string, Info> = {
           build: {
             name: "build",
-            description: "ArkTS build-focused primary agent.",
+            description: "The default agent. Executes tools based on configured permissions.",
             options: {},
             permission: Permission.merge(
               defaults,
               Permission.fromConfig({
                 question: "allow",
-                plan_enter: "ask",
-                plan_write: "deny",
+                plan_enter: "allow",
               }),
               user,
             ),
             mode: "primary",
             native: true,
-            prompt: PROMPT_BUILD,
           },
           plan: {
             name: "plan",
-            description: "ArkTS planning agent with external plan-file workflow.",
+            description: "Plan mode. Disallows all edit tools.",
             options: {},
             permission: Permission.merge(
               defaults,
               Permission.fromConfig({
                 question: "allow",
-                plan_exit: "ask",
-                plan_write: "allow",
-                bash: "deny",
-                build_project: "deny",
-                check_ets_files: "deny",
-                perform_ui_action: "deny",
-                get_app_ui_tree: "deny",
-                start_app: "deny",
-                hdc_log: "deny",
-                switch_cwd: "deny",
-                arkts_knowledge_search: "deny",
+                plan_exit: "allow",
                 external_directory: {
                   [path.join(Global.Path.data, "plans", "*")]: "allow",
                 },
-                edit: "deny",
+                edit: {
+                  "*": "deny",
+                  [path.join(".opencode", "plans", "*.md")]: "allow",
+                  [path.relative(ctx.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
+                },
               }),
               user,
             ),
             mode: "primary",
             native: true,
-            prompt: PROMPT_PLAN,
           },
           general: {
             name: "general",
@@ -190,10 +186,7 @@ export const layer = Layer.effect(
                 webfetch: "allow",
                 websearch: "allow",
                 read: "allow",
-                external_directory: {
-                  "*": "ask",
-                  ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
-                },
+                external_directory: readonlyExternalDirectory,
               }),
               user,
             ),
@@ -203,6 +196,37 @@ export const layer = Layer.effect(
             mode: "subagent",
             native: true,
           },
+          ...(Flag.DEVECO_EXPERIMENTAL_SCOUT
+            ? {
+                scout: {
+                  name: "scout",
+                  permission: Permission.merge(
+                    defaults,
+                    Permission.fromConfig({
+                      "*": "deny",
+                      grep: "allow",
+                      glob: "allow",
+                      webfetch: "allow",
+                      websearch: "allow",
+                      codesearch: "allow",
+                      read: "allow",
+                      repo_clone: "allow",
+                      repo_overview: "allow",
+                      external_directory: {
+                        ...readonlyExternalDirectory,
+                        [path.join(Global.Path.repos, "*")]: "allow",
+                      },
+                    }),
+                    user,
+                  ),
+                  description: `Docs and dependency-source specialist. Use this when you need to inspect external documentation, clone dependency repositories into the managed cache, and research library implementation details without modifying the user's workspace.`,
+                  prompt: PROMPT_SCOUT,
+                  options: {},
+                  mode: "subagent" as const,
+                  native: true,
+                },
+              }
+            : {}),
           compaction: {
             name: "compaction",
             mode: "primary",
@@ -278,6 +302,76 @@ export const layer = Layer.effect(
           item.steps = value.steps ?? item.steps
           item.options = mergeDeep(item.options, value.options ?? {})
           item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))
+        }
+
+        function referencePrompt(reference: Reference.Resolved) {
+          if (reference.kind === "local") {
+            return [
+              `You are configured reference @${reference.name}, a read-only research agent for external reference material.`,
+              `Local directory: ${reference.path}`,
+              `Inspect this directory as the primary reference source. Prefer repo_overview with path ${JSON.stringify(reference.path)} before broader searches. Do not edit files.`,
+              `Return exact absolute file paths for findings whenever possible.`,
+            ].join("\n\n")
+          }
+
+          if (reference.kind === "invalid") {
+            return [
+              `You are configured reference @${reference.name}, but this reference is not usable yet.`,
+              `Configured repository: ${reference.repository}`,
+              `Problem: ${reference.message}`,
+              `Explain this configuration problem if invoked. Do not edit files or attempt fallback clones.`,
+            ].join("\n\n")
+          }
+
+          return [
+            `You are configured reference @${reference.name}, a read-only research agent for external reference material.`,
+            `Repository: ${reference.repository}`,
+            ...(reference.branch ? [`Branch/ref: ${reference.branch}`] : []),
+            `Cached directory: ${reference.path}`,
+            `OpenCode materializes this configured repository before use. Do not call repo_clone for this reference.`,
+            `Inspect the cached directory as the primary reference source. Prefer repo_overview with path ${JSON.stringify(reference.path)} before broader searches, then use Glob, Grep, and Read inside that directory. Do not edit files.`,
+            `Return exact absolute file paths for findings whenever possible.`,
+          ].join("\n\n")
+        }
+
+        function referenceDescription(reference: Reference.Resolved) {
+          if (reference.kind === "local") return `Scout reference for local directory ${reference.path}`
+          if (reference.kind === "git") return `Scout reference for repository ${reference.repository}`
+          return `Invalid Scout reference for repository ${reference.repository}`
+        }
+
+        if (Flag.DEVECO_EXPERIMENTAL_SCOUT) {
+          const resolvedReferences = Reference.resolveAll({
+            references: cfg.reference ?? {},
+            directory: ctx.directory,
+            worktree: ctx.worktree,
+          })
+          for (const resolved of resolvedReferences) {
+            if (agents[resolved.name]) continue
+            const localPath = resolved.kind === "invalid" ? undefined : resolved.path
+            agents[resolved.name] = {
+              name: resolved.name,
+              description: referenceDescription(resolved),
+              permission: Permission.merge(
+                agents.scout.permission,
+                Permission.fromConfig({
+                  repo_clone: "deny",
+                  ...(localPath
+                    ? {
+                        external_directory: {
+                          [localPath]: "allow",
+                          [path.join(localPath, "*")]: "allow",
+                        },
+                      }
+                    : {}),
+                }),
+              ),
+              prompt: referencePrompt(resolved),
+              options: { reference: cfg.reference?.[resolved.name], resolved },
+              mode: "subagent",
+              native: false,
+            }
+          }
         }
 
         // Ensure Truncate.GLOB is allowed unless explicitly configured
@@ -393,6 +487,10 @@ export const layer = Layer.effect(
             whenToUse: z.string(),
             systemPrompt: z.string(),
           }),
+          experimental_repairText: async ({ text }: { text: string }) => {
+            // Some models wrap JSON in markdown code blocks (```json ... ```)
+            return text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "")
+          },
         } satisfies Parameters<typeof generateObject>[0]
 
         if (isOpenaiOauth) {
@@ -412,7 +510,20 @@ export const layer = Layer.effect(
           })
         }
 
-        return yield* Effect.promise(() => generateObject(params).then((r) => r.object))
+        return yield* Effect.promise(() =>
+          generateObject(params)
+            .then((r) => r.object)
+            .catch((err) => {
+              log.error("generateObject failed", {
+                provider: model.providerID,
+                model: model.modelID,
+                error: err.message,
+                cause: err.cause instanceof Error ? err.cause.message : err.cause,
+                text: err.text ? String(err.text).slice(0, 500) : undefined,
+              })
+              throw err
+            }),
+        )
       }),
     })
   }),

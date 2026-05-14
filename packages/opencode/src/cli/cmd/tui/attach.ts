@@ -1,14 +1,14 @@
 import { cmd } from "../cmd"
 import { UI } from "@/cli/ui"
-import { tui } from "./app"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { errorMessage } from "@/util/error"
 import { validateSession } from "./validate-session"
+import { ServerAuth } from "@/server/auth"
 
 export const AttachCommand = cmd({
   command: "attach <url>",
-  describe: "attach to a running codegenie server",
+  describe: "attach to a running deveco server",
   builder: (yargs) =>
     yargs
       .positional("url", {
@@ -37,7 +37,12 @@ export const AttachCommand = cmd({
       .option("password", {
         alias: ["p"],
         type: "string",
-        describe: "basic auth password (defaults to CODEGENIE_SERVER_PASSWORD)",
+        describe: "basic auth password (defaults to DEVECO_SERVER_PASSWORD)",
+      })
+      .option("username", {
+        alias: ["u"],
+        type: "string",
+        describe: "basic auth username (defaults to DEVECO_SERVER_USERNAME or 'deveco')",
       }),
   handler: async (args) => {
     const unguard = win32InstallCtrlCGuard()
@@ -60,13 +65,9 @@ export const AttachCommand = cmd({
           return args.dir
         }
       })()
-      const headers = (() => {
-        const password = args.password ?? process.env.CODEGENIE_SERVER_PASSWORD
-        if (!password) return undefined
-        const auth = `Basic ${Buffer.from(`codegenie:${password}`).toString("base64")}`
-        return { Authorization: auth }
-      })()
+      const headers = ServerAuth.headers({ password: args.password, username: args.username })
       const config = await TuiConfig.get()
+      const { tui } = await import("./app")
 
       try {
         await validateSession({

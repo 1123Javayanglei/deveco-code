@@ -1,6 +1,6 @@
 import { Schema } from "effect"
-import { zod } from "@/util/effect-zod"
-import { PositiveInt, withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { PositiveInt, withStatics } from "@opencode-ai/core/schema"
 
 export const Server = Schema.Struct({
   port: Schema.optional(PositiveInt).annotate({
@@ -9,7 +9,7 @@ export const Server = Schema.Struct({
   hostname: Schema.optional(Schema.String).annotate({ description: "Hostname to listen on" }),
   mdns: Schema.optional(Schema.Boolean).annotate({ description: "Enable mDNS service discovery" }),
   mdnsDomain: Schema.optional(Schema.String).annotate({
-    description: "Custom domain name for mDNS service (default: codegenie.local)",
+    description: "Custom domain name for mDNS service (default: deveco.local)",
   }),
   cors: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
     description: "Additional domains to allow for CORS",

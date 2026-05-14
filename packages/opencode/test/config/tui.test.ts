@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, expect, test } from "bun:test"
+﻿import { afterEach, beforeEach, expect, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
-import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { provideTestInstance, tmpdir } from "../fixture/fixture"
+import { InstanceRuntime } from "@/project/instance-runtime"
 import { TuiConfig } from "../../src/cli/cmd/tui/config/tui"
 import { Config } from "@/config/config"
 import { Global } from "@opencode-ai/core/global"
@@ -13,7 +13,10 @@ import { CurrentWorkingDirectory } from "@/cli/cmd/tui/config/cwd"
 import { ConfigPlugin } from "@/config/plugin"
 
 const wintest = process.platform === "win32" ? test : test.skip
-const clear = (wait = false) => AppRuntime.runPromise(Config.Service.use((svc) => svc.invalidate(wait)))
+const clear = async (wait = false) => {
+  await AppRuntime.runPromise(Config.Service.use((svc) => svc.invalidate()))
+  if (wait) await InstanceRuntime.disposeAllInstances()
+}
 const load = () => AppRuntime.runPromise(Config.Service.use((svc) => svc.get()))
 
 beforeEach(async () => {
@@ -27,9 +30,22 @@ const getTuiConfig = async (directory: string) =>
     ),
   )
 
+async function withPlatform<Value>(platform: typeof process.platform, fn: () => Promise<Value>) {
+  const original = Object.getOwnPropertyDescriptor(process, "platform")
+  Object.defineProperty(process, "platform", {
+    ...original,
+    value: platform,
+  })
+  try {
+    return await fn()
+  } finally {
+    if (original) Object.defineProperty(process, "platform", original)
+  }
+}
+
 afterEach(async () => {
-  delete process.env.OPENCODE_CONFIG
-  delete process.env.OPENCODE_TUI_CONFIG
+  delete process.env.DEVECO_CONFIG
+  delete process.env.DEVECO_TUI_CONFIG
   await fs.rm(path.join(Global.Path.config, "opencode.json"), { force: true }).catch(() => {})
   await fs.rm(path.join(Global.Path.config, "opencode.jsonc"), { force: true }).catch(() => {})
   await fs.rm(path.join(Global.Path.config, "tui.json"), { force: true }).catch(() => {})
@@ -87,7 +103,7 @@ test("keeps server and tui plugin merge semantics aligned", async () => {
     },
   })
 
-  await Instance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       const server = await load()
@@ -147,7 +163,7 @@ test("migrates tui-specific keys from opencode.json when tui.json does not exist
   const config = await getTuiConfig(tmp.path)
   expect(config.theme).toBe("migrated-theme")
   expect(config.scroll_speed).toBe(5)
-  expect(config.keybinds?.app_exit).toBe("ctrl+q")
+  expect(config.keybinds.get("app.exit")?.[0]?.key).toBe("ctrl+q")
   const text = await Filesystem.readText(path.join(tmp.path, "tui.json"))
   expect(JSON.parse(text)).toMatchObject({
     theme: "migrated-theme",
@@ -357,13 +373,13 @@ test("top-level keys in tui.json take precedence over nested tui key", async () 
   expect(config.scroll_speed).toBe(2)
 })
 
-test("project config takes precedence over OPENCODE_TUI_CONFIG (matches OPENCODE_CONFIG)", async () => {
+test("project config takes precedence over DEVECO_TUI_CONFIG (matches DEVECO_CONFIG)", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(path.join(dir, "tui.json"), JSON.stringify({ theme: "project", diff_style: "auto" }))
       const custom = path.join(dir, "custom-tui.json")
       await Bun.write(custom, JSON.stringify({ theme: "custom", diff_style: "stacked" }))
-      process.env.OPENCODE_TUI_CONFIG = custom
+      process.env.DEVECO_TUI_CONFIG = custom
     },
   })
 
@@ -382,15 +398,89 @@ test("merges keybind overrides across precedence layers", async () => {
     },
   })
   const config = await getTuiConfig(tmp.path)
-  expect(config.keybinds?.app_exit).toBe("ctrl+q")
-  expect(config.keybinds?.theme_list).toBe("ctrl+k")
+  expect(config.keybinds.get("app.exit")?.[0]?.key).toBe("ctrl+q")
+  expect(config.keybinds.get("theme.switch")?.[0]?.key).toBe("ctrl+k")
+})
+
+test("resolves keybind lookup from canonical keybinds", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "tui.json"),
+        JSON.stringify({
+          keybinds: {
+            leader: { key: { name: "g", ctrl: true } },
+            command_list: "alt+p",
+            which_key_toggle: "alt+k",
+            editor_open: "ctrl+e",
+            "prompt.autocomplete.next": "ctrl+j",
+            "dialog.mcp.toggle": "ctrl+t",
+            model_favorite_toggle: "ctrl+f",
+            "dialog.plugins.install": "shift+i",
+          },
+          leader_timeout: 1234,
+        }),
+      )
+    },
+  })
+
+  const config = await getTuiConfig(tmp.path)
+  expect(config.keybinds.get("leader")?.[0]?.key).toEqual({ name: "g", ctrl: true })
+  expect(config.leader_timeout).toBe(1234)
+  expect(config.keybinds.get("command.palette.show")?.[0]?.key).toBe("alt+p")
+  expect(config.keybinds.get("session.new")?.[0]?.key).toBe("<leader>n")
+  expect(config.keybinds.get("which-key.toggle")?.[0]?.key).toBe("alt+k")
+  expect(config.keybinds.get("which-key.layout.toggle")?.[0]?.key).toBe("ctrl+alt+shift+k")
+  expect(config.keybinds.get("which-key.pending.toggle")?.[0]?.key).toBe("ctrl+alt+shift+p")
+  expect(config.keybinds.get("which-key.group.next")?.[0]?.key).toBe("ctrl+alt+right,ctrl+alt+]")
+  expect((config.keybinds.get("which-key.toggle")?.[0] as { desc?: unknown } | undefined)?.desc).toBe(
+    "Toggle which-key panel",
+  )
+  expect(config.keybinds.get("prompt.editor")?.[0]?.key).toBe("ctrl+e")
+  expect(config.keybinds.get("prompt.autocomplete.next")?.[0]?.key).toBe("ctrl+j")
+  expect(config.keybinds.get("dialog.mcp.toggle")?.[0]?.key).toBe("ctrl+t")
+  expect(config.keybinds.get("model.dialog.favorite")?.[0]?.key).toBe("ctrl+f")
+  expect(config.keybinds.get("dialog.plugins.install")?.[0]?.key).toBe("shift+i")
+  expect(config.keybinds.gather("plugins.dialog", ["dialog.plugins.install"]).map((binding) => binding.cmd)).toEqual([
+    "dialog.plugins.install",
+  ])
+})
+
+test("keybinds accept OpenTUI binding specs", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "tui.json"),
+        JSON.stringify({
+          keybinds: {
+            command_list: [{ key: "alt+p", preventDefault: false }],
+            editor_open: { key: { name: "e", ctrl: true }, group: "Explicit" },
+            "prompt.autocomplete.next": false,
+            plugin_manager: "ctrl+shift+p",
+          },
+        }),
+      )
+    },
+  })
+
+  const config = await getTuiConfig(tmp.path)
+  expect(config.keybinds.get("command.palette.show")).toEqual([
+    { key: "alt+p", cmd: "command.palette.show", preventDefault: false, desc: "List available commands" },
+  ])
+  expect(config.keybinds.get("prompt.editor")?.[0]).toMatchObject({
+    key: { name: "e", ctrl: true },
+    cmd: "prompt.editor",
+    group: "Explicit",
+  })
+  expect(config.keybinds.get("prompt.autocomplete.next")).toEqual([])
+  expect(config.keybinds.get("plugins.list")?.[0]?.key).toBe("ctrl+shift+p")
 })
 
 wintest("defaults Ctrl+Z to input undo on Windows", async () => {
   await using tmp = await tmpdir()
   const config = await getTuiConfig(tmp.path)
-  expect(config.keybinds?.terminal_suspend).toBe("none")
-  expect(config.keybinds?.input_undo).toBe("ctrl+z,ctrl+-,super+z")
+  expect(config.keybinds.get("terminal.suspend")).toEqual([])
+  expect(config.keybinds.get("input.undo")?.[0]?.key).toBe("ctrl+z,ctrl+-,super+z")
 })
 
 wintest("keeps explicit input undo overrides on Windows", async () => {
@@ -400,8 +490,8 @@ wintest("keeps explicit input undo overrides on Windows", async () => {
     },
   })
   const config = await getTuiConfig(tmp.path)
-  expect(config.keybinds?.terminal_suspend).toBe("none")
-  expect(config.keybinds?.input_undo).toBe("ctrl+y")
+  expect(config.keybinds.get("terminal.suspend")).toEqual([])
+  expect(config.keybinds.get("input.undo")?.[0]?.key).toBe("ctrl+y")
 })
 
 wintest("ignores terminal suspend bindings on Windows", async () => {
@@ -412,16 +502,66 @@ wintest("ignores terminal suspend bindings on Windows", async () => {
   })
 
   const config = await getTuiConfig(tmp.path)
-  expect(config.keybinds?.terminal_suspend).toBe("none")
-  expect(config.keybinds?.input_undo).toBe("ctrl+z,ctrl+-,super+z")
+  expect(config.keybinds.get("terminal.suspend")).toEqual([])
+  expect(config.keybinds.get("input.undo")?.[0]?.key).toBe("ctrl+z,ctrl+-,super+z")
 })
 
-test("OPENCODE_TUI_CONFIG provides settings when no project config exists", async () => {
+test("applies Windows keybind defaults", async () => {
+  await withPlatform("win32", async () => {
+    await using tmp = await tmpdir()
+
+    const config = await getTuiConfig(tmp.path)
+    expect(config.keybinds.get("terminal.suspend")).toEqual([])
+    expect(config.keybinds.get("input.undo")?.[0]?.key).toBe("ctrl+z,ctrl+-,super+z")
+  })
+})
+
+test("ignores explicit keybind terminal suspend binding on Windows", async () => {
+  await withPlatform("win32", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "tui.json"),
+          JSON.stringify({
+            keybinds: {
+              terminal_suspend: "alt+z",
+            },
+          }),
+        )
+      },
+    })
+
+    const config = await getTuiConfig(tmp.path)
+    expect(config.keybinds.get("terminal.suspend")).toEqual([])
+  })
+})
+
+test("keeps explicit configured keybind input undo on Windows", async () => {
+  await withPlatform("win32", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "tui.json"),
+          JSON.stringify({
+            keybinds: {
+              input_undo: "ctrl+y",
+            },
+          }),
+        )
+      },
+    })
+
+    const config = await getTuiConfig(tmp.path)
+    expect(config.keybinds.get("input.undo")?.[0]?.key).toBe("ctrl+y")
+  })
+})
+
+test("DEVECO_TUI_CONFIG provides settings when no project config exists", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       const custom = path.join(dir, "custom-tui.json")
       await Bun.write(custom, JSON.stringify({ theme: "from-env", diff_style: "stacked" }))
-      process.env.OPENCODE_TUI_CONFIG = custom
+      process.env.DEVECO_TUI_CONFIG = custom
     },
   })
   const config = await getTuiConfig(tmp.path)
@@ -429,14 +569,14 @@ test("OPENCODE_TUI_CONFIG provides settings when no project config exists", asyn
   expect(config.diff_style).toBe("stacked")
 })
 
-test("does not derive tui path from OPENCODE_CONFIG", async () => {
+test("does not derive tui path from DEVECO_CONFIG", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       const customDir = path.join(dir, "custom")
       await fs.mkdir(customDir, { recursive: true })
       await Bun.write(path.join(customDir, "opencode.json"), JSON.stringify({ model: "test/model" }))
       await Bun.write(path.join(customDir, "tui.json"), JSON.stringify({ theme: "should-not-load" }))
-      process.env.OPENCODE_CONFIG = path.join(customDir, "opencode.json")
+      process.env.DEVECO_CONFIG = path.join(customDir, "opencode.json")
     },
   })
   const config = await getTuiConfig(tmp.path)
@@ -461,7 +601,7 @@ test("applies env and file substitutions in tui.json", async () => {
     })
     const config = await getTuiConfig(tmp.path)
     expect(config.theme).toBe("env-theme")
-    expect(config.keybinds?.app_exit).toBe("ctrl+q")
+    expect(config.keybinds.get("app.exit")?.[0]?.key).toBe("ctrl+q")
   } finally {
     if (original === undefined) delete process.env.TUI_THEME_TEST
     else process.env.TUI_THEME_TEST = original
@@ -623,4 +763,44 @@ test("merges plugin_enabled flags across config layers", async () => {
     "demo.plugin": false,
     "local.plugin": true,
   })
+})
+
+test("silently skips malformed tui.json — load failures degrade to {}", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(path.join(dir, "tui.json"), '{ "theme": "broken",')
+      await Bun.write(path.join(dir, ".opencode", "tui.json"), JSON.stringify({ theme: "fallback" }))
+    },
+  })
+
+  const config = await getTuiConfig(tmp.path)
+  // Project tui.json is malformed → silently skipped (logs a warning)
+  // .opencode/tui.json (lower precedence in this path) still loads
+  expect(config.theme).toBe("fallback")
+})
+
+test("silently skips non-ENOENT read failures (e.g. tui.json is a directory) — fallback layer still loads", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      // tui.json exists as a DIRECTORY rather than a file → readFileString fails
+      // with EISDIR (PlatformError reason ≠ NotFound). The fix in this PR routes
+      // that through catchCause → log + skip, so a fallback layer should still load.
+      await fs.mkdir(path.join(dir, "tui.json"), { recursive: true })
+      await Bun.write(path.join(dir, ".opencode", "tui.json"), JSON.stringify({ theme: "fallback" }))
+    },
+  })
+
+  const config = await getTuiConfig(tmp.path)
+  // Did NOT crash; .opencode/tui.json (lower precedence) still loads.
+  expect(config.theme).toBe("fallback")
+})
+
+test("missing tui.json — silently treated as empty (ENOENT path)", async () => {
+  await using tmp = await tmpdir({})
+
+  // No tui.json anywhere. Should not throw.
+  const config = await getTuiConfig(tmp.path)
+  expect(config).toBeDefined()
+  // No theme set anywhere.
+  expect(config.theme).toBeUndefined()
 })

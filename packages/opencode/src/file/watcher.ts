@@ -16,7 +16,7 @@ import { FileIgnore } from "./ignore"
 import { Protected } from "./protected"
 import * as Log from "@opencode-ai/core/util/log"
 
-declare const CODEGENIE_LIBC: string | undefined
+declare const DEVECO_LIBC: string | undefined
 
 const log = Log.create({ service: "file.watcher" })
 const SUBSCRIBE_TIMEOUT_MS = 10_000
@@ -34,7 +34,7 @@ export const Event = {
 const watcher = lazy((): typeof import("@parcel/watcher") | undefined => {
   try {
     const binding = require(
-      `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${CODEGENIE_LIBC || "glibc"}` : ""}`,
+      `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${DEVECO_LIBC || "glibc"}` : ""}`,
     )
     return createWrapper(binding) as typeof import("@parcel/watcher")
   } catch (error) {
@@ -73,7 +73,7 @@ export const layer = Layer.effect(
     const state = yield* InstanceState.make(
       Effect.fn("FileWatcher.state")(
         function* () {
-          if (yield* Flag.CODEGENIE_EXPERIMENTAL_DISABLE_FILEWATCHER) return
+          if (yield* Flag.DEVECO_EXPERIMENTAL_DISABLE_FILEWATCHER) return
 
           const ctx = yield* InstanceState.context
 
@@ -113,7 +113,9 @@ export const layer = Layer.effect(
               Effect.timeout(SUBSCRIBE_TIMEOUT_MS),
               Effect.catchCause((cause) => {
                 log.error("failed to subscribe", { dir, cause: Cause.pretty(cause) })
-                pending.then((s) => s.unsubscribe()).catch(() => {})
+                pending.then((s) => s.unsubscribe()).catch((e) => {
+                  log.warn("Failed to unsubscribe watcher", { dir, error: e instanceof Error ? e.message : String(e) })
+                })
                 return Effect.void
               }),
             )
@@ -122,12 +124,10 @@ export const layer = Layer.effect(
           const cfg = yield* config.get()
           const cfgIgnores = cfg.watcher?.ignore ?? []
 
-if (yield* Flag.CODEGENIE_EXPERIMENTAL_FILEWATCHER) {
-            yield* subscribe(ctx.directory, [
-              ...FileIgnore.PATTERNS,
-              ...cfgIgnores,
-              ...protecteds(ctx.directory),
-            ])
+          if (yield* Flag.DEVECO_EXPERIMENTAL_FILEWATCHER) {
+            yield* Effect.forkScoped(
+              subscribe(ctx.directory, [...FileIgnore.PATTERNS, ...cfgIgnores, ...protecteds(ctx.directory)]),
+            )
           }
 
           if (ctx.project.vcs === "git") {
@@ -139,7 +139,7 @@ if (yield* Flag.CODEGENIE_EXPERIMENTAL_FILEWATCHER) {
               const ignore = (yield* Effect.promise(() => readdir(vcsDir).catch(() => []))).filter(
                 (entry) => entry !== "HEAD",
               )
-              yield* subscribe(vcsDir, ignore)
+              yield* Effect.forkScoped(subscribe(vcsDir, ignore))
             }
           }
         },

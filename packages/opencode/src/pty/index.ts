@@ -10,8 +10,8 @@ import type { Proc } from "#pty"
 import * as Log from "@opencode-ai/core/util/log"
 import { PtyID } from "./schema"
 import { Effect, Layer, Context, Schema, Types } from "effect"
-import { zod } from "@/util/effect-zod"
-import { NonNegativeInt, PositiveInt, withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { NonNegativeInt, PositiveInt, withStatics } from "@opencode-ai/core/schema"
 
 const log = Log.create({ service: "pty" })
 
@@ -191,7 +191,7 @@ export const layer = Layer.effect(
         ...input.env,
         ...shell.env,
         TERM: "xterm-256color",
-        CODEGENIE_TERMINAL: "1",
+        DEVECO_TERMINAL: "1",
       } as Record<string, string>
 
       if (process.platform === "win32") {

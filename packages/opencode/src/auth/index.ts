@@ -1,7 +1,7 @@
 import path from "path"
 import { Effect, Layer, Record, Result, Schema, Context } from "effect"
-import { zod } from "@/util/effect-zod"
-import { NonNegativeInt } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Global } from "@opencode-ai/core/global"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { LocalCrypto } from "@/security/local-crypto"
@@ -58,9 +58,9 @@ export const layer = Layer.effect(
     const decode = Schema.decodeUnknownOption(Info)
 
     const all = Effect.fn("Auth.all")(function* () {
-      if (process.env.CODEGENIE_AUTH_CONTENT) {
+      if (process.env.DEVECO_AUTH_CONTENT) {
         try {
-          return JSON.parse(process.env.CODEGENIE_AUTH_CONTENT)
+          return JSON.parse(process.env.DEVECO_AUTH_CONTENT)
         } catch (err) {}
       }
 

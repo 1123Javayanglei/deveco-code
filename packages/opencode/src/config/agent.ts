@@ -2,8 +2,8 @@ export * as ConfigAgent from "./agent"
 
 import { Exit, Schema, SchemaGetter } from "effect"
 import { Bus } from "@/bus"
-import { zod } from "@/util/effect-zod"
-import { PositiveInt, withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { PositiveInt, withStatics } from "@opencode-ai/core/schema"
 import * as Log from "@opencode-ai/core/util/log"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
@@ -126,7 +126,7 @@ export async function load(dir: string) {
     })
     if (!md) continue
 
-    const patterns = ["/.codegenie/agent/", "/.codegenie/agents/", "/.opencode/agent/", "/.opencode/agents/", "/agent/", "/agents/"]
+    const patterns = ["/.deveco/agent/", "/.deveco/agents/", "/.opencode/agent/", "/.opencode/agents/", "/agent/", "/agents/"]
     const name = configEntryNameFromPath(item, patterns)
 
     const config = {

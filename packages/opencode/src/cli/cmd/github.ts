@@ -18,9 +18,9 @@ import type {
 } from "@octokit/webhooks-types"
 import { UI } from "../ui"
 import { cmd } from "./cmd"
+import { effectCmd } from "../effect-cmd"
 import { ModelsDev } from "@/provider/models"
-import { Instance } from "@/project/instance"
-import { bootstrap } from "../bootstrap"
+import { InstanceRef } from "@/effect/instance-ref"
 import { SessionShare } from "@/share/session"
 import { Session } from "@/session/session"
 import type { SessionID } from "../../session/schema"
@@ -29,11 +29,12 @@ import { Provider } from "@/provider/provider"
 import { Bus } from "../../bus"
 import { MessageV2 } from "../../session/message-v2"
 import { SessionPrompt } from "@/session/prompt"
-import { AppRuntime } from "@/effect/app-runtime"
 import { Git } from "@/git"
 import { setTimeout as sleep } from "node:timers/promises"
 import { Process } from "@/util/process"
+import { parseGitHubRemote } from "@/util/repository"
 import { Effect } from "effect"
+import * as Log from "@opencode-ai/core/util/log"
 
 type GitHubAuthor = {
   login: string
@@ -152,18 +153,7 @@ const SUPPORTED_EVENTS = [...USER_EVENTS, ...REPO_EVENTS] as const
 type UserEvent = (typeof USER_EVENTS)[number]
 type RepoEvent = (typeof REPO_EVENTS)[number]
 
-// Parses GitHub remote URLs in various formats:
-// - https://github.com/owner/repo.git
-// - https://github.com/owner/repo
-// - git@github.com:owner/repo.git
-// - git@github.com:owner/repo
-// - ssh://git@github.com/owner/repo.git
-// - ssh://git@github.com/owner/repo
-export function parseGitHubRemote(url: string): { owner: string; repo: string } | null {
-  const match = url.match(/^(?:(?:https?|ssh):\/\/)?(?:git@)?github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/)
-  if (!match) return null
-  return { owner: match[1], repo: match[2] }
-}
+export { parseGitHubRemote }
 
 /**
  * Extracts displayable text from assistant response parts.
@@ -199,191 +189,194 @@ export const GithubCommand = cmd({
   async handler() {},
 })
 
-export const GithubInstallCommand = cmd({
+export const GithubInstallCommand = effectCmd({
   command: "install",
   describe: "install the GitHub agent",
-  async handler() {
-    await Instance.provide({
-      directory: process.cwd(),
-      async fn() {
-        {
-          UI.empty()
-          prompts.intro("Install GitHub agent")
-          const app = await getAppInfo()
-          await installGitHubApp()
+  handler: Effect.fn("Cli.github.install")(function* () {
+    const maybeCtx = yield* InstanceRef
+    if (!maybeCtx) return yield* Effect.die("InstanceRef not provided")
+    const ctx = maybeCtx
+    const modelsDev = yield* ModelsDev.Service
+    const gitSvc = yield* Git.Service
+    yield* Effect.promise(async () => {
+      {
+        UI.empty()
+        prompts.intro("Install GitHub agent")
+        const app = await getAppInfo()
+        await installGitHubApp()
 
-          const providers = await ModelsDev.get().then((p) => {
-            // TODO: add guide for copilot, for now just hide it
-            delete p["github-copilot"]
-            return p
+        const providers = await Effect.runPromise(modelsDev.get()).then((p) => {
+          // TODO: add guide for copilot, for now just hide it
+          delete p["github-copilot"]
+          return p
+        })
+
+        const provider = await promptProvider()
+        const model = await promptModel()
+        //const key = await promptKey()
+
+        await addWorkflowFiles()
+        printNextSteps()
+
+        function printNextSteps() {
+          let step2
+          if (provider === "amazon-bedrock") {
+            step2 =
+              "Configure OIDC in AWS - https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services"
+          } else {
+            step2 = [
+              `    2. Add the following secrets in org or repo (${app.owner}/${app.repo}) settings`,
+              "",
+              ...providers[provider].env.map((e) => `       - ${e}`),
+            ].join("\n")
+          }
+
+          prompts.outro(
+            [
+              "Next steps:",
+              "",
+              `    1. Commit the \`${WORKFLOW_FILE}\` file and push`,
+              step2,
+              "",
+              "    3. Go to a GitHub issue and comment `/oc summarize` to see the agent in action",
+              "",
+              "   Learn more about the GitHub agent - https://opencode.ai/docs/github/#usage-examples",
+            ].join("\n"),
+          )
+        }
+
+        async function getAppInfo() {
+          const project = ctx.project
+          if (project.vcs !== "git") {
+            prompts.log.error(`Could not find git repository. Please run this command from a git repository.`)
+            throw new UI.CancelledError()
+          }
+
+          // Get repo info
+          const info = await Effect.runPromise(gitSvc.run(["remote", "get-url", "origin"], { cwd: ctx.worktree })).then(
+            (x) => x.text().trim(),
+          )
+          const parsed = parseGitHubRemote(info)
+          if (!parsed) {
+            prompts.log.error(`Could not find git repository. Please run this command from a git repository.`)
+            throw new UI.CancelledError()
+          }
+          return { owner: parsed.owner, repo: parsed.repo, root: ctx.worktree }
+        }
+
+        async function promptProvider() {
+          const priority: Record<string, number> = {
+            opencode: 0,
+            anthropic: 1,
+            openai: 2,
+            google: 3,
+          }
+          let provider = await prompts.select({
+            message: "Select provider",
+            maxItems: 8,
+            options: pipe(
+              providers,
+              values(),
+              sortBy(
+                (x) => priority[x.id] ?? 99,
+                (x) => x.name ?? x.id,
+              ),
+              map((x) => ({
+                label: x.name,
+                value: x.id,
+                hint: priority[x.id] === 0 ? "recommended" : undefined,
+              })),
+            ),
           })
 
-          const provider = await promptProvider()
-          const model = await promptModel()
-          //const key = await promptKey()
+          if (prompts.isCancel(provider)) throw new UI.CancelledError()
 
-          await addWorkflowFiles()
-          printNextSteps()
+          return provider
+        }
 
-          function printNextSteps() {
-            let step2
-            if (provider === "amazon-bedrock") {
-              step2 =
-                "Configure OIDC in AWS - https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services"
-            } else {
-              step2 = [
-                `    2. Add the following secrets in org or repo (${app.owner}/${app.repo}) settings`,
-                "",
-                ...providers[provider].env.map((e) => `       - ${e}`),
-              ].join("\n")
+        async function promptModel() {
+          const providerData = providers[provider]!
+
+          const model = await prompts.select({
+            message: "Select model",
+            maxItems: 8,
+            options: pipe(
+              providerData.models,
+              values(),
+              sortBy((x) => x.name ?? x.id),
+              map((x) => ({
+                label: x.name ?? x.id,
+                value: x.id,
+              })),
+            ),
+          })
+
+          if (prompts.isCancel(model)) throw new UI.CancelledError()
+          return model
+        }
+
+        async function installGitHubApp() {
+          const s = prompts.spinner()
+          s.start("Installing GitHub app")
+
+          // Get installation
+          const installation = await getInstallation()
+          if (installation) return s.stop("GitHub app already installed")
+
+          // Open browser
+          const url = "https://github.com/apps/opencode-agent"
+          const command =
+            process.platform === "darwin"
+              ? `open "${url}"`
+              : process.platform === "win32"
+                ? `start "" "${url}"`
+                : `xdg-open "${url}"`
+
+          exec(command, (error) => {
+            if (error) {
+              prompts.log.warn(`Could not open browser. Please visit: ${url}`)
             }
+          })
 
-            prompts.outro(
-              [
-                "Next steps:",
-                "",
-                `    1. Commit the \`${WORKFLOW_FILE}\` file and push`,
-                step2,
-                "",
-                "    3. Go to a GitHub issue and comment `/oc summarize` to see the agent in action",
-                "",
-                "   Learn more about the GitHub agent - https://opencode.ai/docs/github/#usage-examples",
-              ].join("\n"),
-            )
-          }
-
-          async function getAppInfo() {
-            const project = Instance.project
-            if (project.vcs !== "git") {
-              prompts.log.error(`Could not find git repository. Please run this command from a git repository.`)
-              throw new UI.CancelledError()
-            }
-
-            // Get repo info
-            const info = await AppRuntime.runPromise(
-              Git.Service.use((git) => git.run(["remote", "get-url", "origin"], { cwd: Instance.worktree })),
-            ).then((x) => x.text().trim())
-            const parsed = parseGitHubRemote(info)
-            if (!parsed) {
-              prompts.log.error(`Could not find git repository. Please run this command from a git repository.`)
-              throw new UI.CancelledError()
-            }
-            return { owner: parsed.owner, repo: parsed.repo, root: Instance.worktree }
-          }
-
-          async function promptProvider() {
-            const priority: Record<string, number> = {
-              opencode: 0,
-              anthropic: 1,
-              openai: 2,
-              google: 3,
-            }
-            let provider = await prompts.select({
-              message: "Select provider",
-              maxItems: 8,
-              options: pipe(
-                providers,
-                values(),
-                sortBy(
-                  (x) => priority[x.id] ?? 99,
-                  (x) => x.name ?? x.id,
-                ),
-                map((x) => ({
-                  label: x.name,
-                  value: x.id,
-                  hint: priority[x.id] === 0 ? "recommended" : undefined,
-                })),
-              ),
-            })
-
-            if (prompts.isCancel(provider)) throw new UI.CancelledError()
-
-            return provider
-          }
-
-          async function promptModel() {
-            const providerData = providers[provider]!
-
-            const model = await prompts.select({
-              message: "Select model",
-              maxItems: 8,
-              options: pipe(
-                providerData.models,
-                values(),
-                sortBy((x) => x.name ?? x.id),
-                map((x) => ({
-                  label: x.name ?? x.id,
-                  value: x.id,
-                })),
-              ),
-            })
-
-            if (prompts.isCancel(model)) throw new UI.CancelledError()
-            return model
-          }
-
-          async function installGitHubApp() {
-            const s = prompts.spinner()
-            s.start("Installing GitHub app")
-
-            // Get installation
+          // Wait for installation
+          s.message("Waiting for GitHub app to be installed")
+          const MAX_RETRIES = 120
+          let retries = 0
+          do {
             const installation = await getInstallation()
-            if (installation) return s.stop("GitHub app already installed")
+            if (installation) break
 
-            // Open browser
-            const url = "https://github.com/apps/opencode-agent"
-            const command =
-              process.platform === "darwin"
-                ? `open "${url}"`
-                : process.platform === "win32"
-                  ? `start "" "${url}"`
-                  : `xdg-open "${url}"`
-
-            exec(command, (error) => {
-              if (error) {
-                prompts.log.warn(`Could not open browser. Please visit: ${url}`)
-              }
-            })
-
-            // Wait for installation
-            s.message("Waiting for GitHub app to be installed")
-            const MAX_RETRIES = 120
-            let retries = 0
-            do {
-              const installation = await getInstallation()
-              if (installation) break
-
-              if (retries > MAX_RETRIES) {
-                s.stop(
-                  `Failed to detect GitHub app installation. Make sure to install the app for the \`${app.owner}/${app.repo}\` repository.`,
-                )
-                throw new UI.CancelledError()
-              }
-
-              retries++
-              await sleep(1000)
-            } while (true) // oxlint-disable-line no-constant-condition
-
-            s.stop("Installed GitHub app")
-
-            async function getInstallation() {
-              return await fetch(
-                `https://api.opencode.ai/get_github_app_installation?owner=${app.owner}&repo=${app.repo}`,
+            if (retries > MAX_RETRIES) {
+              s.stop(
+                `Failed to detect GitHub app installation. Make sure to install the app for the \`${app.owner}/${app.repo}\` repository.`,
               )
-                .then((res) => res.json())
-                .then((data) => data.installation)
+              throw new UI.CancelledError()
             }
+
+            retries++
+            await sleep(1000)
+          } while (true) // oxlint-disable-line no-constant-condition
+
+          s.stop("Installed GitHub app")
+
+          async function getInstallation() {
+            return await fetch(
+              `https://api.opencode.ai/get_github_app_installation?owner=${app.owner}&repo=${app.repo}`,
+            )
+              .then((res) => res.json())
+              .then((data) => data.installation)
           }
+        }
 
-          async function addWorkflowFiles() {
-            const envStr =
-              provider === "amazon-bedrock"
-                ? ""
-                : `\n        env:${providers[provider].env.map((e) => `\n          ${e}: \${{ secrets.${e} }}`).join("")}`
+        async function addWorkflowFiles() {
+          const envStr =
+            provider === "amazon-bedrock"
+              ? ""
+              : `\n        env:${providers[provider].env.map((e) => `\n          ${e}: \${{ secrets.${e} }}`).join("")}`
 
-            await Filesystem.write(
-              path.join(app.root, WORKFLOW_FILE),
-              `name: codegenie
+          await Filesystem.write(
+            path.join(app.root, WORKFLOW_FILE),
+            `name: opencode
 
 on:
   issue_comment:
@@ -392,12 +385,12 @@ on:
     types: [created]
 
 jobs:
-  codegenie:
+  opencode:
     if: |
-      contains(github.event.comment.body, ' /cg') ||
-      startsWith(github.event.comment.body, '/cg') ||
-      contains(github.event.comment.body, ' /codegenie') ||
-      startsWith(github.event.comment.body, '/codegenie')
+      contains(github.event.comment.body, ' /oc') ||
+      startsWith(github.event.comment.body, '/oc') ||
+      contains(github.event.comment.body, ' /opencode') ||
+      startsWith(github.event.comment.body, '/opencode')
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -410,21 +403,20 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run codegenie
+      - name: Run opencode
         uses: anomalyco/opencode/github@latest${envStr}
         with:
           model: ${provider}/${model}`,
-            )
+          )
 
-            prompts.log.success(`Added workflow file: "${WORKFLOW_FILE}"`)
-          }
+          prompts.log.success(`Added workflow file: "${WORKFLOW_FILE}"`)
         }
-      },
+      }
     })
-  },
+  }),
 })
 
-export const GithubRunCommand = cmd({
+export const GithubRunCommand = effectCmd({
   command: "run",
   describe: "run the GitHub agent",
   builder: (yargs) =>
@@ -437,8 +429,14 @@ export const GithubRunCommand = cmd({
         type: "string",
         describe: "GitHub personal access token (github_pat_********)",
       }),
-  async handler(args) {
-    await bootstrap(process.cwd(), async () => {
+  handler: Effect.fn("Cli.github.run")(function* (args) {
+    const ctx = yield* InstanceRef
+    if (!ctx) return yield* Effect.die("InstanceRef not provided")
+    const gitSvc = yield* Git.Service
+    const sessionSvc = yield* Session.Service
+    const sessionShare = yield* SessionShare.Service
+    const sessionPrompt = yield* SessionPrompt.Service
+    yield* Effect.promise(async () => {
       const isMock = args.token || args.event
 
       const context = isMock ? (JSON.parse(args.event!) as Context) : github.context
@@ -501,21 +499,20 @@ export const GithubRunCommand = cmd({
           : "issue"
         : undefined
       const gitText = async (args: string[]) => {
-        const result = await AppRuntime.runPromise(Git.Service.use((git) => git.run(args, { cwd: Instance.worktree })))
+        const result = await Effect.runPromise(gitSvc.run(args, { cwd: ctx.worktree }))
         if (result.exitCode !== 0) {
           throw new Process.RunFailedError(["git", ...args], result.exitCode, result.stdout, result.stderr)
         }
         return result.text().trim()
       }
       const gitRun = async (args: string[]) => {
-        const result = await AppRuntime.runPromise(Git.Service.use((git) => git.run(args, { cwd: Instance.worktree })))
+        const result = await Effect.runPromise(gitSvc.run(args, { cwd: ctx.worktree }))
         if (result.exitCode !== 0) {
           throw new Process.RunFailedError(["git", ...args], result.exitCode, result.stdout, result.stderr)
         }
         return result
       }
-      const gitStatus = (args: string[]) =>
-        AppRuntime.runPromise(Git.Service.use((git) => git.run(args, { cwd: Instance.worktree })))
+      const gitStatus = (args: string[]) => Effect.runPromise(gitSvc.run(args, { cwd: ctx.worktree }))
       const commitChanges = async (summary: string, actor?: string) => {
         const args = ["commit", "-m", summary]
         if (actor) args.push("-m", `Co-authored-by: ${actor} <${actor}@users.noreply.github.com>`)
@@ -552,27 +549,25 @@ export const GithubRunCommand = cmd({
 
         // Setup opencode session
         const repoData = await fetchRepo()
-        session = await AppRuntime.runPromise(
-          Session.Service.use((svc) =>
-            svc.create({
-              permission: [
-                {
-                  permission: "question",
-                  action: "deny",
-                  pattern: "*",
-                },
-              ],
-            }),
-          ),
+        session = await Effect.runPromise(
+          sessionSvc.create({
+            permission: [
+              {
+                permission: "question",
+                action: "deny",
+                pattern: "*",
+              },
+            ],
+          }),
         )
         subscribeSessionEvents()
         shareId = await (async () => {
           if (share === false) return
           if (!share && repoData.data.private) return
-          await AppRuntime.runPromise(SessionShare.Service.use((svc) => svc.share(session.id)))
+          await Effect.runPromise(sessionShare.share(session.id))
           return session.id.slice(-8)
         })()
-        console.log("codegenie session", session.id)
+        console.log("opencode session", session.id)
 
         // Handle event types:
         // REPO_EVENTS (schedule, workflow_dispatch): no issue/PR context, output to logs/PR only
@@ -688,7 +683,9 @@ export const GithubRunCommand = cmd({
         }
       } catch (e: any) {
         exitCode = 1
-        console.error(e instanceof Error ? e.message : String(e))
+        const errorMsg = e instanceof Error ? e.message : String(e)
+        Log.Default.error("github command failed", { error: errorMsg })
+        console.error(errorMsg)
         let msg = e
         if (e instanceof Process.RunFailedError) {
           msg = e.stderr.toString()
@@ -794,7 +791,7 @@ export const GithubRunCommand = cmd({
         }
 
         const reviewContext = getReviewCommentContext()
-const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
+        const mentions = (process.env["MENTIONS"] || "/opencode,/oc")
           .split(",")
           .map((m) => m.trim().toLowerCase())
           .filter(Boolean)
@@ -853,6 +850,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
             },
           })
           if (!res.ok) {
+            Log.Default.warn("Failed to download image from GitHub", { url, status: res.status })
             console.error(`Failed to download image: ${url}`)
             continue
           }
@@ -879,7 +877,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
       function subscribeSessionEvents() {
         const TOOL: Record<string, [string, string]> = {
           todowrite: ["Todo", UI.Style.TEXT_WARNING_BOLD],
-          bash: ["Bash", UI.Style.TEXT_DANGER_BOLD],
+          bash: ["Shell", UI.Style.TEXT_DANGER_BOLD],
           edit: ["Edit", UI.Style.TEXT_SUCCESS_BOLD],
           glob: ["Glob", UI.Style.TEXT_INFO_BOLD],
           grep: ["Grep", UI.Style.TEXT_INFO_BOLD],
@@ -940,11 +938,11 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
       }
 
       async function chat(message: string, files: PromptFiles = []) {
-        console.log("Sending message to codegenie...")
+        console.log("Sending message to opencode...")
 
-        return AppRuntime.runPromise(
+        return Effect.runPromise(
           Effect.gen(function* () {
-            const prompt = yield* SessionPrompt.Service
+            const prompt = sessionPrompt
             const result = yield* prompt.prompt({
               sessionID: session.id,
               messageID: MessageID.ascending(),
@@ -983,6 +981,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
 
             if (result.info.role === "assistant" && result.info.error) {
               const err = result.info.error
+              Log.Default.error("Agent error in chat", { error: err })
               console.error("Agent error:", err)
               if (err.name === "ContextOverflowError") throw new Error(formatPromptTooLargeError(files))
               const message = "message" in err.data ? err.data.message : ""
@@ -1013,6 +1012,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
 
             if (summary.info.role === "assistant" && summary.info.error) {
               const err = summary.info.error
+              Log.Default.error("Summary agent error in chat", { error: err })
               console.error("Summary agent error:", err)
               if (err.name === "ContextOverflowError") throw new Error(formatPromptTooLargeError(files))
               const message = "message" in err.data ? err.data.message : ""
@@ -1030,7 +1030,9 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
         try {
           return await core.getIDToken("opencode-github-action")
         } catch (error) {
-          console.error("Failed to get OIDC token:", error instanceof Error ? error.message : error)
+          const errorMsg = error instanceof Error ? error.message : String(error)
+          Log.Default.error("Failed to get OIDC token", { error: errorMsg })
+          console.error("Failed to get OIDC token:", errorMsg)
           throw new Error(
             "Could not fetch an OIDC token. Make sure to add `id-token: write` to your workflow permissions.",
             { cause: error },
@@ -1131,9 +1133,9 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
           .join("")
         if (type === "schedule" || type === "dispatch") {
           const hex = crypto.randomUUID().slice(0, 6)
-          return `codegenie/${type}-${hex}-${timestamp}`
+          return `deveco/${type}-${hex}-${timestamp}`
         }
-        return `codegenie/${type}${issueId}-${timestamp}`
+        return `deveco/${type}${issueId}-${timestamp}`
       }
 
       async function pushToNewBranch(summary: string, branch: string, commit: boolean, isSchedule: boolean) {
@@ -1223,6 +1225,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
           permission = response.data.permission
           console.log(`  permission: ${permission}`)
         } catch (error) {
+          Log.Default.error("Failed to check permissions", { actor, error: error instanceof Error ? error.message : String(error) })
           console.error(`Failed to check permissions: ${error}`)
           throw new Error(`Failed to check permissions for user ${actor}: ${error}`, { cause: error })
         }
@@ -1349,6 +1352,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
           }
         } catch (e) {
           // If the check fails, proceed to create - we'll get a clear error if a PR already exists
+          Log.Default.warn("Failed to check for existing PR", { error: e instanceof Error ? e.message : String(e) })
           console.log(`Failed to check for existing PR: ${e}`)
         }
 
@@ -1377,6 +1381,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
           // This can happen when the branch was pushed but has no new commits
           // relative to the base (e.g. shallow clone edge cases).
           if (e instanceof Error && e.message.includes("No commits between")) {
+            Log.Default.warn("GitHub rejected PR: no commits between branches", { error: e.message })
             console.log(`GitHub rejected PR: ${e.message}`)
             return null
           }
@@ -1407,7 +1412,7 @@ const mentions = (process.env["MENTIONS"] || "/codegenie,/cg")
 
           return `<a href="${shareBaseUrl}/s/${shareId}"><img width="200" alt="${titleAlt}" src="https://social-cards.sst.dev/opencode-share/${title64}.png?model=${providerID}/${modelID}&version=${session.version}&id=${shareId}" /></a>\n`
         })()
-        const shareUrl = shareId ? `[codegenie session](${shareBaseUrl}/s/${shareId})&nbsp;&nbsp;|&nbsp;&nbsp;` : ""
+        const shareUrl = shareId ? `[opencode session](${shareBaseUrl}/s/${shareId})&nbsp;&nbsp;|&nbsp;&nbsp;` : ""
         return `\n\n${image}${shareUrl}[github run](${runUrl})`
       }
 
@@ -1606,7 +1611,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
         return [
           "<github_action_context>",
           "You are running as a GitHub Action. Important:",
-          "- Git push and PR creation are handled AUTOMATICALLY by the codegenie infrastructure after your response",
+          "- Git push and PR creation are handled AUTOMATICALLY by the opencode infrastructure after your response",
           "- Do NOT include warnings or disclaimers about GitHub tokens, workflow permissions, or PR creation capabilities",
           "- Do NOT suggest manual steps for creating PRs or pushing code - this happens automatically",
           "- Focus only on the code changes and your analysis/response",
@@ -1645,5 +1650,5 @@ query($owner: String!, $repo: String!, $number: Int!) {
         })
       }
     })
-  },
+  }),
 })
