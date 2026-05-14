@@ -1,4 +1,4 @@
-import { describe, expect, beforeAll, beforeEach, afterAll } from "bun:test"
+﻿import { describe, expect, beforeAll, beforeEach, afterAll } from "bun:test"
 import { Effect, Layer, Ref } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/unstable/http"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
@@ -9,7 +9,7 @@ import { it } from "../lib/effect"
 import { rm, writeFile, utimes, mkdir } from "fs/promises"
 import path from "path"
 
-// test/preload.ts pins CODEGENIE_MODELS_PATH to a fixture so other tests can
+// test/preload.ts pins DEVECO_MODELS_PATH to a fixture so other tests can
 // resolve providers without network. These tests need to drive the on-disk
 // cache themselves and silence the eager refresh fork. Save/restore around
 // the suite — never leak the mutation to subsequent test files in the same

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test"
+﻿import { afterEach, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { WithInstance } from "../../src/project/with-instance"
 import { Server } from "../../src/server/server"
@@ -36,13 +36,13 @@ afterEach(async () => {
 
 async function withoutWatcher<T>(fn: () => Promise<T>) {
   if (process.platform !== "win32") return fn()
-  const prev = process.env.CODEGENIE_EXPERIMENTAL_DISABLE_FILEWATCHER
-  process.env.CODEGENIE_EXPERIMENTAL_DISABLE_FILEWATCHER = "true"
+  const prev = process.env.DEVECO_EXPERIMENTAL_DISABLE_FILEWATCHER
+  process.env.DEVECO_EXPERIMENTAL_DISABLE_FILEWATCHER = "true"
   try {
     return await fn()
   } finally {
-    if (prev === undefined) delete process.env.CODEGENIE_EXPERIMENTAL_DISABLE_FILEWATCHER
-    else process.env.CODEGENIE_EXPERIMENTAL_DISABLE_FILEWATCHER = prev
+    if (prev === undefined) delete process.env.DEVECO_EXPERIMENTAL_DISABLE_FILEWATCHER
+    else process.env.DEVECO_EXPERIMENTAL_DISABLE_FILEWATCHER = prev
   }
 }
 

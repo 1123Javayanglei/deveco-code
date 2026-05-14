@@ -1,4 +1,4 @@
-const raw = process.argv[2]
+﻿const raw = process.argv[2]
 if (!raw) throw new Error("Missing worker payload")
 
 const value = JSON.parse(raw)
@@ -12,7 +12,7 @@ if (typeof msg.file !== "string" || typeof msg.spec !== "string" || typeof msg.t
 }
 if (typeof msg.id !== "string") throw new Error("Invalid worker payload")
 
-process.env.CODEGENIE_PLUGIN_META_FILE = msg.file
+process.env.DEVECO_PLUGIN_META_FILE = msg.file
 
 const { PluginMeta } = await import("../../src/plugin/meta")
 

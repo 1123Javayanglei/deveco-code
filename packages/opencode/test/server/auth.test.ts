@@ -1,16 +1,16 @@
-import { afterEach, describe, expect, test } from "bun:test"
+﻿import { afterEach, describe, expect, test } from "bun:test"
 import { Option, Redacted } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { ServerAuth } from "../../src/server/auth"
 
 const original = {
-  CODEGENIE_SERVER_PASSWORD: Flag.DEVECO_SERVER_PASSWORD,
-  CODEGENIE_SERVER_USERNAME: Flag.DEVECO_SERVER_USERNAME,
+  DEVECO_SERVER_PASSWORD: Flag.DEVECO_SERVER_PASSWORD,
+  DEVECO_SERVER_USERNAME: Flag.DEVECO_SERVER_USERNAME,
 }
 
 afterEach(() => {
-  Flag.DEVECO_SERVER_PASSWORD = original.CODEGENIE_SERVER_PASSWORD
-  Flag.DEVECO_SERVER_USERNAME = original.CODEGENIE_SERVER_USERNAME
+  Flag.DEVECO_SERVER_PASSWORD = original.DEVECO_SERVER_PASSWORD
+  Flag.DEVECO_SERVER_USERNAME = original.DEVECO_SERVER_USERNAME
 })
 
 describe("ServerAuth", () => {

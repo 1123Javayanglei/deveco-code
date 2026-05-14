@@ -1,7 +1,7 @@
 import type { AnalyticsEvent, SessionContext, ToolExecution, Operations, ModifiedFile, FileDiffInfo } from "./types"
 import { isBuiltinTool, isMcpTool, isSkillTool } from "./types"
 import { getOrCreateUid, getUserid, getOsName, getOsVersion, getVersion } from "./storage"
-import { codegenieAuth } from "../codegenie"
+import { devecoAuth } from "../codegenie"
 
 export class SessionCollector {
   private context: SessionContext | null = null
@@ -10,7 +10,7 @@ export class SessionCollector {
 
   async init(): Promise<void> {
     this.version = await getVersion()
-    this.loggedIn = await codegenieAuth.isLoggedIn()
+    this.loggedIn = await devecoAuth.isLoggedIn()
   }
 
   setLoggedIn(loggedIn: boolean): void {

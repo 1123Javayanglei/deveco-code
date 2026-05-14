@@ -1,4 +1,4 @@
-import { For, Match, Show, Switch, createEffect, createMemo, onCleanup, type JSX } from "solid-js"
+﻿import { For, Match, Show, Switch, createEffect, createMemo, onCleanup, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createMediaQuery } from "@solid-primitives/media"
 import { Tabs } from "@opencode-ai/ui/tabs"
@@ -61,7 +61,7 @@ export function SessionSidePanel(props: {
   const shown = createMemo(
     () =>
       platform.platform !== "desktop" ||
-      import.meta.env.VITE_CODEGENIE_CHANNEL !== "beta" ||
+      import.meta.env.VITE_DEVECO_CHANNEL !== "beta" ||
       settings.general.showFileTree(),
   )
 

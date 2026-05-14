@@ -1,4 +1,4 @@
-import type { APIEvent } from "@solidjs/start/server"
+﻿import type { APIEvent } from "@solidjs/start/server"
 import { and, Database, eq, isNull, lt, or, sql } from "@opencode-ai/console-core/drizzle/index.js"
 import { KeyTable } from "@opencode-ai/console-core/schema/key.sql.js"
 import { BillingTable, LiteTable, SubscriptionTable, UsageTable } from "@opencode-ai/console-core/schema/billing.sql.js"
@@ -190,10 +190,10 @@ export async function handler(
           })
           headers.delete("host")
           headers.delete("content-length")
-          headers.delete("x-codegenie-request")
-          headers.delete("x-codegenie-session")
-          headers.delete("x-codegenie-project")
-          headers.delete("x-codegenie-client")
+          headers.delete("x-deveco-request")
+          headers.delete("x-deveco-session")
+          headers.delete("x-deveco-project")
+          headers.delete("x-deveco-client")
           return headers
         })(),
         body: reqBody,
