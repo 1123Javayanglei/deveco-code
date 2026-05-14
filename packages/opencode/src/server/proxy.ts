@@ -22,7 +22,7 @@ const app = (upgrade: UpgradeWebSocket) =>
   new Hono().get(
     "/__workspace_ws",
     upgrade((c) => {
-      const url = c.req.header("x-codegenie-proxy-url")
+      const url = c.req.header("x-deveco-proxy-url")
       const queue: Msg[] = []
       let remote: WebSocket | undefined
       return {
