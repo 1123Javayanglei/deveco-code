@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test"
+﻿import { afterEach, describe, expect, test } from "bun:test"
 import { ConfigProvider, Layer } from "effect"
 import { HttpRouter } from "effect/unstable/http"
 import { Instance } from "../../src/project/instance"
@@ -18,8 +18,8 @@ function app(input: { password?: string; username?: string }) {
       Layer.provide(
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
-            CODEGENIE_SERVER_PASSWORD: input.password,
-            CODEGENIE_SERVER_USERNAME: input.username,
+            DEVECO_SERVER_PASSWORD: input.password,
+            DEVECO_SERVER_USERNAME: input.username,
           }),
         ),
       ),

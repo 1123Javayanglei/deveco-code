@@ -29,26 +29,26 @@ export function Home() {
   const editor = useEditorContext()
   let sent = false
 
-  // CodeGenie onboarding state - null = checking, false = show onboarding, true = ready
-  const [codegenieReady, setCodegenieReady] = createSignal<boolean | null>(null)
-  let codegenieChecked = false
+  // DevEco Code onboarding state - null = checking, false = show onboarding, true = ready
+  const [devecoReady, setDevecoReady] = createSignal<boolean | null>(null)
+  let devecoChecked = false
 
-  // Check if CodeGenie onboarding should be shown - wait for sync to complete
+  // Check if DevEco Code onboarding should be shown - wait for sync to complete
   createEffect(
     on(
       () => sync.status,
       (status) => {
         if (status !== "complete") return
-        if (codegenieChecked) return
-        codegenieChecked = true
+        if (devecoChecked) return
+        devecoChecked = true
 
         const hasCredentials = sync.data.provider.some(
           (x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0),
         )
         if (!hasCredentials) {
-          setCodegenieReady(false)
+          setDevecoReady(false)
         } else {
-          setCodegenieReady(true)
+          setDevecoReady(true)
         }
       },
     ),
@@ -88,7 +88,7 @@ export function Home() {
     <>
       <box flexGrow={1} paddingLeft={2} paddingRight={2} flexDirection="column" alignItems="center">
         <box flexGrow={1} minHeight={0} flexShrink={1} />
-        <Show when={codegenieReady()}>
+        <Show when={devecoReady()}>
           <box flexDirection="row" gap={4} alignItems="flex-start" flexShrink={0}>
             <box flexShrink={0}>
               <TuiPluginRuntime.Slot name="home_logo" mode="replace">
@@ -120,8 +120,8 @@ export function Home() {
             </box>
           </box>
         </Show>
-        <Show when={codegenieReady() === false}>
-          <CodeGenieOnboarding onComplete={() => setCodegenieReady(true)} />
+        <Show when={devecoReady() === false}>
+          <CodeGenieOnboarding onComplete={() => setDevecoReady(true)} />
         </Show>
         <box flexGrow={1} minHeight={0} flexShrink={1} />
         <Toast />

@@ -1,4 +1,4 @@
-// @refresh reload
+﻿// @refresh reload
 
 import * as Sentry from "@sentry/solid"
 import { render } from "solid-js/web"
@@ -147,7 +147,7 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     integrations: (integrations) => {
       return integrations.filter(
         (i) =>
-          i.name !== "Breadcrumbs" && !(import.meta.env.CODEGENIE_CHANNEL === "prod" && i.name === "GlobalHandlers"),
+          i.name !== "Breadcrumbs" && !(import.meta.env.DEVECO_CHANNEL === "prod" && i.name === "GlobalHandlers"),
       )
     },
   })

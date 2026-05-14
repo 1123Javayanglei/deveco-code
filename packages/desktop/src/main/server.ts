@@ -1,4 +1,4 @@
-import { dirname, join } from "node:path"
+﻿import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { app, utilityProcess } from "electron"
 import type { Details } from "electron"
@@ -59,9 +59,9 @@ export function preferAppEnv(userDataPath: string) {
   const shell = process.platform === "win32" ? null : getUserShell()
   Object.assign(process.env, {
     ...(shell ? loadShellEnv(shell) : null),
-    CODEGENIE_EXPERIMENTAL_ICON_DISCOVERY: "true",
-    CODEGENIE_EXPERIMENTAL_FILEWATCHER: "true",
-    CODEGENIE_CLIENT: "desktop",
+    DEVECO_EXPERIMENTAL_ICON_DISCOVERY: "true",
+    DEVECO_EXPERIMENTAL_FILEWATCHER: "true",
+    DEVECO_CLIENT: "desktop",
     XDG_STATE_HOME: process.env.XDG_STATE_HOME ?? userDataPath,
   })
 }

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+﻿import { describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import os from "os"
 import path from "path"
@@ -550,7 +550,7 @@ describe("tool.shell permissions", () => {
       test(
         `asks for external_directory permission for missing PowerShell env paths [${item.label}]`,
         withShell(item, async () => {
-          const key = "CODEGENIE_TEST_MISSING"
+          const key = "DEVECO_TEST_MISSING"
           const prev = process.env[key]
           delete process.env[key]
           try {
