@@ -1240,7 +1240,6 @@ export function Session() {
                         toBottom()
                       }}
                       sessionID={route.sessionID}
-                      notice="⚠︎AI-generated content. For reference only"
                       right={<TuiPluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
                     />
                   </TuiPluginRuntime.Slot>
@@ -1403,6 +1402,12 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
   })
 
+  const hasOutput = createMemo(() => {
+    const hasText = props.parts.some((p) => p.type === "text")
+    const hasReasoning = props.parts.some((p) => p.type === "reasoning")
+    return hasText || (hasReasoning && ctx.showThinking())
+  })
+
   const duration = createMemo(() => {
     if (!final()) return 0
     if (!props.message.time.completed) return 0
@@ -1475,6 +1480,14 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>
             </text>
+            <Show when={hasOutput() && (final() || props.message.error?.name === "MessageAbortedError")}>
+              <text>
+                <span style={{ fg: theme.textMuted }}>
+                  •{" "}
+                </span>{" "}
+                <span style={{ fg: theme.textMuted }}>AI-generated content. For reference only</span>
+              </text>
+            </Show>
           </box>
         </Match>
       </Switch>
