@@ -6,7 +6,7 @@ import * as Log from "@opencode-ai/core/util/log"
 
 type EmbeddedSkillFile = string | { encoding: "base64"; content: string }
 
-declare const CODEGENIE_DEFAULT_SKILLS: Record<string, Record<string, EmbeddedSkillFile>> | undefined
+declare const DEVECO_DEFAULT_SKILLS: Record<string, Record<string, EmbeddedSkillFile>> | undefined
 
 export namespace Defaults {
   const log = Log.create({ service: "skill-defaults" })
@@ -34,7 +34,7 @@ export namespace Defaults {
     ).pipe(Effect.catch(() => Effect.void))
 
     // Extract from embedded data
-    const data = typeof CODEGENIE_DEFAULT_SKILLS !== "undefined" ? CODEGENIE_DEFAULT_SKILLS : {}
+    const data = typeof DEVECO_DEFAULT_SKILLS !== "undefined" ? DEVECO_DEFAULT_SKILLS : {}
     for (const [skillName, files] of Object.entries(data)) {
       for (const [fileName, content] of Object.entries(files)) {
         yield* fsys.writeWithDirs(
