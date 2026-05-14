@@ -56,7 +56,7 @@ const log = Log.create({ service: "tool.registry" })
 
 export function webSearchEnabled(
   providerID: ProviderID,
-  flags = { exa: Flag.CODEGENIE_ENABLE_EXA, parallel: Flag.CODEGENIE_ENABLE_PARALLEL },
+  flags = { exa: Flag.DEVECO_ENABLE_EXA, parallel: Flag.DEVECO_ENABLE_PARALLEL },
 ) {
   return providerID === ProviderID.opencode || flags.exa || flags.parallel
 }
@@ -208,7 +208,7 @@ export const layer: Layer.Layer<
 
         yield* config.get()
         const questionEnabled =
-          ["app", "cli", "desktop"].includes(Flag.CODEGENIE_CLIENT) || Flag.CODEGENIE_ENABLE_QUESTION_TOOL
+          ["app", "cli", "desktop"].includes(Flag.DEVECO_CLIENT) || Flag.DEVECO_ENABLE_QUESTION_TOOL
 
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
@@ -247,11 +247,11 @@ export const layer: Layer.Layer<
             tool.fetch,
             tool.todo,
             tool.search,
-            ...(Flag.CODEGENIE_EXPERIMENTAL_SCOUT ? [tool.code, tool.repo_clone, tool.repo_overview] : []),
+            ...(Flag.DEVECO_EXPERIMENTAL_SCOUT ? [tool.code, tool.repo_clone, tool.repo_overview] : []),
             tool.skill,
             tool.patch,
-            ...(Flag.CODEGENIE_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
-            ...(Flag.CODEGENIE_EXPERIMENTAL_PLAN_MODE && Flag.CODEGENIE_CLIENT === "cli" ? [tool.plan] : []),
+            ...(Flag.DEVECO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
+            ...(Flag.DEVECO_EXPERIMENTAL_PLAN_MODE && Flag.DEVECO_CLIENT === "cli" ? [tool.plan] : []),
           ],
           task: tool.task,
           read: tool.read,

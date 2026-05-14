@@ -4,12 +4,12 @@ import appPlugin from "@opencode-ai/app/vite"
 import * as fs from "node:fs/promises"
 
 const channel = (() => {
-  const raw = process.env.CODEGENIE_CHANNEL
+  const raw = process.env.DEVECO_CHANNEL
   if (raw === "dev" || raw === "beta" || raw === "prod") return raw
   return "dev"
 })()
 
-const CODEGENIE_SERVER_DIST = "../opencode/dist/node"
+const DEVECO_SERVER_DIST = "../opencode/dist/node"
 
 const nodePtyPkg = `@lydell/node-pty-${process.platform}-${process.arch}`
 
@@ -33,7 +33,7 @@ const sentry =
 export default defineConfig({
   main: {
     define: {
-      "import.meta.env.CODEGENIE_CHANNEL": JSON.stringify(channel),
+      "import.meta.env.DEVECO_CHANNEL": JSON.stringify(channel),
     },
     build: {
       rollupOptions: {

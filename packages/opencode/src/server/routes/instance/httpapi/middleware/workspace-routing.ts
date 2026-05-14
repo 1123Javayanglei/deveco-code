@@ -69,7 +69,7 @@ function requestURL(request: HttpServerRequest.HttpServerRequest): URL {
 }
 
 function configuredWorkspaceID(): WorkspaceID | undefined {
-  return Flag.CODEGENIE_WORKSPACE_ID ? WorkspaceID.make(Flag.CODEGENIE_WORKSPACE_ID) : undefined
+  return Flag.DEVECO_WORKSPACE_ID ? WorkspaceID.make(Flag.DEVECO_WORKSPACE_ID) : undefined
 }
 
 function selectedWorkspaceID(url: URL, sessionWorkspaceID?: WorkspaceID): WorkspaceID | undefined {

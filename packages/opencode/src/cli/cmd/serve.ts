@@ -12,7 +12,7 @@ export const ServeCommand = effectCmd({
   // need for an ambient project InstanceContext at startup.
   instance: false,
   handler: Effect.fn("Cli.serve")(function* (args) {
-    if (!Flag.CODEGENIE_SERVER_PASSWORD) {
+    if (!Flag.DEVECO_SERVER_PASSWORD) {
       console.log("Warning: CODEGENIE_SERVER_PASSWORD is not set; server is unsecured.")
     }
     const opts = yield* resolveNetworkOptions(args)
