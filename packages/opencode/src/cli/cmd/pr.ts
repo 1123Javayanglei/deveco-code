@@ -80,7 +80,7 @@ export const PrCommand = effectCmd({
           UI.println(`Importing session...`)
 
           const importResult = yield* Effect.promise(() =>
-            Process.text(["codegenie", "import", sessionUrl], { nothrow: true }),
+            Process.text(["deveco", "import", sessionUrl], { nothrow: true }),
           )
           if (importResult.code === 0) {
             const sessionIdMatch = importResult.text.trim().match(/Imported session: ([a-zA-Z0-9_-]+)/)
@@ -101,7 +101,7 @@ export const PrCommand = effectCmd({
     const opencodeArgs = sessionId ? ["-s", sessionId] : []
     const code = yield* Effect.promise(
       () =>
-        Process.spawn(["codegenie", ...opencodeArgs], {
+        Process.spawn(["deveco", ...opencodeArgs], {
           stdin: "inherit",
           stdout: "inherit",
           stderr: "inherit",

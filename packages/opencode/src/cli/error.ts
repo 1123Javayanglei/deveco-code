@@ -39,8 +39,8 @@ export function FormatError(input: unknown) {
     return [
       `Model not found: ${data?.providerID}/${data?.modelID}`,
       ...(suggestions.length ? ["Did you mean: " + suggestions.join(", ")] : []),
-      `Try: \`codegenie models\` to list available models`,
-      `Or check your config (codegenie.json) provider/model names`,
+      `Try: \`deveco models\` to list available models`,
+      `Or check your config (deveco.json) provider/model names`,
     ].join("\n")
   }
 

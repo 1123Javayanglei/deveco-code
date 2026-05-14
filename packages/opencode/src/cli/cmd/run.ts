@@ -441,7 +441,7 @@ export const RunCommand = effectCmd({
       async function share(sdk: OpencodeClient, sessionID: string) {
         const cfg = await sdk.config.get()
         if (!cfg.data) return
-        if (cfg.data.share !== "auto" && !Flag.CODEGENIE_AUTO_SHARE && !args.share) return
+        if (cfg.data.share !== "auto" && !Flag.DEVECO_AUTO_SHARE && !args.share) return
         const res = await sdk.session.share({ sessionID }).catch((error) => {
           if (error instanceof Error && error.message.includes("disabled")) {
             UI.println(UI.Style.TEXT_DANGER_BOLD + "!  " + error.message)

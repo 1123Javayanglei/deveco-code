@@ -134,13 +134,13 @@ async function backupAndStripLegacy(file: string, source: string) {
 
 async function opencodeFiles(input: { directories: string[]; cwd: string }) {
   const files = [
-    ...ConfigPaths.fileInDirectory(Global.Path.config, "codegenie"),
-    ...(await Filesystem.findUp(["codegenie.json", "codegenie.jsonc"], input.cwd, undefined, { rootFirst: true })),
+    ...ConfigPaths.fileInDirectory(Global.Path.config, "deveco"),
+    ...(await Filesystem.findUp(["deveco.json", "deveco.jsonc"], input.cwd, undefined, { rootFirst: true })),
   ]
   for (const dir of unique(input.directories)) {
-    files.push(...ConfigPaths.fileInDirectory(dir, "codegenie"))
+    files.push(...ConfigPaths.fileInDirectory(dir, "deveco"))
   }
-  if (Flag.CODEGENIE_CONFIG) files.push(Flag.CODEGENIE_CONFIG)
+  if (Flag.DEVECO_CONFIG) files.push(Flag.DEVECO_CONFIG)
 
   const existing = await Promise.all(
     unique(files).map(async (file) => {

@@ -411,10 +411,9 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       Effect.succeed({
         autoload: false,
         options: {
-          headers: {
+headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "codegenie",
-            "X-Source": "opencode",
+            "X-Title": "deveco",
           },
         },
       }),
@@ -424,7 +423,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "codegenie",
+            "X-Title": "deveco",
           },
         },
       }),
@@ -434,7 +433,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "codegenie",
+            "X-Title": "deveco",
           },
         },
       }),
@@ -444,7 +443,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "http-referer": "https://opencode.ai/",
-            "x-title": "codegenie",
+            "x-title": "deveco",
           },
         },
       }),
@@ -542,7 +541,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "codegenie",
+            "X-Title": "deveco",
           },
         },
       }),
@@ -567,7 +566,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const directory = yield* InstanceState.directory
 
       const aiGatewayHeaders = {
-        "User-Agent": `codegenie/${InstallationVersion} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
+        "User-Agent": `deveco/${InstallationVersion} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
         "anthropic-beta": "context-1m-2025-08-07",
         ...providerConfig?.options?.aiGatewayHeaders,
       }
@@ -720,7 +719,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           apiKey,
           headers: {
-            "User-Agent": `codegenie/${InstallationVersion} cloudflare-workers-ai (${os.platform()} ${os.release()}; ${os.arch()})`,
+            "User-Agent": `deveco/${InstallationVersion} cloudflare-workers-ai (${os.platform()} ${os.release()}; ${os.arch()})`,
           },
         },
         async getModel(sdk: any, modelID: string) {
@@ -791,7 +790,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         skipCache: input.options?.skipCache,
         collectLog: input.options?.collectLog,
         headers: {
-          "User-Agent": `codegenie/${InstallationVersion} cloudflare-ai-gateway (${os.platform()} ${os.release()}; ${os.arch()})`,
+          "User-Agent": `deveco/${InstallationVersion} cloudflare-ai-gateway (${os.platform()} ${os.release()}; ${os.arch()})`,
         },
       }
 
@@ -827,7 +826,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           headers: {
             "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "codegenie",
+            "X-Title": "deveco",
           },
         },
       }),
@@ -1187,8 +1186,8 @@ const layer: Layer.Layer<
         // === CodeGenie: inject provider config if authenticated ===
         const codegenieAuth = yield* auth.get("codegenie").pipe(Effect.orElseSucceed(() => undefined))
         if (codegenieAuth) {
-          const { CODEGENIE_PROVIDER_CONFIG } = yield* Effect.promise(() => import("@/plugin/codegenie-models"))
-          configProviders.push(["codegenie", CODEGENIE_PROVIDER_CONFIG])
+          const { DEVECO_PROVIDER_CONFIG } = yield* Effect.promise(() => import("@/plugin/codegenie-models"))
+          configProviders.push(["codegenie", DEVECO_PROVIDER_CONFIG])
         }
 
         const disabled = new Set(cfg.disabled_providers ?? [])
@@ -1429,7 +1428,7 @@ const layer: Layer.Layer<
               (providerID === ProviderID.openrouter && modelID === "openai/gpt-5-chat")
             )
               delete provider.models[modelID]
-            if (model.status === "alpha" && !Flag.CODEGENIE_ENABLE_EXPERIMENTAL_MODELS) delete provider.models[modelID]
+            if (model.status === "alpha" && !Flag.DEVECO_ENABLE_EXPERIMENTAL_MODELS) delete provider.models[modelID]
             if (model.status === "deprecated") delete provider.models[modelID]
             if (
               (configProvider?.blacklist && configProvider.blacklist.includes(modelID)) ||
