@@ -26,7 +26,7 @@ import { BashArity } from "@/permission/arity"
 export { Parameters } from "./shell/prompt"
 
 const MAX_METADATA_LENGTH = 30_000
-const DEFAULT_TIMEOUT = Flag.CODEGENIE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
+const DEFAULT_TIMEOUT = Flag.DEVECO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
 const CWD = new Set(["cd", "chdir", "popd", "pushd", "push-location", "set-location"])
 const FILES = new Set([
   ...CWD,
@@ -520,19 +520,10 @@ export const ShellTool = Tool.define(
 
           if (exit.kind === "abort") {
             aborted = true
-            log.warn("shell command aborted by user", {
-              command: input.command.slice(0, 100),
-              timeout: input.timeout,
-            })
             yield* handle.kill({ forceKillAfter: "3 seconds" }).pipe(Effect.orDie)
           }
           if (exit.kind === "timeout") {
             expired = true
-            log.warn("shell command timeout", {
-              command: input.command.slice(0, 100),
-              timeout: input.timeout,
-              cwd: input.cwd,
-            })
             yield* handle.kill({ forceKillAfter: "3 seconds" }).pipe(Effect.orDie)
           }
 

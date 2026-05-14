@@ -5,7 +5,6 @@ import path from "path"
 import fs from "fs/promises"
 import * as Filesystem from "../../../../util/filesystem"
 import * as Process from "../../../../util/process"
-import * as Log from "@opencode-ai/core/util/log"
 
 // Lazy load which and clipboardy to avoid expensive execa/which/isexe chain at startup
 const getWhich = lazy(async () => {
@@ -71,9 +70,7 @@ export async function read(): Promise<Content | undefined> {
       return { data: buffer.toString("base64"), mime: "image/png" }
     } catch {
     } finally {
-      await fs.rm(tmpfile, { force: true }).catch((e) => {
-        Log.Default.debug("Failed to cleanup temp file in clipboard read", { error: e instanceof Error ? e.message : String(e) })
-      })
+      await fs.rm(tmpfile, { force: true }).catch(() => {})
     }
   }
 
@@ -107,10 +104,7 @@ export async function read(): Promise<Content | undefined> {
   }
 
   const clipboardy = await getClipboardy()
-  const text = await clipboardy.read().catch((e) => {
-    Log.Default.debug("Failed to read from clipboardy", { error: e instanceof Error ? e.message : String(e) })
-    return undefined
-  })
+  const text = await clipboardy.read().catch(() => {})
   if (text) {
     return { data: text, mime: "text/plain" }
   }
@@ -136,9 +130,7 @@ const getCopyMethod = lazy(async () => {
         if (!proc.stdin) return
         proc.stdin.write(text)
         proc.stdin.end()
-        await proc.exited.catch((e) => {
-          Log.Default.debug("wl-copy failed", { error: e instanceof Error ? e.message : String(e) })
-        })
+        await proc.exited.catch(() => {})
       }
     }
     if (which("xclip")) {
@@ -152,9 +144,7 @@ const getCopyMethod = lazy(async () => {
         if (!proc.stdin) return
         proc.stdin.write(text)
         proc.stdin.end()
-        await proc.exited.catch((e) => {
-          Log.Default.debug("xclip failed", { error: e instanceof Error ? e.message : String(e) })
-        })
+        await proc.exited.catch(() => {})
       }
     }
     if (which("xsel")) {
@@ -168,9 +158,7 @@ const getCopyMethod = lazy(async () => {
         if (!proc.stdin) return
         proc.stdin.write(text)
         proc.stdin.end()
-        await proc.exited.catch((e) => {
-          Log.Default.debug("xsel failed", { error: e instanceof Error ? e.message : String(e) })
-        })
+        await proc.exited.catch(() => {})
       }
     }
   }
@@ -197,18 +185,14 @@ const getCopyMethod = lazy(async () => {
       if (!proc.stdin) return
       proc.stdin.write(text)
       proc.stdin.end()
-      await proc.exited.catch((e) => {
-        Log.Default.debug("powershell clipboard write failed", { error: e instanceof Error ? e.message : String(e) })
-      })
+      await proc.exited.catch(() => {})
     }
   }
 
   console.log("clipboard: no native support")
   return async (text: string) => {
     const clipboardy = await getClipboardy()
-    await clipboardy.write(text).catch((e) => {
-      Log.Default.debug("clipboardy write failed", { error: e instanceof Error ? e.message : String(e) })
-    })
+    await clipboardy.write(text).catch(() => {})
   }
 })
 
