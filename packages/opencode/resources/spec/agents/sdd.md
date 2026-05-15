@@ -98,12 +98,8 @@ Execute phases sequentially (1 → 5). Do not skip, merge, or reorder steps.
 
 ### Phase 5: Verification & Validation
 1. Pre-Phase: Load `spec-verify.md` via `read` from `{CONFIG_ROOT}/specs/commands/`.
-2. Execution: Follow all rules in the loaded instructions. Strictly follow the internal workflow: `build` → `start` → `plan/confirm` → `verify`.
-3. Review Gate (`question` tool options):
-  - "Wrap up and finish"
-  - "There are remaining issues"
-  - "I want to do more testing"
-4. Gate Action: Await selection. Resolve issues if needed. Update state. Mark workflow as `completed`.
+2. Execution: Follow all rules in the loaded instructions. Strictly follow the internal workflow: `build` → `start` → `plan/confirm` → `verify`. The loaded instructions include a re-verification loop for issue resolution — follow it as specified.
+3. Gate Action: Update state. Mark workflow as `completed` when verification passes or user confirms wrap-up.
 
 ## EXCEPTION HANDLING & RECOVERY PROTOCOL
 - **Tool Failure:** If `read`/`write`/`question`/`todowrite` fails after 1 retry, output: `[TOOL_ERROR] <tool_name>: <error_detail>` and pause for user intervention.
