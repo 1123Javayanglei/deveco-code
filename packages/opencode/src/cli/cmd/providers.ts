@@ -298,7 +298,7 @@ export const ProvidersLoginCommand = effectCmd({
   builder: (yargs) =>
     yargs
       .positional("url", {
-        describe: "opencode auth provider",
+        describe: "deveco auth provider",
         type: "string",
       })
       .option("provider", {
@@ -363,7 +363,7 @@ export const ProvidersLoginCommand = effectCmd({
     const hooks = yield* pluginSvc.list()
 
     const priority: Record<string, number> = {
-      opencode: 0,
+      deveco: 0,
       openai: 1,
       "github-copilot": 2,
       google: 3,
@@ -378,29 +378,25 @@ export const ProvidersLoginCommand = effectCmd({
       enabled,
       providerNames: Object.fromEntries(Object.entries(config.provider ?? {}).map(([id, p]) => [id, p.name])),
     })
-    const options = [
+    const allOptions = [
       ...pipe(
         providers,
         values(),
-        sortBy(
-          (x) => priority[x.id] ?? 99,
-          (x) => x.name ?? x.id,
-        ),
         map((x) => ({
           label: x.name,
           value: x.id,
           hint: {
-            opencode: "recommended",
             openai: "ChatGPT Plus/Pro or API key",
           }[x.id],
         })),
       ),
       ...pluginProviders.map((x) => ({
-        label: x.name,
+        label: x.id === "deveco" ? "DevEco Code" : x.name,
         value: x.id,
-        hint: "plugin",
+        hint: x.id === "deveco" ? "recommended" : "plugin",
       })),
     ]
+    const options = sortBy(allOptions, (x) => priority[x.value] ?? 99, (x) => x.label)
 
     let provider: string
     if (args.provider) {
@@ -457,7 +453,7 @@ export const ProvidersLoginCommand = effectCmd({
       )
     }
 
-    if (provider === "deveco") {
+    if (provider === "opencode") {
       yield* Prompt.log.info("Create an api key at https://opencode.ai/auth")
     }
 
