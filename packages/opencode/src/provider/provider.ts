@@ -771,7 +771,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       if (!apiToken) {
         throw new Error(
           "CLOUDFLARE_API_TOKEN (or CF_AIG_TOKEN) is required for Cloudflare AI Gateway. " +
-            "Set it via environment variable or run `opencode auth cloudflare-ai-gateway`.",
+            "Set it via environment variable or run `deveco providers`.",
         )
       }
 
@@ -842,7 +842,13 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         if (auth.expires && Date.now() >= auth.expires) {
           log.info("deveco token expired, attempting refresh")
           const { devecoAuth, ACCESS_TOKEN_EXPIRES_MS } = yield* Effect.promise(() => import("@/plugin/deveco"))
-          const newTokens = yield* Effect.promise(() => devecoAuth.refreshToken())
+          const newTokens = yield* Effect.promise(() => devecoAuth.refreshToken()).pipe(
+            Effect.timeout("10 seconds"),
+            Effect.catchTag("TimeoutError", () => {
+              log.warn("deveco token refresh timed out")
+              return Effect.succeed(null)
+            }),
+          )
           if (newTokens) {
             log.info("deveco token refresh successful")
             yield* Effect.promise(() =>
@@ -1142,9 +1148,13 @@ const layer: Layer.Layer<
     const state = yield* InstanceState.make<State>(() =>
       Effect.gen(function* () {
         using _ = log.time("state")
+        log.info("state: start")
         const bridge = yield* EffectBridge.make()
+        log.info("state: bridge ready")
         const cfg = yield* config.get()
+        log.info("state: config loaded")
         const modelsDev = yield* modelsDevSvc.get()
+        log.info("state: modelsDev loaded")
         const database = mapValues(modelsDev, fromModelsDevProvider)
 
         const providers: Record<ProviderID, Info> = {} as Record<ProviderID, Info>
@@ -1183,12 +1193,15 @@ const layer: Layer.Layer<
 
         // load plugins first so config() hook runs before reading cfg.provider
         const plugins = yield* plugin.list()
+        log.info("state: plugins listed")
 
         // now read config providers - includes any modifications from plugin config() hook
         const configProviders = Object.entries(cfg.provider ?? {})
+        log.info("state: configProviders read")
 
         // === DevEco Code: inject provider config if authenticated ===
         const devecoAuth = yield* auth.get("deveco").pipe(Effect.orElseSucceed(() => undefined))
+        log.info("state: deveco auth checked", { hasAuth: !!devecoAuth })
         if (devecoAuth) {
           const { DEVECO_PROVIDER_CONFIG } = yield* Effect.promise(() => import("@/plugin/deveco-models"))
           configProviders.push(["deveco", DEVECO_PROVIDER_CONFIG])
@@ -1374,12 +1387,14 @@ const layer: Layer.Layer<
         for (const [id, fn] of Object.entries(custom(dep))) {
           const providerID = ProviderID.make(id)
           if (disabled.has(providerID)) continue
+          log.info("state: custom provider start", { providerID })
           const data = database[providerID]
           if (!data) {
             log.error("Provider does not exist in model list " + providerID)
             continue
           }
           const result = yield* fn(data)
+          log.info("state: custom provider done", { providerID })
           if (result && (result.autoload || providers[providerID])) {
             if (result.getModel) modelLoaders[providerID] = result.getModel
             if (result.vars) varsLoaders[providerID] = result.vars
