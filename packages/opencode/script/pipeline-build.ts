@@ -108,6 +108,31 @@ if (fs.existsSync(defaultSkillsDir)) {
 }
 console.log(`Loaded ${Object.keys(defaultSkillsData).length} default skills`)
 
+// Load default spec resources from resources/spec/
+console.log("\n[2.5/5] Loading default spec resources...")
+const defaultSpecDir = path.join(dir, "resources/spec")
+type EmbeddedFile = string | { encoding: "base64"; content: string }
+const binaryExtensions = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bin"])
+const defaultSpecData: Record<string, Record<string, EmbeddedFile> | EmbeddedFile> = {}
+if (fs.existsSync(defaultSpecDir)) {
+  for (const entry of await fs.promises.readdir(defaultSpecDir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      const files: Record<string, EmbeddedFile> = {}
+      const specPath = path.join(defaultSpecDir, entry.name)
+      for (const file of await walk(specPath)) {
+        const rel = path.relative(specPath, file)
+        files[rel] = binaryExtensions.has(path.extname(file).toLowerCase())
+          ? { encoding: "base64", content: Buffer.from(await Bun.file(file).arrayBuffer()).toString("base64") }
+          : await Bun.file(file).text()
+      }
+      defaultSpecData[entry.name] = files
+    } else if (entry.isFile()) {
+      defaultSpecData[entry.name] = await Bun.file(path.join(defaultSpecDir, entry.name)).text()
+    }
+  }
+}
+console.log(`Loaded ${Object.keys(defaultSpecData).length} default spec resources`)
+
 // Build embedded Web UI bundle
 const createEmbeddedWebUIBundle = async () => {
   console.log("\nBuilding Web UI to embed in the binary")
@@ -290,6 +315,7 @@ for (const item of targets) {
       CODEGENIE_VERSION: `'${Script.version}'`,
       CODEGENIE_MIGRATIONS: JSON.stringify(migrations),
       CODEGENIE_DEFAULT_SKILLS: JSON.stringify(defaultSkillsData),
+      CODEGENIE_DEFAULT_SPEC_RESOURCES: JSON.stringify(defaultSpecData),
       OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
       CODEGENIE_WORKER_PATH: workerPath,
       CODEGENIE_CHANNEL: `'${Script.channel}'`,
