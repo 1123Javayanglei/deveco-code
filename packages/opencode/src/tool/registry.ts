@@ -124,6 +124,7 @@ export const layer: Layer.Layer<
     const switchcwd = yield* SwitchCwdTool
     const ohknowledge = yield* OhKnowledgeTool
     const agent = yield* Agent.Service
+    const auth = yield* Auth.Service
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -194,6 +195,9 @@ export const layer: Layer.Layer<
         const questionEnabled =
           ["app", "cli", "desktop"].includes(Flag.CODEGENIE_CLIENT) || Flag.CODEGENIE_ENABLE_QUESTION_TOOL
 
+        const authInfo = yield* auth.get("codegenie").pipe(Effect.orElseSucceed(() => undefined))
+        const ohknowledgeEnabled = authInfo !== undefined && authInfo.type === "oauth"
+
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
           bash: Tool.init(bash),
@@ -238,7 +242,7 @@ export const layer: Layer.Layer<
             // HarmonyOS tools
             tool.hdclog,
             tool.switchcwd,
-            tool.ohknowledge,
+            ...(ohknowledgeEnabled ? [tool.ohknowledge] : []),
             ...(Flag.CODEGENIE_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
             ...(Flag.CODEGENIE_CLIENT === "cli" ? [tool.plan, tool.planwrite, tool.planenter] : []),
           ],
