@@ -171,6 +171,15 @@ export type ContextOverflowError = {
   }
 }
 
+export type QueueError = {
+  name: "QueueError"
+  data: {
+    position: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    message: string
+    responseBody?: string
+  }
+}
+
 export type ApiError = {
   name: "APIError"
   data: {
@@ -425,6 +434,7 @@ export type AssistantMessage = {
     | MessageAbortedError
     | StructuredOutputError
     | ContextOverflowError
+    | QueueError
     | ApiError
   parentID: string
   modelID: string
@@ -756,7 +766,7 @@ export type Session = {
     created: number
     updated: number
     compacting?: number
-    archived?: number
+    archived?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
   }
   permission?: PermissionRuleset
   revert?: {
@@ -1444,7 +1454,7 @@ export type GlobalSession = {
     created: number
     updated: number
     compacting?: number
-    archived?: number
+    archived?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
   }
   permission?: PermissionRuleset
   revert?: {
@@ -1808,6 +1818,105 @@ export type WorkspaceWarpError = {
   }
 }
 
+export type QueueError1 = {
+  name: "QueueError"
+  data: {
+    position: number | "NaN" | "Infinity" | "-Infinity"
+    message: string
+    responseBody?: string
+  }
+}
+
+export type Session9 = {
+  id: string
+  slug: string
+  projectID: string
+  workspaceID?: string
+  directory: string
+  path?: string
+  parentID?: string
+  summary?: {
+    additions: number
+    deletions: number
+    files: number
+    diffs?: Array<SnapshotFileDiff>
+  }
+  share?: {
+    url: string
+  }
+  title: string
+  agent?: string
+  model?: {
+    id: string
+    providerID: string
+    variant?: string
+  }
+  version: string
+  time: {
+    created: number
+    updated: number
+    compacting?: number
+    archived?: number | "NaN" | "Infinity" | "-Infinity"
+  }
+  permission?: PermissionRuleset
+  revert?: {
+    messageID: string
+    partID?: string
+    snapshot?: string
+    diff?: string
+  }
+}
+
+export type SyncEventSessionUpdated11 = {
+  type: "sync"
+  name: "session.updated.1"
+  id: string
+  seq: number
+  aggregateID: "sessionID"
+  data: {
+    sessionID: string
+    info: {
+      id?: string
+      slug?: string
+      projectID?: string
+      workspaceID?: string
+      directory?: string
+      path?: string
+      parentID?: string
+      summary?: {
+        additions: number
+        deletions: number
+        files: number
+        diffs?: Array<SnapshotFileDiff>
+      }
+      share?: {
+        url?: string
+      }
+      title?: string
+      agent?: string
+      model?: {
+        id: string
+        providerID: string
+        variant?: string
+      }
+      version?: string
+      time?: {
+        created?: number
+        updated?: number
+        compacting?: number
+        archived?: number | "NaN" | "Infinity" | "-Infinity"
+      }
+      permission?: PermissionRuleset
+      revert?: {
+        messageID: string
+        partID?: string
+        snapshot?: string
+        diff?: string
+      }
+    }
+  }
+}
+
 export type SyncEventMessageUpdated = {
   type: "sync"
   name: "message.updated.1"
@@ -1907,7 +2016,7 @@ export type SyncEventSessionUpdated = {
         created?: number | null
         updated?: number | null
         compacting?: number | null
-        archived?: number | null
+        archived?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN" | null
       }
       permission?: PermissionRuleset | null
       revert?: {
@@ -2421,6 +2530,7 @@ export type EventSessionError = {
       | MessageAbortedError
       | StructuredOutputError
       | ContextOverflowError
+      | QueueError
       | ApiError
   }
 }
@@ -5286,7 +5396,7 @@ export type SessionUpdateData = {
     title?: string
     permission?: PermissionRuleset
     time?: {
-      archived?: number
+      archived?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     }
   }
   path: {
