@@ -171,6 +171,15 @@ export type ContextOverflowError = {
   }
 }
 
+export type QueueError = {
+  name: "QueueError"
+  data: {
+    position: number
+    message: string
+    responseBody?: string
+  }
+}
+
 export type ApiError = {
   name: "APIError"
   data: {
@@ -425,6 +434,7 @@ export type AssistantMessage = {
     | MessageAbortedError
     | StructuredOutputError
     | ContextOverflowError
+    | QueueError
     | ApiError
   parentID: string
   modelID: string

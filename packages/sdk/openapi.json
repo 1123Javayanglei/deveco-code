@@ -9363,6 +9363,33 @@
         "required": ["name", "data"],
         "additionalProperties": false
       },
+      "QueueError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["QueueError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "position": {
+                "type": "number"
+              },
+              "message": {
+                "type": "string"
+              },
+              "responseBody": {
+                "type": "string"
+              }
+            },
+            "required": ["position", "message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "APIError": {
         "type": "object",
         "properties": {
@@ -10031,6 +10058,9 @@
               },
               {
                 "$ref": "#/components/schemas/ContextOverflowError"
+              },
+              {
+                "$ref": "#/components/schemas/QueueError"
               },
               {
                 "$ref": "#/components/schemas/APIError"

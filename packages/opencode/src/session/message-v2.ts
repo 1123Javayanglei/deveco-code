@@ -27,6 +27,7 @@ import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
 import { NonNegativeInt, withStatics } from "@opencode-ai/core/schema"
 import { namedSchemaError } from "@/util/named-schema-error"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
+import { macaddr } from "drizzle-orm/pg-core/columns/macaddr"
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
 interface FetchDecompressionError extends Error {
@@ -61,6 +62,12 @@ export const ContextOverflowError = namedSchemaError("ContextOverflowError", {
   message: Schema.String,
   responseBody: Schema.optional(Schema.String),
 })
+export const QueueError = namedSchemaError("QueueError", {
+  position: Schema.Number,
+  message: Schema.String,
+  responseBody: Schema.optional(Schema.String),
+})
+export type QueueError = z.infer<typeof QueueError.Schema>
 
 export class OutputFormatText extends Schema.Class<OutputFormatText>("OutputFormatText")({
   type: Schema.Literal("text"),
@@ -455,6 +462,7 @@ const AssistantErrorSchema = Schema.Union([
   AbortedError.EffectSchema,
   StructuredOutputError.EffectSchema,
   ContextOverflowError.EffectSchema,
+  QueueError.EffectSchema,
   APIError.EffectSchema,
 ]).annotate({ discriminator: "name" })
 type AssistantError = Schema.Schema.Type<typeof AssistantErrorSchema>
@@ -1148,6 +1156,9 @@ export function fromError(
   e: unknown,
   ctx: { providerID: ProviderID; aborted?: boolean },
 ): NonNullable<Assistant["error"]> {
+
+  const isQueueErrorString = (e: unknown): e is string => typeof e === "string" && e.includes("排队")
+
   switch (true) {
     case e instanceof DOMException && e.name === "AbortError":
       return new AbortedError(
@@ -1222,6 +1233,18 @@ export function fromError(
       ).toObject()
     case e instanceof Error:
       return new NamedError.Unknown({ message: errorMessage(e) }, { cause: e }).toObject()
+    case isQueueErrorString(e):
+      const match = e.match(/第\s*(\d+)\s*位/)
+      const position = match ? parseInt(match[1], 10) : 0
+      return new QueueError(
+        {
+          position,
+          message: e,
+        },
+        {
+          cause: e,
+        },
+      )
     default:
       try {
         const parsed = ProviderError.parseStreamError(e)
