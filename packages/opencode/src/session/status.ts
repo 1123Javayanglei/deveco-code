@@ -28,13 +28,6 @@ export const Info = Schema.Union([
     next: NonNegativeInt,
   }),
   Schema.Struct({
-    type: Schema.Literal("queue"),
-    attempt: Schema.Number,
-    position: Schema.Number,
-    message: Schema.String,
-    next: Schema.Number,
-  }),
-  Schema.Struct({
     type: Schema.Literal("busy"),
   }),
 ])

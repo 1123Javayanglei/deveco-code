@@ -171,6 +171,15 @@ export type ContextOverflowError = {
   }
 }
 
+export type QueueError = {
+  name: "QueueError"
+  data: {
+    position: number
+    message: string
+    responseBody?: string
+  }
+}
+
 export type ApiError = {
   name: "APIError"
   data: {
@@ -425,6 +434,7 @@ export type AssistantMessage = {
     | MessageAbortedError
     | StructuredOutputError
     | ContextOverflowError
+    | QueueError
     | ApiError
   parentID: string
   modelID: string
@@ -693,6 +703,19 @@ export type RetryPart = {
   }
 }
 
+export type QueuePart = {
+  id: string
+  sessionID: string
+  messageID: string
+  type: "queue"
+  position: number
+  message: string
+  time: {
+    start: number
+    end?: number
+  }
+}
+
 export type CompactionPart = {
   id: string
   sessionID: string
@@ -715,6 +738,7 @@ export type Part =
   | PatchPart
   | AgentPart
   | RetryPart
+  | QueuePart
   | CompactionPart
 
 export type PermissionAction = "allow" | "deny" | "ask"
