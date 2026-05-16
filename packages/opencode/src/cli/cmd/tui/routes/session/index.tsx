@@ -10,6 +10,7 @@ import {
   onMount,
   Show,
   Switch,
+  untrack,
   useContext,
 } from "solid-js"
 import { Dynamic } from "solid-js/web"
@@ -63,7 +64,6 @@ import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
 import { Sidebar } from "./sidebar"
 import { SubagentFooter } from "./subagent-footer.tsx"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import parsers from "../../../../../../parsers-config.ts"
 import * as Clipboard from "../../util/clipboard"
@@ -98,7 +98,7 @@ const GO_UPSELL_FREE_TIER_DONT_SHOW = "go_upsell_dont_show"
 const GO_UPSELL_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT = "go_upsell_account_rate_limit_last_seen_at"
 const GO_UPSELL_ACCOUNT_RATE_LIMIT_DONT_SHOW = "go_upsell_account_rate_limit_dont_show"
 const GO_UPSELL_WINDOW = 86_400_000 // 24 hrs
-const GO_UPSELL_PROVIDERS = new Set(["opencode", "opencode-go"])
+const GO_UPSELL_PROVIDERS = new Set(["codegenie", "opencode-go"])
 
 function goUpsellKeys(action: SessionRetry.Retryable["action"]) {
   if (!action) return
@@ -242,7 +242,7 @@ export function Session() {
   createEffect(() => {
     const sessionID = route.sessionID
     void (async () => {
-      const previousWorkspace = project.workspace.current()
+      const previousWorkspace = untrack(() => project.workspace.current())
       const result = await sdk.client.session.get({ sessionID }, { throwOnError: true })
       if (!result.data) {
         toast.show({
@@ -744,7 +744,7 @@ export function Session() {
       title: "Line up",
       value: "session.line.up",
       category: "Session",
-      enabled: false,
+      hidden: true,
       run: () => {
         scroll.scrollBy(-1)
         dialog.clear()
@@ -754,7 +754,7 @@ export function Session() {
       title: "Line down",
       value: "session.line.down",
       category: "Session",
-      enabled: false,
+      hidden: true,
       run: () => {
         scroll.scrollBy(1)
         dialog.clear()
@@ -1393,19 +1393,13 @@ function UserMessage(props: {
 function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; last: boolean }) {
   const ctx = use()
   const local = useLocal()
-  const { theme, subtleSyntax } = useTheme()
+  const { theme } = useTheme()
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
   const model = createMemo(() => Model.name(ctx.providers(), props.message.providerID, props.message.modelID))
 
   const final = createMemo(() => {
     return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
-  })
-
-  const hasOutput = createMemo(() => {
-    const hasText = props.parts.some((p) => p.type === "text")
-    const hasReasoning = props.parts.some((p) => p.type === "reasoning")
-    return hasText || (hasReasoning && ctx.showThinking())
   })
 
   const duration = createMemo(() => {
@@ -1460,17 +1454,6 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
           <box paddingLeft={3}>
-<Show when={hasOutput() && (final() || props.message.error?.name === "MessageAbortedError")}>
-              <box marginTop={1}>
-                <code
-                  filetype="markdown"
-                  drawUnstyledText={false}
-                  syntaxStyle={subtleSyntax()}
-                  content="•  AI-generated content. For reference only"
-                  fg={theme.textMuted}
-                />
-              </box>
-            </Show>
             <text marginTop={1}>
               <span
                 style={{
@@ -1543,29 +1526,15 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
   return (
     <Show when={props.part.text.trim()}>
       <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
-        <Switch>
-          <Match when={Flag.DEVECO_EXPERIMENTAL_MARKDOWN}>
-            <markdown
-              syntaxStyle={syntax()}
-              streaming={true}
-              content={props.part.text.trim()}
-              conceal={ctx.conceal()}
-              fg={theme.markdownText}
-              bg={theme.background}
-            />
-          </Match>
-          <Match when={!Flag.DEVECO_EXPERIMENTAL_MARKDOWN}>
-            <code
-              filetype="markdown"
-              drawUnstyledText={false}
-              streaming={true}
-              syntaxStyle={syntax()}
-              content={props.part.text.trim()}
-              conceal={ctx.conceal()}
-              fg={theme.text}
-            />
-          </Match>
-        </Switch>
+        <code
+          filetype="markdown"
+          drawUnstyledText={false}
+          streaming={true}
+          syntaxStyle={syntax()}
+          content={props.part.text.trim()}
+          conceal={ctx.conceal()}
+          fg={theme.text}
+        />
       </box>
     </Show>
   )
@@ -1999,11 +1968,11 @@ function WebFetch(props: ToolProps<typeof WebFetchTool>) {
 }
 
 function WebSearch(props: ToolProps<typeof WebSearchTool>) {
-  const metadata = props.metadata as { numResults?: number; provider?: unknown }
+  const metadata = () => props.metadata as { numResults?: number; provider?: unknown }
   return (
     <InlineTool icon="◈" pending="Searching web..." complete={props.input.query} part={props.part}>
-      {webSearchProviderLabel(metadata.provider)} "{props.input.query}"{" "}
-      <Show when={metadata.numResults}>({metadata.numResults} results)</Show>
+      {webSearchProviderLabel(metadata().provider)} "{props.input.query}"{" "}
+      <Show when={metadata().numResults}>({metadata().numResults} results)</Show>
     </InlineTool>
   )
 }

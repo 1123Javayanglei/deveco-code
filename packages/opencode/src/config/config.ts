@@ -2,7 +2,6 @@ import * as Log from "@opencode-ai/core/util/log"
 import path from "path"
 import { pathToFileURL } from "url"
 import os from "os"
-import z from "zod"
 import { mergeDeep } from "remeda"
 import { Global } from "@opencode-ai/core/global"
 import fsNode from "fs/promises"
@@ -11,11 +10,8 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { applyEdits, modify } from "jsonc-parser"
-import { Instance, type InstanceContext } from "../project/instance"
-import { InstanceStore } from "../project/instance-store"
+import { type InstanceContext } from "../project/instance"
 import { InstallationLocal, InstallationVersion } from "@opencode-ai/core/installation/version"
-// @ts-expect-error — workspace package JSON import (resolves at build time)
-import pluginPkg from "@opencode-ai/plugin/package.json"
 import { existsSync } from "fs"
 import { Account } from "@/account/account"
 import { isRecord } from "@/util/record"
@@ -24,9 +20,8 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { InstanceState } from "@/effect/instance-state"
 import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
-import { InstanceRef } from "@/effect/instance-ref"
-import { zod } from "@opencode-ai/core/effect-zod"
-import { NonNegativeInt, PositiveInt, withStatics, type DeepMutable } from "@opencode-ai/core/schema"
+import { containsPath } from "../project/instance-context"
+import { NonNegativeInt, PositiveInt, type DeepMutable } from "@opencode-ai/core/schema"
 import { ConfigAgent } from "./agent"
 import { ConfigAttachment } from "./attachment"
 import { ConfigCommand } from "./command"
@@ -115,8 +110,6 @@ async function resolveLoadedPlugins<T extends { plugin?: ConfigPlugin.Spec[] }>(
   return config
 }
 
-export const Server = ConfigServer.Server.zod
-export const Layout = ConfigLayout.Layout.zod
 export type Layout = ConfigLayout.Layout
 
 const LogLevelRef = Schema.Literals(["DEBUG", "INFO", "WARN", "ERROR"]).annotate({
@@ -124,14 +117,6 @@ const LogLevelRef = Schema.Literals(["DEBUG", "INFO", "WARN", "ERROR"]).annotate
   description: "Log level",
 })
 
-// The Effect Schema is the canonical source of truth. The `.zod` compatibility
-// surface is derived from it so plugin/SDK Zod consumers keep working without
-// a parallel hand-maintained Zod definition.
-//
-// The walker emits `z.object({...})` which is non-strict by default. Config
-// historically uses `.strict()` (additionalProperties: false in openapi.json),
-// so layer that on after derivation. Re-apply the Config ref afterward
-// since `.strict()` strips the walker's meta annotation.
 export const Info = Schema.Struct({
   $schema: Schema.optional(Schema.String).annotate({
     description: "JSON schema reference for configuration validation",
@@ -148,7 +133,7 @@ export const Info = Schema.Struct({
   }),
   skills: Schema.optional(ConfigSkills.Info).annotate({ description: "Additional skill folder paths" }),
   reference: Schema.optional(ConfigReference.Info).annotate({
-    description: "Named git or local directory references that can be @ mentioned as Scout-backed subagents",
+    description: "Named git or local directory references that can be mentioned as @alias or @alias/path",
   }),
   watcher: Schema.optional(
     Schema.Struct({
@@ -304,15 +289,7 @@ export const Info = Schema.Struct({
       }),
     }),
   ),
-})
-  .annotate({ identifier: "Config" })
-  .pipe(
-    withStatics((s) => ({
-      zod: (zod(s) as unknown as z.ZodObject<any>).strict().meta({ ref: "Config" }) as unknown as z.ZodType<
-        DeepMutable<Schema.Schema.Type<typeof s>>
-      >,
-    })),
-  )
+}).annotate({ identifier: "Config" })
 
 // Uses the shared `DeepMutable` from `@opencode-ai/core/schema`. See the definition
 // there for why the local variant is needed over `Types.DeepMutable` from
@@ -344,7 +321,7 @@ export interface Interface {
 export class Service extends Context.Service<Service, Interface>()("@opencode/Config") {}
 
 function globalConfigFile() {
-  const candidates = ["deveco.jsonc", "deveco.json", "config.json"].map((file) =>
+  const candidates = ["opencode.jsonc", "opencode.json", "config.json"].map((file) =>
     path.join(Global.Path.config, file),
   )
   for (const file of candidates) {
@@ -379,14 +356,11 @@ function writableGlobal(info: Info) {
   return next
 }
 
-export const ConfigDirectoryTypoError = NamedError.create(
-  "ConfigDirectoryTypoError",
-  z.object({
-    path: z.string(),
-    dir: z.string(),
-    suggestion: z.string(),
-  }),
-)
+export const ConfigDirectoryTypoError = NamedError.create("ConfigDirectoryTypoError", {
+  path: Schema.String,
+  dir: Schema.String,
+  suggestion: Schema.String,
+})
 
 export const layer = Layer.effect(
   Service,
@@ -410,7 +384,7 @@ export const layer = Layer.effect(
         ),
       )
       const parsed = ConfigParse.jsonc(expanded, source)
-      const data = ConfigParse.effectSchema(Info, normalizeLoadedConfig(parsed, source), source)
+      const data = ConfigParse.schema(Info, normalizeLoadedConfig(parsed, source), source)
       if (!("path" in options)) return data
 
       yield* Effect.promise(() => resolveLoadedPlugins(data, options.path))
@@ -431,9 +405,19 @@ export const layer = Layer.effect(
 
     const loadGlobal = Effect.fnUntraced(function* () {
       let result: Info = {}
+      // Seed the default global config with the schema for editor completion, but avoid writing when the user
+      // explicitly routes config through env-provided paths or content.
+      if (!Flag.DEVECO_CONFIG && !Flag.DEVECO_CONFIG_DIR && !Flag.DEVECO_CONFIG_CONTENT) {
+        const file = globalConfigFile()
+        if (!existsSync(file)) {
+          yield* fs
+            .writeWithDirs(file, JSON.stringify({ $schema: "https://opencode.ai/config.json" }, null, 2))
+            .pipe(Effect.catch(() => Effect.void))
+        }
+      }
       result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "config.json")))
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "deveco.json")))
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "deveco.jsonc")))
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.json")))
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.jsonc")))
 
       const legacy = path.join(Global.Path.config, "config")
       if (existsSync(legacy)) {
@@ -447,9 +431,7 @@ export const layer = Layer.effect(
               await fsNode.writeFile(path.join(Global.Path.config, "config.json"), JSON.stringify(result, null, 2))
               await fsNode.unlink(legacy)
             })
-            .catch((e) => {
-              log.warn("Failed to migrate legacy config", { error: e instanceof Error ? e.message : String(e) })
-            }),
+            .catch(() => {}),
         )
       }
 
@@ -499,7 +481,7 @@ export const layer = Layer.effect(
         const pluginScopeForSource = Effect.fnUntraced(function* (source: string) {
           if (source.startsWith("http://") || source.startsWith("https://")) return "global"
           if (source === "DEVECO_CONFIG_CONTENT") return "local"
-          if (yield* InstanceRef.use((ctx) => Effect.succeed(Instance.containsPath(source, ctx)))) return "local"
+          if (containsPath(source, ctx)) return "local"
           return "global"
         })
 
@@ -580,7 +562,7 @@ export const layer = Layer.effect(
         }
 
         if (!Flag.DEVECO_DISABLE_PROJECT_CONFIG) {
-          for (const file of yield* ConfigPaths.files("deveco", ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
+          for (const file of yield* ConfigPaths.files("codegenie", ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
             yield* merge(file, yield* loadFile(file), "local")
           }
         }
@@ -598,8 +580,8 @@ export const layer = Layer.effect(
         const deps: Fiber.Fiber<void, never>[] = []
 
         for (const dir of directories) {
-          if (dir.endsWith(".deveco") || dir === Flag.DEVECO_CONFIG_DIR) {
-            for (const file of ["deveco.json", "deveco.jsonc"]) {
+          if (dir.endsWith(".opencode") || dir === Flag.DEVECO_CONFIG_DIR) {
+            for (const file of ["opencode.json", "opencode.jsonc"]) {
               const source = path.join(dir, file)
               log.debug(`loading config from ${source}`)
               yield* merge(source, yield* loadFile(source))
@@ -616,7 +598,7 @@ export const layer = Layer.effect(
               add: [
                 {
                   name: "@opencode-ai/plugin",
-                  version: InstallationLocal ? undefined : pluginPkg.version,
+                  version: InstallationLocal ? undefined : InstallationVersion,
                 },
               ],
             })
@@ -637,7 +619,7 @@ export const layer = Layer.effect(
           result.command = mergeDeep(result.command ?? {}, yield* Effect.promise(() => ConfigCommand.load(dir)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.load(dir)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir)))
-          // Auto-discovered plugins under `.deveco/plugin(s)` are already local files, so ConfigPlugin.load
+          // Auto-discovered plugins under `.opencode/plugin(s)` are already local files, so ConfigPlugin.load
           // returns normalized Specs and we only need to attach origin metadata here.
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))
           yield* mergePluginOrigins(dir, list)
@@ -694,7 +676,7 @@ export const layer = Layer.effect(
 
         const managedDir = ConfigManaged.managedConfigDir()
         if (existsSync(managedDir)) {
-          for (const file of ["deveco.json", "deveco.jsonc"]) {
+          for (const file of ["opencode.json", "opencode.jsonc"]) {
             const source = path.join(managedDir, file)
             yield* merge(source, yield* loadFile(source), "global")
           }
@@ -810,7 +792,7 @@ export const layer = Layer.effect(
       let next: Info
       let changed: boolean
       if (!file.endsWith(".jsonc")) {
-        const existing = ConfigParse.effectSchema(Info, ConfigParse.jsonc(before, file), file)
+        const existing = ConfigParse.schema(Info, ConfigParse.jsonc(before, file), file)
         const merged = mergeDeep(writable(existing), patch)
         const serialized = JSON.stringify(merged, null, 2)
         changed = serialized !== before
@@ -818,7 +800,7 @@ export const layer = Layer.effect(
         next = merged
       } else {
         const updated = patchJsonc(before, patch)
-        next = ConfigParse.effectSchema(Info, ConfigParse.jsonc(updated, file), file)
+        next = ConfigParse.schema(Info, ConfigParse.jsonc(updated, file), file)
         changed = updated !== before
         if (changed) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
       }

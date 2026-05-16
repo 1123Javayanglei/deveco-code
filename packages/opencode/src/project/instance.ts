@@ -1,4 +1,3 @@
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { context, type InstanceContext } from "./instance-context"
 
 export type { InstanceContext } from "./instance-context"
@@ -17,19 +16,6 @@ export const Instance = {
     return context.use().project
   },
 
-  /**
-   * Check if a path is within the project boundary.
-   * Returns true if path is inside Instance.directory OR Instance.worktree.
-   * Paths within the worktree but outside the working directory should not trigger external_directory permission.
-   */
-  containsPath(filepath: string, ctx?: InstanceContext) {
-    const instance = ctx ?? Instance
-    if (AppFileSystem.contains(instance.directory, filepath)) return true
-    // Non-git projects set worktree to "/" which would match ANY absolute path.
-    // Skip worktree check in this case to preserve external_directory permissions.
-    if (instance.worktree === "/") return false
-    return AppFileSystem.contains(instance.worktree, filepath)
-  },
   /**
    * Captures the current instance ALS context and returns a wrapper that
    * restores it when called. Use this for callbacks that fire outside the

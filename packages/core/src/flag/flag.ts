@@ -1,5 +1,4 @@
 import { Config } from "effect"
-import { InstallationChannel } from "../installation/version"
 
 function truthy(key: string) {
   const value = process.env[key]?.toLowerCase()
@@ -9,13 +8,6 @@ function truthy(key: string) {
 function falsy(key: string) {
   const value = process.env[key]?.toLowerCase()
   return value === "false" || value === "0"
-}
-
-// Channels where new experiments default to ON (unstable / internal users).
-// Stable channels (`prod`, `latest`) stay opt-in.
-const UNSTABLE_CHANNELS = new Set(["dev", "beta", "local"])
-function unstableDefault(key: string) {
-  return truthy(key) || (!falsy(key) && UNSTABLE_CHANNELS.has(InstallationChannel))
 }
 
 function number(key: string) {
@@ -56,9 +48,6 @@ export const Flag = {
   DEVECO_DISABLE_CLAUDE_CODE_PROMPT: DEVECO_DISABLE_CLAUDE_CODE || truthy("DEVECO_DISABLE_CLAUDE_CODE_PROMPT"),
   DEVECO_DISABLE_CLAUDE_CODE_SKILLS,
   DEVECO_DISABLE_EXTERNAL_SKILLS: truthy("DEVECO_DISABLE_EXTERNAL_SKILLS"),
-  // Default-on for dev/beta/local; opt-in for stable. Set
-  // DEVECO_EXPERIMENTAL_CUSTOMIZE_SKILL=false to force off, =true to force on.
-  DEVECO_EXPERIMENTAL_CUSTOMIZE_SKILL: unstableDefault("DEVECO_EXPERIMENTAL_CUSTOMIZE_SKILL"),
   DEVECO_FAKE_VCS: process.env["DEVECO_FAKE_VCS"],
   DEVECO_SERVER_PASSWORD: process.env["DEVECO_SERVER_PASSWORD"],
   DEVECO_SERVER_USERNAME: process.env["DEVECO_SERVER_USERNAME"],
@@ -96,6 +85,7 @@ export const Flag = {
   DEVECO_WORKSPACE_ID: process.env["DEVECO_WORKSPACE_ID"],
   DEVECO_EXPERIMENTAL_WORKSPACES: DEVECO_EXPERIMENTAL || truthy("DEVECO_EXPERIMENTAL_WORKSPACES"),
   DEVECO_EXPERIMENTAL_EVENT_SYSTEM: DEVECO_EXPERIMENTAL || truthy("DEVECO_EXPERIMENTAL_EVENT_SYSTEM"),
+  DEVECO_EXPERIMENTAL_SESSION_SWITCHING: DEVECO_EXPERIMENTAL || truthy("DEVECO_EXPERIMENTAL_SESSION_SWITCHING"),
 
   // Evaluated at access time (not module load) because tests, the CLI, and
   // external tooling set these env vars at runtime.

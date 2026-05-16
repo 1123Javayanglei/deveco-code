@@ -82,17 +82,17 @@ export function Logo(props: { shape?: LogoType; column?: "left" | "right" } = {}
 
   const renderLogoRightRow = (rightLine: string, lineIndex: number): JSX.Element[] => {
     const hasTags = rightLine.includes("{muted}") || rightLine.includes("{link}")
-    
-    // Line 0: CODE GENIE title - bold white
+
+    // Line 0: title - bold white
     if (lineIndex === 0) {
       return [<text fg={white} attributes={TextAttributes.BOLD} selectable={false}>{rightLine}</text>]
     }
-    
+
     // Line 6: "Powered by BITFUN & OpenCode" — white
     if (lineIndex === 6 && rightLine.includes("Powered by")) {
       return [<text fg={white} selectable={false}>{rightLine}</text>]
     }
-    
+
     // Line 8: separator line - dimmed
     if (lineIndex === 8) {
       const dim = tint(theme.background, theme.textMuted, 0.5)
@@ -103,7 +103,7 @@ export function Logo(props: { shape?: LogoType; column?: "left" | "right" } = {}
       }
       return els
     }
-    
+
     // Lines with tags: parse and render segments
     if (hasTags) {
       const segments = parseSegments(rightLine)
@@ -113,12 +113,12 @@ export function Logo(props: { shape?: LogoType; column?: "left" | "right" } = {}
       }
       return segments.flatMap(renderTextSegment)
     }
-    
+
     // Default: muted text for subtitle lines
     if (lineIndex === 5) {
       return renderTextSegment({ text: rightLine, muted: true, link: false })
     }
-    
+
     return renderTextSegment({ text: rightLine, muted: false, link: false })
   }
 
