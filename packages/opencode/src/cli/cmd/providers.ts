@@ -19,6 +19,10 @@ import { Effect, Option } from "effect"
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
+const PLUGIN_PROVIDER_CONFIG: Record<string, { name?: string; hint?: string }> = {
+  deveco: { name: "DevEco Code", hint: "recommended" },
+}
+
 const promptValue = <Value>(value: Option.Option<Value>) => {
   if (Option.isNone(value)) return Effect.die(new UI.CancelledError())
   return Effect.succeed(value.value)
@@ -391,9 +395,9 @@ export const ProvidersLoginCommand = effectCmd({
         })),
       ),
       ...pluginProviders.map((x) => ({
-        label: x.id === "deveco" ? "DevEco Code" : x.name,
+        label: PLUGIN_PROVIDER_CONFIG[x.id]?.name ?? x.name,
         value: x.id,
-        hint: x.id === "deveco" ? "recommended" : "plugin",
+        hint: PLUGIN_PROVIDER_CONFIG[x.id]?.hint ?? "plugin",
       })),
     ]
     const options = sortBy(allOptions, (x) => priority[x.value] ?? 99, (x) => x.label)

@@ -509,7 +509,7 @@ export class Agent implements ACPAgent {
     log.info("initialize", { protocolVersion: params.protocolVersion })
 
     const authMethod: AuthMethod = {
-      description: "Run `deveco console login` in the terminal",
+      description: "Run `deveco auth login` in the terminal",
       name: "Login with deveco",
       id: "deveco-login",
     }
@@ -519,7 +519,7 @@ export class Agent implements ACPAgent {
       authMethod._meta = {
         "terminal-auth": {
           command: "deveco",
-          args: ["console", "login"],
+          args: ["auth", "login"],
           label: "DevEco Login",
         },
       }
