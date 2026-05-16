@@ -9363,6 +9363,33 @@
         "required": ["name", "data"],
         "additionalProperties": false
       },
+      "QueueError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["QueueError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "position": {
+                "type": "number"
+              },
+              "message": {
+                "type": "string"
+              },
+              "responseBody": {
+                "type": "string"
+              }
+            },
+            "required": ["position", "message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "APIError": {
         "type": "object",
         "properties": {
@@ -10031,6 +10058,9 @@
               },
               {
                 "$ref": "#/components/schemas/ContextOverflowError"
+              },
+              {
+                "$ref": "#/components/schemas/QueueError"
               },
               {
                 "$ref": "#/components/schemas/APIError"
@@ -10860,6 +10890,49 @@
         "required": ["id", "sessionID", "messageID", "type", "attempt", "error", "time"],
         "additionalProperties": false
       },
+      "QueuePart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^prt"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "messageID": {
+            "type": "string",
+            "pattern": "^msg"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["queue"]
+          },
+          "position": {
+            "type": "number"
+          },
+          "message": {
+            "type": "string"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "end": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["start"]
+          }
+        },
+        "required": ["id", "sessionID", "messageID", "type", "position", "message", "time"],
+        "additionalProperties": false
+      },
       "CompactionPart": {
         "type": "object",
         "properties": {
@@ -10927,6 +11000,9 @@
           },
           {
             "$ref": "#/components/schemas/RetryPart"
+          },
+          {
+            "$ref": "#/components/schemas/QueuePart"
           },
           {
             "$ref": "#/components/schemas/CompactionPart"
