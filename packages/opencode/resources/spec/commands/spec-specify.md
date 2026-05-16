@@ -17,6 +17,8 @@ You **MUST** consider the user input before proceeding. If empty or whitespace-o
   * **Detection**: Automatically detect the language used in user input (e.g., Chinese, English).
   * **Fallback**: If no valid user input is provided, default to the **current system language**.
   * **Ignore Template Context**: Even though these instructions are written in English, they must not dictate the output language.
+5. **Knowledge Query Rule**: When the `arkts_knowledge_search` tool is accessible, all contents related to ArkTS standard syntax, HarmonyOS official APIs,
+   technical specifications, compatibility rules and official design criteria must be verified through this tool before providing responses.
 
 ## Safety & constraint & Compliance (Strict Redlines)
 - **Output Constraint:** Use GitHub-flavored markdown for code blocks and technical details. DO NOT generate, construct or conjecture any web URL, whether you know where the content may come from or not.
