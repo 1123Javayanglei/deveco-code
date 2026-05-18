@@ -18,11 +18,9 @@ import { tool } from '@opencode-ai/plugin'
 import { callHarmonyNapiTool, resolveUIVerifyParams } from '../tool/lib/harmony_napi'
 import { getSessionCwd } from '../tool/lib/session-cwd';
 import emulatorTools from '../tool/lib/emulator_tools.json' with { type: "json" }
-import Ajv from 'ajv'
+import { Schema, Exit, Cause } from "effect"
 import path from 'node:path'
 import fs from 'node:fs'
-
-const ajv = new Ajv()
 
 
 type ListedTool = {
@@ -32,6 +30,110 @@ type ListedTool = {
   input_schema?: unknown;
 };
 
+/**
+ * Converts a JSON Schema property to an Effect.Schema.
+ * Supports basic types: string, boolean, number, integer, array, object.
+ */
+function jsonSchemaPropertyToEffectSchema(prop: Record<string, unknown>): Schema.Decoder<unknown> {
+  const type = prop.type as string | undefined
+  const nullable = prop.nullable as boolean | undefined
+  
+  switch (type) {
+    case 'string':
+      return Schema.String as Schema.Decoder<unknown>
+    
+    case 'boolean':
+      return Schema.Boolean as Schema.Decoder<unknown>
+    
+    case 'number':
+    case 'integer':
+      return Schema.Number as Schema.Decoder<unknown>
+    
+    case 'array': {
+      const items = prop.items as Record<string, unknown> | undefined
+      if (items && typeof items === 'object') {
+        const itemSchema = jsonSchemaPropertyToEffectSchema(items)
+        return Schema.Array(itemSchema) as Schema.Decoder<unknown>
+      }
+      return Schema.Array(Schema.Unknown) as Schema.Decoder<unknown>
+    }
+    
+    case 'object': {
+      const properties = prop.properties as Record<string, Record<string, unknown>> | undefined
+      if (properties && typeof properties === 'object') {
+        const schemaObj: Record<string, Schema.Decoder<unknown>> = {}
+        for (const [key, value] of Object.entries(properties)) {
+          schemaObj[key] = jsonSchemaPropertyToEffectSchema(value)
+        }
+        return Schema.Struct(schemaObj) as Schema.Decoder<unknown>
+      }
+      return Schema.Unknown as Schema.Decoder<unknown>
+    }
+    
+    default:
+      return Schema.Unknown as Schema.Decoder<unknown>
+  }
+}
+
+/**
+ * Converts a JSON Schema to an Effect.Schema for validation.
+ * Handles the top-level object schema with properties and required fields.
+ */
+function jsonSchemaToEffectSchema(inputSchema: unknown): Schema.Decoder<unknown> | null {
+  if (!inputSchema || typeof inputSchema !== 'object' || Array.isArray(inputSchema)) {
+    return null
+  }
+  
+  const schema = inputSchema as Record<string, unknown>
+  const type = schema.type as string | undefined
+  
+  // Only handle object type at the top level
+  if (type !== 'object') {
+    return null
+  }
+  
+  const properties = schema.properties as Record<string, Record<string, unknown>> | undefined
+  if (!properties || typeof properties !== 'object') {
+    return null
+  }
+  
+  const required = schema.required as string[] | undefined
+  
+  // Build property schemas
+  const schemaObj: Record<string, Schema.Decoder<unknown>> = {}
+  for (const [key, prop] of Object.entries(properties)) {
+    if (typeof prop !== 'object' || Array.isArray(prop)) {
+      schemaObj[key] = Schema.Unknown as Schema.Decoder<unknown>
+      continue
+    }
+    
+    const propSchema = jsonSchemaPropertyToEffectSchema(prop as Record<string, unknown>)
+    const isRequired = required ? required.includes(key) : false
+    const isNullable = (prop as Record<string, unknown>).nullable as boolean | undefined
+    
+    // Handle optional/nullable fields
+    if (!isRequired || isNullable) {
+      schemaObj[key] = Schema.optional(propSchema) as Schema.Decoder<unknown>
+    } else {
+      schemaObj[key] = propSchema
+    }
+  }
+  
+  return Schema.Struct(schemaObj) as Schema.Decoder<unknown>
+}
+
+/**
+ * Formats an Effect.Schema parse error into a human-readable string.
+ */
+function formatSchemaError(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const err = error as { message?: string; _tag?: string }
+    if (err.message) return err.message
+    if (err._tag) return `Validation error: ${err._tag}`
+  }
+  return 'Schema validation failed'
+}
+
 function parseArgsJson(input?: string, inputSchema?: unknown): Record<string, unknown> {
   const raw = (input ?? '').trim();
   if (!raw) return {};
@@ -39,13 +141,22 @@ function parseArgsJson(input?: string, inputSchema?: unknown): Record<string, un
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('argsJson must be a JSON object string');
   }
+  
   // Validate against inputSchema if provided
   if (inputSchema && typeof inputSchema === 'object') {
-    const validate = ajv.compile(inputSchema as object);
-    if (!validate(value)) {
-      throw new Error(`Args validation failed: ${ajv.errorsText(validate.errors)}`);
+    const effectSchema = jsonSchemaToEffectSchema(inputSchema)
+    
+    if (effectSchema) {
+      // Use Effect.Schema to validate
+      const decoded = Schema.decodeUnknownExit(effectSchema)(value, { errors: "all" })
+      
+      if (Exit.isFailure(decoded)) {
+        const error = Cause.squash(decoded.cause)
+        throw new Error(`Args validation failed: ${formatSchemaError(error)}`)
+      }
     }
   }
+  
   return value as Record<string, unknown>;
 }
 
