@@ -72,6 +72,8 @@ export type PromptProps = {
   ref?: (ref: PromptRef | undefined) => void
   hint?: JSX.Element
   right?: JSX.Element
+  /** Home: tips / extras on the right of the bottom hint row */
+  footerRight?: JSX.Element
   showPlaceholder?: boolean
   placeholders?: {
     normal?: string[]
@@ -203,6 +205,15 @@ export function Prompt(props: PromptProps) {
   const [cursorVersion, setCursorVersion] = createSignal(0)
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const hasRightContent = createMemo(() => Boolean(props.right))
+  const isHomeRoute = createMemo(() => route.data.type === "home")
+  const homeTipsMaxWidth = createMemo(() => {
+    if (!isHomeRoute()) return 0
+    const inner = Math.max(0, Math.floor(dimensions().width) - 4)
+    const panel = Math.min(110, inner)
+    const hintReserve = Math.min(32, Math.max(22, Math.floor(panel * 0.42)))
+    return Math.max(24, panel - hintReserve - 2)
+  })
+  const homePromptRows = 4
   const defaultWorkspaceID = createMemo(() => props.workspaceID ?? project.workspace.current())
 
   function selectWorkspace(selection: WorkspaceSelection | undefined) {
@@ -337,6 +348,7 @@ export function Prompt(props: PromptProps) {
 
   const usage = createMemo(() => {
     if (!props.sessionID) return
+    const session = sync.session.get(props.sessionID)
     const msg = sync.data.message[props.sessionID] ?? []
     const last = msg.findLast((item): item is AssistantMessage => item.role === "assistant" && item.tokens.output > 0)
     if (!last) return
@@ -347,7 +359,7 @@ export function Prompt(props: PromptProps) {
 
     const model = sync.data.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
     const pct = model?.limit.context ? `${Math.round((tokens / model.limit.context) * 100)}%` : undefined
-    const cost = msg.reduce((sum, item) => sum + (item.role === "assistant" ? item.cost : 0), 0)
+    const cost = session?.cost ?? 0
     return {
       context: pct ? `${Locale.number(tokens)} (${pct})` : Locale.number(tokens),
       cost: cost > 0 ? money.format(cost) : undefined,
@@ -926,13 +938,7 @@ export function Prompt(props: PromptProps) {
       target: inputTarget,
       enabled: (() => {
         cursorVersion()
-        return (
-          inputTarget() !== undefined &&
-          !props.disabled &&
-          !auto()?.visible &&
-          input !== undefined &&
-          (input.cursorOffset === 0 || input.visualCursor.visualRow === 0)
-        )
+        return inputTarget() !== undefined && !props.disabled && !auto()?.visible && input !== undefined
       })(),
       commands: [
         {
@@ -941,12 +947,12 @@ export function Prompt(props: PromptProps) {
           category: "Prompt",
           run() {
             if (input.cursorOffset !== 0) {
-              input.cursorOffset = 0
-              return
+              if (input.scrollY + input.visualCursor.visualRow === 0) input.cursorOffset = 0
+              return false
             }
 
             const item = history.move(-1, input.plainText)
-            if (!item) return
+            if (!item) return false
             input.setText(item.input)
             setStore("prompt", item)
             setStore("mode", item.mode ?? "normal")
@@ -964,13 +970,7 @@ export function Prompt(props: PromptProps) {
       target: inputTarget,
       enabled: (() => {
         cursorVersion()
-        return (
-          inputTarget() !== undefined &&
-          !props.disabled &&
-          !auto()?.visible &&
-          input !== undefined &&
-          (input.cursorOffset === input.plainText.length || input.visualCursor.visualRow === input.height - 1)
-        )
+        return inputTarget() !== undefined && !props.disabled && !auto()?.visible && input !== undefined
       })(),
       commands: [
         {
@@ -979,12 +979,16 @@ export function Prompt(props: PromptProps) {
           category: "Prompt",
           run() {
             if (input.cursorOffset !== input.plainText.length) {
-              input.cursorOffset = input.plainText.length
-              return
+              if (
+                input.scrollY + input.visualCursor.visualRow ===
+                Math.max(0, input.editorView.getTotalVirtualLineCount() - 1)
+              )
+                input.cursorOffset = input.plainText.length
+              return false
             }
 
             const item = history.move(1, input.plainText)
-            if (!item) return
+            if (!item) return false
             input.setText(item.input)
             setStore("prompt", item)
             setStore("mode", item.mode ?? "normal")
@@ -997,7 +1001,24 @@ export function Prompt(props: PromptProps) {
     }
   })
 
+  let submitting = false
   async function submit() {
+    // Prevent overlapping invocations (e.g. a double-pressed Enter, or the
+    // input's native onSubmit racing another dispatch). Without this guard,
+    // a second call slips past the empty-input check before the first call
+    // clears `store.prompt.input`, then awaits its own `session.create` and
+    // ultimately reads the now-empty store — sending a phantom empty prompt
+    // to a freshly created session.
+    if (submitting) return false
+    submitting = true
+    try {
+      return await submitInner()
+    } finally {
+      submitting = false
+    }
+  }
+
+  async function submitInner() {
     setWarpNotice(undefined)
 
     // IME: double-defer may fire before onContentChange flushes the last
@@ -1471,23 +1492,68 @@ export function Prompt(props: PromptProps) {
     }
   })
 
+  function IdleKeybindHintRow() {
+    return (
+      <box gap={2} flexDirection="row">
+        <Switch>
+          <Match when={store.mode === "normal"}>
+            <Switch>
+              <Match when={usage()}>
+                {(item) => (
+                  <text fg={theme.textMuted} wrapMode="none">
+                    {[item().context, item().cost].filter(Boolean).join(" · ")}
+                  </text>
+                )}
+              </Match>
+              <Match when={true}>
+                <text fg={theme.text}>
+                  {agentShortcut()} <span style={{ fg: theme.textMuted }}>agents</span>
+                </text>
+              </Match>
+            </Switch>
+            <text fg={theme.text}>
+              {paletteShortcut()} <span style={{ fg: theme.textMuted }}>commands</span>
+            </text>
+          </Match>
+          <Match when={store.mode === "shell"}>
+            <text fg={theme.text}>
+              esc <span style={{ fg: theme.textMuted }}>exit shell mode</span>
+            </text>
+          </Match>
+        </Switch>
+      </box>
+    )
+  }
+
   return (
     <>
       <box ref={(r: BoxRenderable) => (anchor = r)} visible={props.visible !== false}>
         <box
-          border={["left"]}
-          borderColor={borderHighlight()}
-          customBorderChars={{
-            ...SplitBorder.customBorderChars,
-            bottomLeft: "╹",
-          }}
+          border={isHomeRoute() ? ["top", "right", "bottom", "left"] : ["left"]}
+          borderColor={isHomeRoute() ? theme.textMuted : borderHighlight()}
+          customBorderChars={
+            isHomeRoute()
+              ? {
+                  ...EmptyBorder,
+                  topLeft: "┌",
+                  topRight: "┐",
+                  bottomLeft: "└",
+                  bottomRight: "┘",
+                  horizontal: "─",
+                  vertical: "│",
+                }
+              : {
+                  ...SplitBorder.customBorderChars,
+                  bottomLeft: "╹",
+                }
+          }
         >
           <box
-            paddingLeft={2}
-            paddingRight={2}
-            paddingTop={1}
+            paddingLeft={isHomeRoute() ? 1 : 2}
+            paddingRight={isHomeRoute() ? 1 : 2}
+            paddingTop={isHomeRoute() ? 0 : 1}
             flexShrink={0}
-            backgroundColor={theme.backgroundElement}
+            backgroundColor={isHomeRoute() ? undefined : theme.backgroundElement}
             flexGrow={1}
           >
             <textarea
@@ -1495,8 +1561,8 @@ export function Prompt(props: PromptProps) {
               placeholderColor={theme.textMuted}
               textColor={leader() ? theme.textMuted : theme.text}
               focusedTextColor={leader() ? theme.textMuted : theme.text}
-              minHeight={1}
-              maxHeight={6}
+              minHeight={isHomeRoute() ? homePromptRows : 1}
+              maxHeight={isHomeRoute() ? homePromptRows : 6}
               onContentChange={() => {
                 const value = input.plainText
                 setStore("prompt", "input", value)
@@ -1555,21 +1621,26 @@ export function Prompt(props: PromptProps) {
                 }, 0)
               }}
               onMouseDown={(r: MouseEvent) => r.target?.focus()}
-              focusedBackgroundColor={theme.backgroundElement}
+              focusedBackgroundColor={isHomeRoute() ? RGBA.fromInts(0, 0, 0, 0) : theme.backgroundElement}
               cursorColor={props.disabled ? theme.backgroundElement : theme.text}
               syntaxStyle={syntax()}
             />
-            <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1} justifyContent="space-between">
-              <box flexDirection="row" gap={1}>
+            <box
+              flexDirection="row"
+              flexShrink={0}
+              paddingTop={1}
+              gap={1}
+              justifyContent={isHomeRoute() ? "flex-start" : "space-between"}
+            >
+              <box flexDirection="row" gap={isHomeRoute() ? 3 : 1}>
                 <Show when={local.agent.current()} fallback={<box height={1} />}>
                   {(agent) => (
                     <>
-                      <text fg={fadeColor(highlight(), agentMetaAlpha())}>
+                      <text fg={theme.text}>
                         {store.mode === "shell" ? "Shell" : Locale.titlecase(agent().name)}
                       </text>
                       <Show when={store.mode === "normal"}>
-                        <box flexDirection="row" gap={1}>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                        <box flexDirection="row" gap={isHomeRoute() ? 3 : 1}>
                           <text
                             flexShrink={0}
                             fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
@@ -1599,34 +1670,38 @@ export function Prompt(props: PromptProps) {
             </box>
           </box>
         </box>
-        <box
-          height={1}
-          border={["left"]}
-          borderColor={borderHighlight()}
-          customBorderChars={{
-            ...EmptyBorder,
-            vertical: bgElementVisible() ? "╹" : " ",
-          }}
-        >
+        <Show when={!isHomeRoute()}>
           <box
             height={1}
-            border={["bottom"]}
-            borderColor={theme.backgroundElement}
-            customBorderChars={
-              bgElementVisible()
-                ? {
-                    ...EmptyBorder,
-                    horizontal: "▀",
-                  }
-                : {
-                    ...EmptyBorder,
-                    horizontal: " ",
-                  }
-            }
-          />
-        </box>
-        <box width="100%" flexDirection="row" justifyContent="space-between" position="relative">
-          <Switch>
+            border={["left"]}
+            borderColor={borderHighlight()}
+            customBorderChars={{
+              ...EmptyBorder,
+              vertical: bgElementVisible() ? "╹" : " ",
+            }}
+          >
+            <box
+              height={1}
+              border={["bottom"]}
+              borderColor={theme.backgroundElement}
+              customBorderChars={
+                bgElementVisible()
+                  ? {
+                      ...EmptyBorder,
+                      horizontal: "▀",
+                    }
+                  : {
+                      ...EmptyBorder,
+                      horizontal: " ",
+                    }
+              }
+            />
+          </box>
+        </Show>
+        <box width="100%" flexDirection="column" gap={1} position="relative">
+          <box width="100%" flexDirection="row" justifyContent="space-between" alignItems="flex-start">
+            <box flexGrow={1} minWidth={0}>
+              <Switch>
             <Match when={status().type !== "idle"}>
               <box
                 flexDirection="row"
@@ -1742,43 +1817,57 @@ export function Prompt(props: PromptProps) {
                 </box>
               )}
             </Match>
-            <Match when={true}>{props.hint ?? <text />}</Match>
-          </Switch>
-          <Show when={status().type !== "retry"}>
+            <Match when={isHomeRoute() && status().type === "idle"}>
+              <box flexDirection="column" width="100%" gap={1} alignItems="stretch">
+                <Show when={props.hint}>
+                  <box flexShrink={0} alignSelf="flex-start">
+                    {props.hint}
+                  </box>
+                </Show>
+                <box
+                  flexDirection="row"
+                  justifyContent="space-between"
+                  width="100%"
+                  gap={2}
+                  alignItems="center"
+                  flexShrink={0}
+                >
+                  <box gap={2} flexDirection="row" flexShrink={0}>
+                    <Show when={editorContextLabelState() !== "none" ? editorFileLabelDisplay() : undefined}>
+                      {(file) => (
+                        <text fg={editorContextLabelState() === "pending" ? theme.secondary : theme.textMuted}>{file()}</text>
+                      )}
+                    </Show>
+                    <IdleKeybindHintRow />
+                  </box>
+                  <Show when={props.footerRight}>
+                    <box flexShrink={1} minWidth={0} maxWidth={homeTipsMaxWidth()}>
+                      {props.footerRight}
+                    </box>
+                  </Show>
+                </box>
+              </box>
+            </Match>
+            <Match when={true}>
+              <box flexShrink={0}>{props.hint ?? <text />}</box>
+            </Match>
+              </Switch>
+            </box>
+            <Show
+              when={
+                status().type !== "retry" && !(isHomeRoute() && status().type === "idle")
+              }
+            >
             <box gap={2} flexDirection="row">
               <Show when={editorContextLabelState() !== "none" ? editorFileLabelDisplay() : undefined}>
                 {(file) => (
                   <text fg={editorContextLabelState() === "pending" ? theme.secondary : theme.textMuted}>{file()}</text>
                 )}
               </Show>
-              <Switch>
-                <Match when={store.mode === "normal"}>
-                  <Switch>
-                    <Match when={usage()}>
-                      {(item) => (
-                        <text fg={theme.textMuted} wrapMode="none">
-                          {[item().context, item().cost].filter(Boolean).join(" · ")}
-                        </text>
-                      )}
-                    </Match>
-                    <Match when={true}>
-                      <text fg={theme.text}>
-                        {agentShortcut()} <span style={{ fg: theme.textMuted }}>agents</span>
-                      </text>
-                    </Match>
-                  </Switch>
-                  <text fg={theme.text}>
-                    {paletteShortcut()} <span style={{ fg: theme.textMuted }}>commands</span>
-                  </text>
-                </Match>
-                <Match when={store.mode === "shell"}>
-                  <text fg={theme.text}>
-                    esc <span style={{ fg: theme.textMuted }}>exit shell mode</span>
-                  </text>
-                </Match>
-              </Switch>
+              <IdleKeybindHintRow />
             </box>
           </Show>
+          </box>
         </box>
       </box>
       <Autocomplete

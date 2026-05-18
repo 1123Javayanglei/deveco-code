@@ -1,8 +1,10 @@
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import { createEffect, createSignal, on, onMount, Show } from "solid-js"
-import { Logo } from "../component/logo"
-import { useProject } from "../context/project"
+import { createEffect, createMemo, createSignal, Match, on, onMount, Show, Switch } from "solid-js"
+import { useTheme } from "@tui/context/theme"
+import { Banner } from "../component/banner"
+import { pluralize } from "@/util/locale"
 import { useSync } from "../context/sync"
+import { useKV } from "../context/kv"
 import { Toast } from "../ui/toast"
 import { useArgs } from "../context/args"
 import { useRouteData } from "@tui/context/route"
@@ -10,24 +12,17 @@ import { usePromptRef } from "../context/prompt"
 import { useLocal } from "../context/local"
 import { DevEcoOnboarding } from "../component/deveco-onboarding"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
-import { useEditorContext } from "@tui/context/editor"
+import { KV_CODEGENIE_DEVECO_PRIVACY_ACCEPTED } from "@/cli/codegenie-legal"
 
+// TODO: what is the best way to do this?
 let once = false
-const placeholder = {
-  normal: ["Fix a TODO in the codebase", "What is the tech stack of this project?", "Fix broken tests"],
-  shell: ["ls -la", "git status", "pwd"],
-}
 
 export function Home() {
   const sync = useSync()
-  const project = useProject()
+  const kv = useKV()
+  const { theme } = useTheme()
   const route = useRouteData("home")
   const promptRef = usePromptRef()
-  const [ref, setRef] = createSignal<PromptRef | undefined>()
-  const args = useArgs()
-  const local = useLocal()
-  const editor = useEditorContext()
-  let sent = false
 
   // DevEco onboarding state - null = checking, false = show onboarding, true = ready
   const [devecoReady, setDevecoReady] = createSignal<boolean | null>(null)
@@ -39,13 +34,15 @@ export function Home() {
       () => sync.status,
       (status) => {
         if (status !== "complete") return
+        // Only check once
         if (devecoChecked) return
         devecoChecked = true
 
+        const privacyAccepted = kv.get(KV_CODEGENIE_DEVECO_PRIVACY_ACCEPTED, false)
         const hasCredentials = sync.data.provider.some(
           (x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0),
         )
-        if (!hasCredentials) {
+        if (!privacyAccepted || !hasCredentials) {
           setDevecoReady(false)
         } else {
           setDevecoReady(true)
@@ -54,65 +51,95 @@ export function Home() {
     ),
   )
 
-  onMount(() => {
-    editor.clearSelection()
+  const mcpError = createMemo(() => {
+    return Object.values(sync.data.mcp).some((x) => x.status === "failed")
   })
 
-  const bind = (r: PromptRef | undefined) => {
-    setRef(r)
-    promptRef.set(r)
-    if (once || !r) return
+  const connectedMcpCount = createMemo(() => {
+    return Object.values(sync.data.mcp).filter((x) => x.status === "connected").length
+  })
+
+  const Hint = (
+    <Show when={connectedMcpCount() > 0}>
+      <box flexShrink={0} flexDirection="row" gap={1}>
+        <text fg={theme.text}>
+          <Switch>
+            <Match when={mcpError()}>
+              <span style={{ fg: theme.error }}>•</span> mcp errors{" "}
+              <span style={{ fg: theme.textMuted }}>ctrl+x s</span>
+            </Match>
+            <Match when={true}>
+              <span style={{ fg: theme.success }}>•</span>{" "}
+              {pluralize(connectedMcpCount(), "{} mcp server", "{} mcp servers")}
+            </Match>
+          </Switch>
+        </text>
+      </box>
+    </Show>
+  )
+
+  let prompt: PromptRef | undefined
+  const args = useArgs()
+  const local = useLocal()
+  onMount(() => {
+    if (once) return
+    if (!prompt) return
     if (route.prompt) {
-      r.set(route.prompt)
+      prompt.set(route.prompt)
       once = true
-      return
+    } else if (args.prompt) {
+      prompt.set({ input: args.prompt, parts: [] })
+      once = true
     }
-    if (!args.prompt) return
-    r.set({ input: args.prompt, parts: [] })
-    once = true
-  }
+  })
 
   // Wait for sync and model store to be ready before auto-submitting --prompt
-  createEffect(() => {
-    const r = ref()
-    if (sent) return
-    if (!r) return
-    if (!sync.ready || !local.model.ready) return
-    if (!args.prompt) return
-    if (r.current.input !== args.prompt) return
-    sent = true
-    r.submit()
-  })
-
+  createEffect(
+    on(
+      () => sync.ready && local.model.ready && prompt,
+      (ready) => {
+        if (!ready) return
+        if (!args.prompt) return
+        if (!prompt) return
+        if (prompt.current?.input !== args.prompt) return
+        prompt.submit()
+      },
+    ),
+  )
   return (
     <>
-      <box flexGrow={1} paddingLeft={2} paddingRight={2} flexDirection="column" alignItems="center">
-        <box flexGrow={1} minHeight={0} flexShrink={1} />
+      <box
+        flexGrow={1}
+        paddingLeft={2}
+        paddingRight={2}
+        flexDirection="column"
+        alignItems="flex-start"
+        justifyContent="flex-start"
+      >
         <Show when={devecoReady()}>
-          <box flexDirection="row" gap={4} alignItems="flex-start" flexShrink={0}>
-            <box flexShrink={0}>
+          <box
+            paddingLeft={2}
+            paddingRight={2}
+            width="100%"
+            flexDirection="column"
+            alignItems="center"
+            flexShrink={0}
+            paddingTop={1}
+          >
+            <box width="100%" flexDirection="column" alignItems="center" flexShrink={0}>
               <TuiPluginRuntime.Slot name="home_logo" mode="replace">
-                <Logo column="left" />
+                <Banner />
               </TuiPluginRuntime.Slot>
-            </box>
-            <box flexDirection="column" flexGrow={1} minWidth={0}>
-              <box flexShrink={0}>
-                <TuiPluginRuntime.Slot name="home_logo_right" mode="replace">
-                  <Logo column="right" />
-                </TuiPluginRuntime.Slot>
-              </box>
-              <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1} flexShrink={0}>
-                <TuiPluginRuntime.Slot
-                  name="home_prompt"
-                  mode="replace"
-                  workspace_id={project.workspace.current()}
-                  ref={bind}
-                >
+              <box width="100%" maxWidth={110} zIndex={1000} paddingTop={2} flexShrink={0}>
+                <TuiPluginRuntime.Slot name="home_prompt" mode="replace">
                   <Prompt
-                    ref={bind}
-                    workspaceID={project.workspace.current()}
-                    right={<TuiPluginRuntime.Slot name="home_prompt_right" workspace_id={project.workspace.current()} />}
-                    placeholders={placeholder}
+                    ref={(r) => {
+                      if (r) {
+                        prompt = r
+                        promptRef.set(r)
+                      }
+                    }}
+                    hint={Hint}
                   />
                 </TuiPluginRuntime.Slot>
               </box>

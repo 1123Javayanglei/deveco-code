@@ -10,6 +10,7 @@ import { UpgradeCommand } from "./cli/cmd/upgrade"
 import { UninstallCommand } from "./cli/cmd/uninstall"
 import { ModelsCommand } from "./cli/cmd/models"
 import { UI } from "./cli/ui"
+import { formatCliHelpBannerLogoBlock } from "./cli/cmd/tui/component/banner-logo"
 import { Installation } from "./installation"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { NamedError } from "@opencode-ai/core/util/error"
@@ -38,6 +39,7 @@ import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 import { drizzle } from "drizzle-orm/bun-sqlite"
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process"
+import { isRecord } from "@/util/record"
 
 const processMetadata = ensureProcessMetadata("main")
 
@@ -58,7 +60,8 @@ const args = hideBin(process.argv)
 function show(out: string) {
   const text = out.trimStart()
   if (!text.startsWith("deveco ")) {
-    process.stderr.write(UI.logo() + EOL + EOL)
+    const cols = process.stderr.columns ?? process.stdout.columns
+    process.stderr.write(formatCliHelpBannerLogoBlock(cols) + EOL + EOL)
     process.stderr.write(text)
     return
   }
@@ -201,13 +204,6 @@ try {
   }
 } catch (e) {
   let data: Record<string, any> = {}
-  if (e instanceof NamedError) {
-    const obj = e.toObject()
-    Object.assign(data, {
-      ...obj.data,
-    })
-  }
-
   if (e instanceof Error) {
     Object.assign(data, {
       name: e.name,
@@ -215,6 +211,16 @@ try {
       cause: e.cause?.toString(),
       stack: e.stack,
     })
+  }
+
+  if (e instanceof NamedError) {
+    const obj = e.toObject()
+    if (isRecord(obj.data)) {
+      for (const [key, value] of Object.entries(obj.data)) {
+        if (key === "name" || key === "stack" || key === "cause") continue
+        data[key] = value
+      }
+    }
   }
 
   if (e instanceof ResolveMessage) {

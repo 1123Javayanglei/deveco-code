@@ -19,6 +19,10 @@ import { Effect, Option } from "effect"
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
+const PLUGIN_PROVIDER_CONFIG: Record<string, { name?: string; hint?: string }> = {
+  deveco: { name: "DevEco Code", hint: "recommended" },
+}
+
 const promptValue = <Value>(value: Option.Option<Value>) => {
   if (Option.isNone(value)) return Effect.die(new UI.CancelledError())
   return Effect.succeed(value.value)
@@ -124,6 +128,7 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
           yield* put(saveProvider, {
             type: "api",
             key: result.key,
+            ...(result.metadata ? { metadata: result.metadata } : {}),
           })
         }
         yield* spinner.stop("Login successful")
@@ -156,6 +161,7 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
           yield* put(saveProvider, {
             type: "api",
             key: result.key,
+            ...(result.metadata ? { metadata: result.metadata } : {}),
           })
         }
         yield* Prompt.log.success("Login successful")
@@ -191,10 +197,11 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
     }
     if (result.type === "success") {
       const saveProvider = result.provider ?? provider
+      const merged = { ...(metadata.metadata ?? {}), ...(result.metadata ?? {}) }
       yield* put(saveProvider, {
         type: "api",
         key: result.key ?? apiKey,
-        ...metadata,
+        ...(Object.keys(merged).length ? { metadata: merged } : {}),
       })
       yield* Prompt.log.success("Login successful")
     }
@@ -298,7 +305,7 @@ export const ProvidersLoginCommand = effectCmd({
   builder: (yargs) =>
     yargs
       .positional("url", {
-        describe: "opencode auth provider",
+        describe: "deveco code auth provider",
         type: "string",
       })
       .option("provider", {
@@ -363,7 +370,7 @@ export const ProvidersLoginCommand = effectCmd({
     const hooks = yield* pluginSvc.list()
 
     const priority: Record<string, number> = {
-      opencode: 0,
+      deveco: 0,
       openai: 1,
       "github-copilot": 2,
       google: 3,
@@ -390,15 +397,14 @@ export const ProvidersLoginCommand = effectCmd({
           label: x.name,
           value: x.id,
           hint: {
-            opencode: "recommended",
             openai: "ChatGPT Plus/Pro or API key",
           }[x.id],
         })),
       ),
       ...pluginProviders.map((x) => ({
-        label: x.name,
+        label: PLUGIN_PROVIDER_CONFIG[x.id]?.name ?? x.name,
         value: x.id,
-        hint: "plugin",
+        hint: PLUGIN_PROVIDER_CONFIG[x.id]?.hint ?? "plugin",
       })),
     ]
 
@@ -443,7 +449,7 @@ export const ProvidersLoginCommand = effectCmd({
       }
 
       yield* Prompt.log.warn(
-        `This only stores a credential for ${provider} - you will need configure it in opencode.json, check the docs for examples.`,
+        `This only stores a credential for ${provider} - you will need configure it in deveco.json, check the docs for examples.`,
       )
     }
 
@@ -452,12 +458,12 @@ export const ProvidersLoginCommand = effectCmd({
         "Amazon Bedrock authentication priority:\n" +
           "  1. Bearer token (AWS_BEARER_TOKEN_BEDROCK or /connect)\n" +
           "  2. AWS credential chain (profile, access keys, IAM roles, EKS IRSA)\n\n" +
-          "Configure via opencode.json options (profile, region, endpoint) or\n" +
+          "Configure via deveco.json options (profile, region, endpoint) or\n" +
           "AWS environment variables (AWS_PROFILE, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_WEB_IDENTITY_TOKEN_FILE).",
       )
     }
 
-    if (provider === "deveco") {
+    if (provider === "opencode") {
       yield* Prompt.log.info("Create an api key at https://opencode.ai/auth")
     }
 
