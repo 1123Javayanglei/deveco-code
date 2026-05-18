@@ -18,6 +18,11 @@ import { tool } from '@opencode-ai/plugin'
 import { callHarmonyNapiTool, resolveUIVerifyParams } from '../tool/lib/harmony_napi'
 import { getSessionCwd } from '../tool/lib/session-cwd';
 import emulatorTools from '../tool/lib/emulator_tools.json' with { type: "json" }
+import Ajv from 'ajv'
+import path from 'node:path'
+import fs from 'node:fs'
+
+const ajv = new Ajv()
 
 
 type ListedTool = {
@@ -27,14 +32,84 @@ type ListedTool = {
   input_schema?: unknown;
 };
 
-function parseArgsJson(input?: string): Record<string, unknown> {
+function parseArgsJson(input?: string, inputSchema?: unknown): Record<string, unknown> {
   const raw = (input ?? '').trim();
   if (!raw) return {};
   const value = JSON.parse(raw) as unknown;
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('argsJson must be a JSON object string');
   }
+  // Validate against inputSchema if provided
+  if (inputSchema && typeof inputSchema === 'object') {
+    const validate = ajv.compile(inputSchema as object);
+    if (!validate(value)) {
+      throw new Error(`Args validation failed: ${ajv.errorsText(validate.errors)}`);
+    }
+  }
   return value as Record<string, unknown>;
+}
+
+/**
+ * Sanitizes and validates a file path to prevent path traversal attacks.
+ * Ensures the resolved path is within the allowed worktree directory.
+ * @param filePath - The file path to validate (can be relative or absolute)
+ * @param worktree - The allowed base directory
+ * @returns The validated absolute path
+ * @throws Error if path traversal is detected
+ */
+function sanitizeFilePath(filePath: string, worktree: string): string {
+  // Resolve the path relative to worktree
+  const resolved = path.resolve(worktree, filePath);
+  
+  // Get real paths to handle symlinks and normalize
+  let realResolved: string;
+  let realWorktree: string;
+  
+  try {
+    realResolved = fs.realpathSync(resolved);
+  } catch {
+    // Path doesn't exist yet - use resolved path for comparison
+    realResolved = resolved;
+  }
+  
+  try {
+    realWorktree = fs.realpathSync(worktree);
+  } catch {
+    realWorktree = worktree;
+  }
+  
+  // Normalize paths for comparison (ensure consistent separators)
+  const normalizedResolved = path.normalize(realResolved);
+  const normalizedWorktree = path.normalize(realWorktree);
+  
+  // Check if resolved path starts with worktree path
+  // Use path.sep to ensure we're comparing directory boundaries correctly
+  const worktreePrefix = normalizedWorktree.endsWith(path.sep) 
+    ? normalizedWorktree 
+    : normalizedWorktree + path.sep;
+  
+  if (normalizedResolved !== normalizedWorktree && !normalizedResolved.startsWith(worktreePrefix)) {
+    throw new Error(`Path traversal detected: ${filePath} resolves to ${resolved}, which is outside worktree ${worktree}`);
+  }
+  
+  return realResolved;
+}
+
+/**
+ * Validates file path parameters in tool arguments.
+ * Checks for known path parameter names and validates them against the worktree.
+ */
+function validatePathParameters(args: Record<string, unknown>, worktree: string): void {
+  // Known path parameter names that need validation
+  const pathParams = ['log_path', 'dirname', 'filePath', 'filepath', 'path'];
+  
+  for (const paramName of pathParams) {
+    if (paramName in args && typeof args[paramName] === 'string') {
+      const filePath = args[paramName] as string;
+      // Validate and normalize the path
+      args[paramName] = sanitizeFilePath(filePath, worktree);
+    }
+  }
 }
 
 function textFromCallResult(result: unknown): string {
@@ -169,8 +244,13 @@ const HarmonyNapiDynamicToolsPlugin: Plugin = async (_input) => {
               return "工具调用失败。请将以下内容原文告知用户，不要修改或补充，告知后立即停止，不要再调用任何工具：「UI 意图校验功能不可用：未配置多模态模型。请在配置文件中为 ui_verification agent 配置一个支持多模态的模型，或登录账号以使用内置多模态模型。」"
             }
           }
-          const payload = parseArgsJson((args as { argsJson?: string }).argsJson);
+          // Parse and validate args against inputSchema
+          const payload = parseArgsJson((args as { argsJson?: string }).argsJson, inputSchema);
           const worktree = resolveWorktree(ctx as { sessionID?: string; directory?: string; worktree?: string });
+          
+          // Validate file path parameters to prevent path traversal attacks
+          validatePathParameters(payload, worktree);
+          
           const result = await callHarmonyNapiTool({ worktree, toolName: name, args: payload });
           return textFromCallResult(result);
         },
