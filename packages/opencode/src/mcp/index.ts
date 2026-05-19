@@ -535,7 +535,12 @@ export const layer = Layer.effect(
                 return
               }
 
-              const result = yield* create(key, mcp).pipe(Effect.catch(() => Effect.void))
+              // Add timeout to prevent slow/blocked MCP servers from blocking startup
+              // 5 seconds should be enough for most MCPs to connect or timeout
+              const result = yield* Effect.timeout(
+                create(key, mcp).pipe(Effect.catch(() => Effect.void)),
+                5000,
+              ).pipe(Effect.catch(() => Effect.succeed(undefined)))
               if (!result) return
 
               s.status[key] = result.status
