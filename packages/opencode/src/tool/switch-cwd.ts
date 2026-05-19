@@ -15,6 +15,7 @@
 
 import { Effect, Schema } from "effect"
 import path from "path"
+import { realpathSync } from "fs"
 import * as Tool from "./tool"
 import { Instance } from "../project/instance"
 import { assertExternalDirectory } from "./external-directory"
@@ -55,7 +56,7 @@ export const SwitchCwdTool = Tool.define("switch_cwd", Effect.gen(function* () {
     parameters: Parameters,
     execute: (args: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
       Effect.gen(function* () {
-        const target = resolveTarget(args.project_path)
+        const target = realpathSync(resolveTarget(args.project_path))
         const stat = yield* Effect.tryPromise(() => import("fs/promises").then((fs) => fs.stat(target)))
         if (!stat?.isDirectory()) {
           throw new Error(`Not a directory or not found: ${target}`)
