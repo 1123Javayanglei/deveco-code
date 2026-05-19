@@ -11,6 +11,7 @@ import { useRouteData } from "@tui/context/route"
 import { usePromptRef } from "../context/prompt"
 import { useLocal } from "../context/local"
 import { DevEcoOnboarding } from "../component/deveco-onboarding"
+import { Tips } from "../feature-plugins/home/tips-view"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
 import { KV_DEVECO_CODE_PRIVACY_ACCEPTED } from "@/cli/deveco-legal"
 
@@ -63,6 +64,16 @@ export function Home() {
   const connectedMcpCount = createMemo(() => {
     return Object.values(sync.data.mcp).filter((x) => x.status === "connected").length
   })
+
+  const providerConnected = createMemo(() =>
+    sync.data.provider.some(
+      (x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0),
+    ),
+  )
+
+  const tipsHidden = createMemo(() => kv.get("tips_hidden", false))
+  const tipsFirstSession = createMemo(() => sync.data.session.length === 0)
+  const showTips = createMemo(() => (!tipsFirstSession() || !providerConnected()) && !tipsHidden())
 
   const Hint = (
     <Show when={connectedMcpCount() > 0}>
@@ -145,6 +156,12 @@ export function Home() {
                       }
                     }}
                     hint={Hint}
+                    placeholders={placeholder}
+                    footerRight={
+                      <Show when={showTips()}>
+                        <Tips connected={providerConnected()} />
+                      </Show>
+                    }
                   />
                 </TuiPluginRuntime.Slot>
               </box>
