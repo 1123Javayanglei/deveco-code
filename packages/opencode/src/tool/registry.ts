@@ -1,4 +1,4 @@
-import { PlanExitTool } from "./plan"
+import { PlanExitTool, PlanWriteTool, PlanEnterTool } from "./plan"
 import { Session } from "@/session/session"
 import { QuestionTool } from "./question"
 import { ShellTool } from "./shell"
@@ -29,6 +29,10 @@ import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
+import { HdcLogTool } from "./hdc_log"
+import { SwitchCwdTool } from "./switch-cwd"
+import { OhKnowledgeTool } from "./oh_knowledge"
+import { SpecWriteTool } from "./spec"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -47,6 +51,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Bus } from "../bus"
 import { Agent } from "../agent/agent"
 import { Git } from "@/git"
+import { Auth } from "@/auth"
 import { Skill } from "../skill"
 import { Permission } from "@/permission"
 import { Reference } from "@/reference/reference"
@@ -133,6 +138,11 @@ export const layer: Layer.Layer<
     const greptool = yield* GrepTool
     const patchtool = yield* ApplyPatchTool
     const skilltool = yield* SkillTool
+    const hdclog = yield* HdcLogTool
+    const switchcwd = yield* SwitchCwdTool
+    const ohknowledge = yield* OhKnowledgeTool
+    const specwrite = yield* SpecWriteTool
+    const auth = yield* Auth.Service
     const agent = yield* Agent.Service
 
     const state = yield* InstanceState.make<State>(
@@ -216,6 +226,9 @@ export const layer: Layer.Layer<
         yield* config.get()
         const questionEnabled = ["app", "cli", "desktop"].includes(flags.client) || flags.enableQuestionTool
 
+        const authInfo = yield* auth.get("deveco").pipe(Effect.orElseSucceed(() => undefined))
+        const ohknowledgeEnabled = authInfo !== undefined && authInfo.type === "oauth"
+
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
           shell: Tool.init(shell),
@@ -236,6 +249,12 @@ export const layer: Layer.Layer<
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
+          planwrite: Tool.init(planwrite),
+          planenter: Tool.init(planenter),
+          hdclog: Tool.init(hdclog),
+          switchcwd: Tool.init(switchcwd),
+          ohknowledge: Tool.init(ohknowledge),
+          spec_write: Tool.init(specwrite),
         })
 
         return {
@@ -257,8 +276,12 @@ export const layer: Layer.Layer<
             ...(flags.experimentalScout ? [tool.repo_clone, tool.repo_overview] : []),
             tool.skill,
             tool.patch,
+            tool.hdclog,
+            tool.switchcwd,
+            ...(ohknowledgeEnabled ? [tool.ohknowledge] : []),
+            tool.spec_write,
             ...(flags.experimentalLspTool ? [tool.lsp] : []),
-            ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
+            ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan, tool.planwrite, tool.planenter] : []),
           ],
           task: tool.task,
           read: tool.read,
@@ -382,6 +405,7 @@ export const defaultLayer = Layer.suspend(() =>
       Layer.provide(LSP.defaultLayer),
       Layer.provide(Instruction.defaultLayer),
       Layer.provide(AppFileSystem.defaultLayer),
+      Layer.provide(Auth.defaultLayer),
       Layer.provide(Bus.layer),
       Layer.provide(FetchHttpClient.layer),
       Layer.provide(Format.defaultLayer),

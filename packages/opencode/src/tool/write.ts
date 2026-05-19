@@ -14,6 +14,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { trimDiff } from "./edit"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import * as Bom from "@/util/bom"
+import { validateSpecArtifactIfApplicable } from "./document-validation"
 
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
 
@@ -87,6 +88,11 @@ export const WriteTool = Tool.define(
             }
             projectDiagnosticsCount++
             output += `\n\nLSP errors detected in other files:\n${block}`
+          }
+
+          const specValidation = validateSpecArtifactIfApplicable(filepath)
+          if (specValidation) {
+            output += specValidation
           }
 
           return {
