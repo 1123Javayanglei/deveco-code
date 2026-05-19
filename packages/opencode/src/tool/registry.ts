@@ -31,6 +31,7 @@ import { ApplyPatchTool } from "./apply_patch"
 import { HdcLogTool } from "./hdc_log"
 import { SwitchCwdTool } from "./switch-cwd"
 import { OhKnowledgeTool } from "./oh_knowledge"
+import { SpecWriteTool } from "./spec"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -137,6 +138,7 @@ export const layer: Layer.Layer<
     const hdclog = yield* HdcLogTool
     const switchcwd = yield* SwitchCwdTool
     const ohknowledge = yield* OhKnowledgeTool
+    const specwrite = yield* SpecWriteTool
     const auth = yield* Auth.Service
     const agent = yield* Agent.Service
 
@@ -248,6 +250,7 @@ export const layer: Layer.Layer<
           hdclog: Tool.init(hdclog),
           switchcwd: Tool.init(switchcwd),
           ohknowledge: Tool.init(ohknowledge),
+          spec_write: Tool.init(specwrite),
         })
 
         return {
@@ -271,6 +274,7 @@ export const layer: Layer.Layer<
             tool.hdclog,
             tool.switchcwd,
             ...(ohknowledgeEnabled ? [tool.ohknowledge] : []),
+            tool.spec_write,
             ...(flags.experimentalLspTool ? [tool.lsp] : []),
             ...(flags.client === "cli" ? [tool.plan, tool.planwrite, tool.planenter] : []),
           ],
