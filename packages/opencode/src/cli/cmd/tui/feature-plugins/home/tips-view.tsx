@@ -1,8 +1,8 @@
-import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
 import { createMemo, For, type Accessor } from "solid-js"
 import { DEFAULT_THEMES, useTheme } from "@tui/context/theme"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { useCommandShortcut } from "../../keymap"
+import { useTuiConfig } from "../../context/tui-config"
+import { formatKeySequence, useCommandShortcut, useOpencodeKeymap } from "../../keymap"
 
 const themeCount = Object.keys(DEFAULT_THEMES).length
 
@@ -89,23 +89,25 @@ function press(shortcut: string, text: string) {
   return `Press ${shortcutText(shortcut)} ${text}`
 }
 
-function configShortcut(api: TuiPluginApi, command: string): TipShortcut {
+function useConfigShortcut(command: string): TipShortcut {
+  const config = useTuiConfig()
+  const keymap = useOpencodeKeymap()
   return () =>
-    api.tuiConfig.keybinds
+    config.keybinds
       .get(command)
-      .map((binding) => api.keys.formatSequence(Array.from(api.keymap.parseKeySequence(binding.key))))
+      .map((binding) => formatKeySequence(Array.from(keymap.parseKeySequence(binding.key)), config))
       .filter(Boolean)
       .join(", ")
 }
 
-export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
+export function Tips(props: { connected?: boolean }) {
   const theme = useTheme().theme
   const tipOffset = Math.random()
   const shortcuts: Shortcuts = {
     agentCycle: useCommandShortcut("agent.cycle"),
-    childFirst: configShortcut(props.api, "session.child.first"),
-    childNext: configShortcut(props.api, "session.child.next"),
-    childPrevious: configShortcut(props.api, "session.child.previous"),
+    childFirst: useConfigShortcut("session.child.first"),
+    childNext: useConfigShortcut("session.child.next"),
+    childPrevious: useConfigShortcut("session.child.previous"),
     commandList: useCommandShortcut("command.palette.show"),
     editorOpen: useCommandShortcut("prompt.editor"),
     helpShow: useCommandShortcut("help.show"),
@@ -113,28 +115,28 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
     inputNewline: useCommandShortcut("input.newline"),
     inputPaste: useCommandShortcut("prompt.paste"),
     inputUndo: useCommandShortcut("input.undo"),
-    leader: configShortcut(props.api, "leader"),
-    messagesCopy: configShortcut(props.api, "messages.copy"),
-    messagesFirst: configShortcut(props.api, "session.first"),
-    messagesLast: configShortcut(props.api, "session.last"),
-    messagesPageDown: configShortcut(props.api, "session.page.down"),
-    messagesPageUp: configShortcut(props.api, "session.page.up"),
-    messagesToggleConceal: configShortcut(props.api, "session.toggle.conceal"),
+    leader: useConfigShortcut("leader"),
+    messagesCopy: useConfigShortcut("messages.copy"),
+    messagesFirst: useConfigShortcut("session.first"),
+    messagesLast: useConfigShortcut("session.last"),
+    messagesPageDown: useConfigShortcut("session.page.down"),
+    messagesPageUp: useConfigShortcut("session.page.up"),
+    messagesToggleConceal: useConfigShortcut("session.toggle.conceal"),
     modelCycleRecent: useCommandShortcut("model.cycle_recent"),
     modelList: useCommandShortcut("model.list"),
     sessionCycleRecent: useCommandShortcut("session.cycle_recent"),
     sessionCycleRecentReverse: useCommandShortcut("session.cycle_recent_reverse"),
-    sessionExport: configShortcut(props.api, "session.export"),
-    sessionInterrupt: configShortcut(props.api, "session.interrupt"),
+    sessionExport: useConfigShortcut("session.export"),
+    sessionInterrupt: useConfigShortcut("session.interrupt"),
     sessionList: useCommandShortcut("session.list"),
     sessionNew: useCommandShortcut("session.new"),
-    sessionParent: configShortcut(props.api, "session.parent"),
-    sessionPinToggle: configShortcut(props.api, "session.pin.toggle"),
+    sessionParent: useConfigShortcut("session.parent"),
+    sessionPinToggle: useConfigShortcut("session.pin.toggle"),
     sessionQuickSwitch1: useCommandShortcut("session.quick_switch.1"),
     sessionQuickSwitch9: useCommandShortcut("session.quick_switch.9"),
-    sessionSidebarToggle: configShortcut(props.api, "session.sidebar.toggle"),
-    sessionTimeline: configShortcut(props.api, "session.timeline"),
-    sessionToggleRecent: configShortcut(props.api, "session.toggle.recent"),
+    sessionSidebarToggle: useConfigShortcut("session.sidebar.toggle"),
+    sessionTimeline: useConfigShortcut("session.timeline"),
+    sessionToggleRecent: useConfigShortcut("session.toggle.recent"),
     statusView: useCommandShortcut("opencode.status"),
     terminalSuspend: useCommandShortcut("terminal.suspend"),
     themeList: useCommandShortcut("theme.switch"),
