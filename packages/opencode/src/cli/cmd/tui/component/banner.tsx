@@ -26,11 +26,61 @@ export const BANNER_HOME_CONTENT_INSET = 8
 /** Shared max width for banner, prompt, and onboarding body. */
 export const HOME_CONTENT_MAX_WIDTH = 110
 
-/** Minimum terminal rows for the region below the banner (prompt vs onboarding share this slot). */
-export const HOME_BODY_MIN_ROWS = 18
+/** Maximum rows for the region below the banner when the terminal is tall enough. */
+export const HOME_BODY_MAX_ROWS = 18
+
+/** @deprecated Use {@link HOME_BODY_MAX_ROWS}. */
+export const HOME_BODY_MIN_ROWS = HOME_BODY_MAX_ROWS
+
+/** Preferred minimum body slot rows; may shrink further when the terminal is very short. */
+export const HOME_BODY_SLOT_FLOOR_ROWS = 8
 
 /** Gap between banner and body slot (terminal rows). */
 export const HOME_BODY_GAP_ROWS = 2
+
+/** Logo block + taglines + padding (see `Banner` layout). */
+export const HOME_BANNER_ESTIMATE_ROWS = 1 + LOGO_ROW_CAP + 2 + 2
+
+/** Reserved rows for `home_footer` and outer vertical breathing room. */
+export const HOME_LAYOUT_FOOTER_ROWS = 2
+export const HOME_LAYOUT_MARGIN_ROWS = 2
+
+/** Body slot rows from terminal height: capped at {@link HOME_BODY_MAX_ROWS}, shrinks when space is tight. */
+export function homeBodySlotRows(terminalHeight: number): number {
+  const h = Math.max(0, Math.floor(terminalHeight))
+  const reserved =
+    HOME_BANNER_ESTIMATE_ROWS + HOME_BODY_GAP_ROWS + HOME_LAYOUT_FOOTER_ROWS + HOME_LAYOUT_MARGIN_ROWS
+  const available = h - reserved
+  if (available <= HOME_BODY_SLOT_FLOOR_ROWS) {
+    return Math.max(4, available)
+  }
+  return Math.min(HOME_BODY_MAX_ROWS, available)
+}
+
+/** Max textarea rows on the home prompt when the body slot is tall. */
+export const HOME_PROMPT_MAX_TEXTAREA_ROWS = 4
+
+/** Min textarea rows on the home prompt when the terminal is short. */
+export const HOME_PROMPT_MIN_TEXTAREA_ROWS = 2
+
+/** Rows used by home prompt border + idle footer (not the textarea). */
+export const HOME_PROMPT_CHROME_ROWS = 3
+
+/** Rows reserved for `home_bottom` tips when estimating prompt height. */
+export const HOME_PROMPT_TIPS_RESERVE_ROWS = 4
+
+/** Home prompt textarea rows from the shared body slot height. */
+export function homePromptTextareaRows(
+  bodySlotHeight: number,
+  tipsReserveRows: number = HOME_PROMPT_TIPS_RESERVE_ROWS,
+): number {
+  const inner = Math.max(0, bodySlotHeight - HOME_BODY_GAP_ROWS)
+  const available = inner - HOME_PROMPT_CHROME_ROWS - Math.max(0, tipsReserveRows)
+  if (available <= HOME_PROMPT_MIN_TEXTAREA_ROWS) {
+    return Math.max(1, available)
+  }
+  return Math.min(HOME_PROMPT_MAX_TEXTAREA_ROWS, available)
+}
 
 export function Banner(props?: { contentInset?: number }) {
   const { theme, mode } = useTheme()
