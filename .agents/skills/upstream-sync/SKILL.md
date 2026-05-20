@@ -193,6 +193,16 @@ Launch the `upstream-sync` subagent to perform a comprehensive post-sync quality
 - **Agent tool permission overwrites** *(Step 3, Step 4)*: `packages/opencode/src/agent/agent.ts` — DevEco Code customizes permissions for two agents. When upstream restructures the permission format, naive conflict resolution drops these rules. **Accept upstream's new permission structure, but always re-add all custom permissions:**
   - **build agent**: `plan_enter: "ask"`, `plan_write: "deny"` (upstream defaults: `"allow"` / absent)
   - **plan agent**: `plan_exit: "ask"`, `plan_write: "allow"`, `edit: "deny"`, plus 9 HarmonyOS tool deny rules (`bash`, `build_project`, `check_ets_files`, `perform_ui_action`, `get_app_ui_tree`, `start_app`, `hdc_log`, `switch_cwd`, `arkts_knowledge_search`)
+- **HarmonyOS custom tool registrations dropped** *(Step 3, Step 4, Step 7)*: `packages/opencode/src/tool/registry.ts` — upstream does not have HarmonyOS tools, so when upstream restructures the registry (renames tools, changes the import/init/builtin pattern, adds new Layer dependencies), the custom tool registrations are silently dropped even without conflict markers. **After every sync, verify the following are present in registry.ts:**
+  - **Imports**: `HdcLogTool` from `"./hdc_log"`, `SwitchCwdTool` from `"./switch-cwd"`, `OhKnowledgeTool` from `"./oh_knowledge"`, `Auth` from `"@/auth"`, `PlanWriteTool` and `PlanEnterTool` from `"./plan"` (alongside existing `PlanExitTool`)
+  - **Layer dependency**: `Auth.Service` in the `Layer.Layer` type union
+  - **Initialization**: `yield* HdcLogTool`, `yield* SwitchCwdTool`, `yield* OhKnowledgeTool`, `yield* PlanWriteTool`, `yield* PlanEnterTool`
+  - **Tool.init()**: `hdclog`, `switchcwd`, `ohknowledge`, `planwrite`, `planenter` in the `Effect.all` block
+  - **Builtin list**: `tool.hdclog`, `tool.switchcwd`, `tool.ohknowledge` (with `// HarmonyOS tools` comment); `tool.planwrite`, `tool.planenter` alongside `tool.plan` gated by `flags.client === "cli"` only (**NOT** `experimentalPlanMode` — Plan mode is a core DevEco Code feature, not experimental)
+  - **defaultLayer**: `Layer.provide(Auth.defaultLayer)` in the provider chain
+- **Plan tools gating condition overwritten** *(Step 3, Step 4, Step 7)*: upstream v1.15.0 added `experimentalPlanMode` to the Plan tools builtin condition (`flags.experimentalPlanMode && flags.client === "cli"`). DevEco Code does not require this flag — Plan mode is a shipped feature. **After every sync, verify the builtin list condition for plan tools is `flags.client === "cli"` only, without `experimentalPlanMode`:**
+  - Correct: `...(flags.client === "cli" ? [tool.plan, tool.planwrite, tool.planenter] : [])`
+  - Wrong: `...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan, tool.planwrite, tool.planenter] : [])`
 
 ### Moderate — causes errors or incorrect behavior
 
