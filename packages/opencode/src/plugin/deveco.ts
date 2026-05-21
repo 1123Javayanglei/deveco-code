@@ -35,6 +35,19 @@ export async function saveAuthToDisk(key: string, info: Record<string, unknown>)
   } catch {}
 }
 
+function loadAccessTokenFromDisk(): string {
+  try {
+    if (!fs.existsSync(authFilePath)) return ""
+    const raw = JSON.parse(fs.readFileSync(authFilePath, "utf-8")) as Record<string, unknown>
+    const data = LocalCrypto.decryptAuthData(raw) as Record<string, unknown>
+    const deveco = data.deveco as Record<string, unknown> | undefined
+    if (deveco?.type === "oauth" && typeof deveco.access === "string") {
+      return deveco.access
+    }
+  } catch {}
+  return ""
+}
+
 // ============ Types ============
 interface UserInfo {
   userId: string
@@ -723,10 +736,13 @@ class DevEcoAuth {
       try {
         const parsed = loginService.parseJwt(jwtToken)
         if (parsed.userId) {
+          // When restoring from jwtToken only (no userInfo in memory),
+          // accessToken may be stored in auth.json — read it from disk
+          const accessToken = loadAccessTokenFromDisk()
           return {
             userId: parsed.userId,
             userName: parsed.userName ?? "",
-            accessToken: "",
+            accessToken,
             refreshToken: "",
             jwtToken,
             countryCode: "",
@@ -777,6 +793,24 @@ class DevEcoAuth {
 
   private getUserInfo(): UserInfo | null {
     return loginService.getUserInfo()
+  }
+
+  /**
+   * 获取当前登录用户的 userId，供 AgreementService 使用。
+   * 优先从内存中的 userInfo 取，其次从持久化的 jwtToken 解析。
+   * 解析失败返回 null（不抛出错误）。
+   */
+  async getUserId(): Promise<string | null> {
+    const userInfo = this.getUserInfo()
+    if (userInfo?.userId) return userInfo.userId
+    const jwtToken = await tokenStorage.loadToken()
+    if (!jwtToken) return null
+    try {
+      const parsed = loginService.parseJwt(jwtToken)
+      return parsed.userId || null
+    } catch {
+      return null
+    }
   }
 }
 

@@ -20,7 +20,8 @@ import { usePromptRef } from "../context/prompt"
 import { useLocal } from "../context/local"
 import { DevEcoOnboarding } from "../component/deveco-onboarding"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
-import { KV_DEVECO_CODE_PRIVACY_ACCEPTED } from "@/cli/deveco-legal"
+import { agreementService } from "@/cli/deveco-agreement"
+import { devecoAuth } from "@/plugin/deveco"
 
 // TODO: what is the best way to do this?
 let once = false
@@ -40,6 +41,7 @@ export function Home() {
 
   // DevEco onboarding state - null = checking, false = show onboarding, true = ready
   const [devecoReady, setDevecoReady] = createSignal<boolean | null>(null)
+  const [devecoInitialStep, setDevecoInitialStep] = createSignal<'entry' | 'privacy'>('entry')
   let devecoChecked = false
 
   const bodySlotHeight = createMemo(() => homeBodySlotRows(dimensions().height))
@@ -48,20 +50,50 @@ export function Home() {
   createEffect(
     on(
       () => sync.status,
-      (status) => {
+      async (status) => {
         if (status !== "complete") return
         // Only check once
         if (devecoChecked) return
         devecoChecked = true
 
-        const privacyAccepted = kv.get(KV_DEVECO_CODE_PRIVACY_ACCEPTED, false)
         const hasCredentials = sync.data.provider.some(
           (x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0),
         )
-        if (!privacyAccepted || !hasCredentials) {
+
+        // Get session — may have accessToken in memory, or jwtToken on disk
+        const session = await devecoAuth.getSession()
+
+        // No session at all (no jwtToken locally) → truly not logged in
+        if (!session) {
+          setDevecoInitialStep('entry')
           setDevecoReady(false)
-        } else {
+          return
+        }
+
+        // Has session but accessToken is empty → refresh token to get a fresh accessToken
+        let accessToken = session.accessToken
+        if (!accessToken) {
+          const newTokens = await devecoAuth.refreshToken()
+          if (newTokens?.accessToken) {
+            accessToken = newTokens.accessToken
+          } else {
+            // Token refresh failed → local login state expired, need to re-login
+            setDevecoInitialStep('entry')
+            setDevecoReady(false)
+            return
+          }
+        }
+
+        // Remote query agreement signing status
+        const checkResult = await agreementService.checkAllAgreements(accessToken, kv)
+
+        if (checkResult.canEnter && hasCredentials) {
+          // Logged in + agreements compliant → enter conversation page
           setDevecoReady(true)
+        } else {
+          // Logged in but agreements not compliant → show privacy step
+          setDevecoInitialStep('privacy')
+          setDevecoReady(false)
         }
       },
     ),
@@ -183,6 +215,7 @@ export function Home() {
                   <DevEcoOnboarding
                     onComplete={() => setDevecoReady(true)}
                     bodySlotHeight={bodySlotHeight()}
+                    initialStep={devecoInitialStep()}
                   />
                 </Show>
               </box>
