@@ -31,20 +31,25 @@ You **MUST** consider the user input before proceeding. If empty or whitespace-o
     - Extract 2-4 meaningful keywords. Format: `action-noun` or `tech-concept` (e.g., `add-user-auth`, `oauth2-api-integration`).
     - Preserve acronyms. Keep it concise and descriptive.
 
-2. **Resolve & Create Feature Directory**:
-  - **Base path**: `.specs` (unless `SPECIFY_FEATURE_DIRECTORY` is explicitly provided).
-  - **Format**: `.specs/<short-name>`
-  - **Pre-Action Verification (Mandatory)**:
-    - **Before** creating any directories or writing files: **If `question` is NOT available, DO NOT ask the user for confirmation in any form. Proceed with the proposed path immediately without pausing.** If available, call the `question` tool to present the proposed path (e.g., `.specs/003-auth-logic`) to the user and obtain their explicit approval.
-  - **Action (Execute after user approval, or immediately if `question` is unavailable)**:
-    - **Create Directory**: Generate the resolved directory.
-    - **Define Path**: Set `SPEC_FILE` to `<resolved_path>/spec.md`.
-    - **State Persistence**: Overwrite `.specs/feature.json` with:
-      ```json
-      {
-        "feature_directory": "<resolved_relative_or_absolute_path>"
-      }
-      ```
+2. **Resolve & Create Feature Directory**
+- **Base path**: Default to `.specs`, overridden only if `SPECIFY_FEATURE_DIRECTORY` is explicitly supplied.
+- **Directory format**: `.specs/<short-name>`
+
+### Mandatory Pre-Action Check
+Prior to directory creation and file writing:
+- If the `question` tool is available: Mandatorily invoke the tool to display target paths and obtain explicit user approval.
+- If the `question` tool is unavailable: Skip confirmation steps, execute directly with resolved paths.
+
+### Execution Steps
+Run actions right after approval or directly when `question` is inaccessible:
+1. Create the resolved feature directory
+2. Assign `SPEC_FILE` as `<resolved_path>/spec.md`
+3. Persist state by overwriting `.specs/feature.json`
+```json
+{
+  "feature_directory": "<resolved_relative_or_absolute_path>"
+}
+```
 
 3. **Load Template**:
     - Load `{CONFIG_ROOT}/specs/templates/spec-template.md`.
