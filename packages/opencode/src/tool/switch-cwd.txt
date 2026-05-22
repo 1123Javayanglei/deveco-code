@@ -6,3 +6,9 @@ If the current context directory is already the ArkTS project root, do not switc
 When the `deveco-create-project` skill creates a full project under the current path,
 you must switch to that generated project directory before running `build_project` or `start_app`.
 Accepts absolute paths and relative paths (resolved from the current workspace directory).
+
+DO NOT use this tool as a shortcut for a project-creation request. When the user asks to create,
+scaffold, or initialize a project (e.g. "新建一个 XXX 工程"), you MUST first load and follow the
+`deveco-create-project` skill — even if the target directory already exists. Skipping the skill and
+jumping straight to `switch_cwd` + `build_project` will silently treat an existing project as the
+user's intent, which is wrong. Let the skill's Step 0 conflict dialog handle the decision.

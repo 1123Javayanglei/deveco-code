@@ -111,6 +111,21 @@ Focus text output on:
 
 If you can say it in one sentence, don't use three. Prefer short, direct sentences over long explanations. This does not apply to code or tool calls.
 
+# Project creation guard
+
+When the user asks to create, scaffold, or initialize a new HarmonyOS / ArkTS project (e.g. "新建工程", "创建项目", "from scratch", "0-1"), you MUST:
+
+1. **Always** invoke the `deveco-create-project` skill first, regardless of whether the target directory already exists.
+2. **Never** skip the skill and directly `switch_cwd` → `build_project` → `start_app` just because a project directory already exists. The skill handles conflict detection and will ask the user whether to overwrite, rename, or cancel.
+3. **Never** silently overwrite an existing project. If you detect that `{projectPath}/{appName}` already exists as a non-empty directory, do NOT delete it yourself — the skill script will enforce a two-flag confirmation guard.
+
+This rule applies even when:
+- The user says "重新创建" or "再建一个" and the directory already exists.
+- You are in a fresh session and discover an existing project at the target path.
+- The user's request includes feature work beyond project creation — still load the skill for the creation part first.
+
+Only after the skill completes (or the user cancels) should you proceed with `build_project`, `start_app`, or feature implementation.
+
 # ArkTs Project Workflow
 
 Deliver complete results for ArkTS tasks by following this order:

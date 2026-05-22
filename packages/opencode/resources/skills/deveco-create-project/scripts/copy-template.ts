@@ -19,12 +19,19 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { detectApiLevel } from './detect-sdk';
 
+type OnConflict =
+  | { kind: 'error' }
+  | { kind: 'overwrite' }
+  | { kind: 'rename'; renameTo: string };
+
 type Args = {
   projectPath: string;
   appName: string;
   bundleName: string;
   apiLevel?: number;
   templateDir: string;
+  onConflict: OnConflict;
+  confirmOverwriteTarget?: string;
 };
 
 type ApiConfig = {
@@ -60,11 +67,11 @@ const REQUIRED_FILES = [
   'entry/src/main/resources/base/media/foreground.png',
 ];
 
-function parseArgs(argv: string[]): Args {
+function tokenizeArgs(argv: string[]): Map<string, string> {
   const values = new Map<string, string>();
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
-    if (!token.startsWith('--')) {
+    if (token === undefined || !token.startsWith('--')) {
       continue;
     }
     const key = token.slice(2);
@@ -75,30 +82,141 @@ function parseArgs(argv: string[]): Args {
     values.set(key, value);
     index += 1;
   }
+  return values;
+}
+
+function parseOnConflict(raw: string): OnConflict {
+  if (raw === 'error') {
+    return { kind: 'error' };
+  }
+  if (raw === 'overwrite') {
+    return { kind: 'overwrite' };
+  }
+  if (raw.startsWith('rename:')) {
+    const renameTo = raw.slice('rename:'.length).trim();
+    if (!renameTo) {
+      throw new Error('--on-conflict rename:<NewName> requires a non-empty name');
+    }
+    return { kind: 'rename', renameTo };
+  }
+  throw new Error(`Unsupported --on-conflict value: ${raw}`);
+}
+
+function parseApiLevel(raw: string | undefined): number | undefined {
+  if (!raw) {
+    return undefined;
+  }
+  const apiLevel = Number(raw);
+  if (!Number.isInteger(apiLevel) || !API_CONFIGS[apiLevel]) {
+    throw new Error(`Unsupported apiLevel: ${raw}`);
+  }
+  return apiLevel;
+}
+
+function assertRequired(name: string, value: string | undefined): asserts value is string {
+  if (!value) {
+    throw new Error(`Missing required argument --${name}`);
+  }
+}
+
+const APP_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,127}$/;
+const BUNDLE_SEGMENT_PATTERN = /^[a-z][a-z0-9_]*$/;
+
+type AppNameValidation = { reasons: string[]; suggestion: string };
+type BundleValidation = { reason: string };
+
+function suggestAppName(raw: string): string {
+  const ascii = raw
+    .normalize('NFKD')
+    .replace(/[^\x20-\x7E]+/g, '')
+    .replace(/[^A-Za-z0-9]+/g, ' ')
+    .trim();
+  if (!ascii) return '';
+  const camel = ascii
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join('');
+  const trimmed = camel.replace(/^[^A-Za-z]+/, '');
+  return trimmed.slice(0, 64) || '';
+}
+
+function validateAppName(rawAppName: string): AppNameValidation | null {
+  if (APP_NAME_PATTERN.test(rawAppName)) return null;
+  const suggestion = suggestAppName(rawAppName);
+  const reasons: string[] = [];
+  if (/[^\x00-\x7F]/.test(rawAppName)) reasons.push('contains non-ASCII characters (e.g. Chinese)');
+  if (/\s/.test(rawAppName)) reasons.push('contains whitespace');
+  if (/^[^A-Za-z]/.test(rawAppName)) reasons.push('does not start with an English letter');
+  if (/[^A-Za-z0-9_]/.test(rawAppName)) reasons.push('contains characters other than [A-Za-z0-9_]');
+  if (rawAppName.length > 128) reasons.push('exceeds 128 characters');
+  if (reasons.length === 0) reasons.push('does not match HarmonyOS app name rule');
+  return { reasons, suggestion };
+}
+
+function validateBundleName(bundleName: string): BundleValidation | null {
+  if (bundleName.length === 0 || bundleName.length > 128) {
+    return { reason: 'bundleName length must be between 1 and 128 characters' };
+  }
+  const segments = bundleName.split('.');
+  if (segments.length < 2) {
+    return { reason: 'bundleName must contain at least one dot (e.g. com.example.app)' };
+  }
+  for (const seg of segments) {
+    if (!BUNDLE_SEGMENT_PATTERN.test(seg)) {
+      return {
+        reason:
+          `bundleName segment "${seg}" is invalid; each segment must start with a lowercase letter ` +
+          'and contain only [a-z0-9_]',
+      };
+    }
+  }
+  return null;
+}
+
+function emitInvalidAppName(rawAppName: string, validation: AppNameValidation): void {
+  const payload = {
+    code: 'APP_NAME_INVALID',
+    message:
+      `appName "${rawAppName}" is not a valid HarmonyOS application name. ` +
+      'It must start with an English letter and contain only [A-Za-z0-9_], length 1-128.',
+    rawAppName,
+    reasons: validation.reasons,
+    suggestion: validation.suggestion || null,
+    hint:
+      validation.suggestion
+        ? `请通过 AskUserQuestion 向用户确认是否使用建议的英文名 "${validation.suggestion}"，或让用户提供一个符合规范的英文 appName，然后用新的 --app-name 重新运行脚本。Never auto-translate without explicit user confirmation.`
+        : '请通过 AskUserQuestion 让用户提供一个符合规范的英文 appName（仅 A-Z/a-z/0-9/_，首字符必须是字母），然后用新的 --app-name 重新运行脚本。',
+  };
+  console.error(JSON.stringify(payload, null, 2));
+}
+
+function emitInvalidBundleName(bundleName: string, reason: string): void {
+  const payload = {
+    code: 'BUNDLE_NAME_INVALID',
+    message: `bundleName "${bundleName}" is invalid: ${reason}`,
+    bundleName,
+    hint: 'bundleName must be reverse-DNS (e.g. com.example.shoppingcart). 请用合法的 --bundle-name 重新运行脚本。',
+  };
+  console.error(JSON.stringify(payload, null, 2));
+}
+
+function parseArgs(argv: string[]): Args {
+  const values = tokenizeArgs(argv);
 
   const scriptDir = path.dirname(fileURLToPath(import.meta.url));
   const templateDir = values.get('template-dir') ??
     path.resolve(scriptDir, '../../deveco-create-project/application');
   const projectPath = values.get('project-path');
-  const appName = values.get('app-name');
-  const bundleName = values.get('bundle-name') ?? (appName
-    ? `com.example.${appName.toLowerCase()}`
-    : undefined);
-  const apiLevelRaw = values.get('api-level');
-  const apiLevel = apiLevelRaw ? Number(apiLevelRaw) : undefined;
+  const bundleNameRaw = values.get('bundle-name');
+  const onConflict = parseOnConflict(values.get('on-conflict') ?? 'error');
+  const appName = onConflict.kind === 'rename' ? onConflict.renameTo : values.get('app-name');
+  const apiLevel = parseApiLevel(values.get('api-level'));
+  const confirmOverwriteTarget = values.get('confirm-overwrite-target');
 
-  if (!projectPath) {
-    throw new Error('Missing required argument --project-path');
-  }
-  if (!appName) {
-    throw new Error('Missing required argument --app-name');
-  }
-  if (!bundleName) {
-    throw new Error('Missing required argument --bundle-name');
-  }
-  if (apiLevelRaw && (apiLevel === undefined || !Number.isInteger(apiLevel) || !API_CONFIGS[apiLevel])) {
-    throw new Error(`Unsupported apiLevel: ${apiLevelRaw}`);
-  }
+  assertRequired('project-path', projectPath);
+  assertRequired('app-name', appName);
+
+  const bundleName = bundleNameRaw ?? `com.example.${appName.toLowerCase()}`;
 
   return {
     projectPath: path.resolve(projectPath),
@@ -106,6 +224,8 @@ function parseArgs(argv: string[]): Args {
     bundleName,
     apiLevel,
     templateDir: path.resolve(templateDir),
+    onConflict,
+    confirmOverwriteTarget: confirmOverwriteTarget ? path.resolve(confirmOverwriteTarget) : undefined,
   };
 }
 
@@ -152,6 +272,9 @@ function updateApiLevel(targetRoot: string, apiLevel: number): void {
     return;
   }
   const config = API_CONFIGS[apiLevel];
+  if (!config) {
+    throw new Error(`Unsupported apiLevel: ${apiLevel}`);
+  }
   replaceInFile(path.join(targetRoot, 'build-profile.json5'), [
     ['6.0.2(22)', config.sdkVersion],
   ]);
@@ -164,8 +287,105 @@ function verifyFiles(targetRoot: string): string[] {
   return REQUIRED_FILES.filter((relativePath) => !fs.existsSync(path.join(targetRoot, relativePath)));
 }
 
+type ExistingInfo = {
+  exists: boolean;
+  isProject?: boolean;
+  isEmpty?: boolean;
+  isFile?: boolean;
+};
+
+function detectExistingProject(targetRoot: string): ExistingInfo {
+  if (!fs.existsSync(targetRoot)) {
+    return { exists: false };
+  }
+  const stat = fs.statSync(targetRoot);
+  if (!stat.isDirectory()) {
+    return { exists: true, isProject: false, isEmpty: false, isFile: true };
+  }
+  const entries = fs.readdirSync(targetRoot);
+  if (entries.length === 0) {
+    return { exists: true, isProject: false, isEmpty: true, isFile: false };
+  }
+  const isProject = fs.existsSync(path.join(targetRoot, 'build-profile.json5'));
+  return { exists: true, isProject, isEmpty: false, isFile: false };
+}
+
+type ConflictOption = {
+  value: 'overwrite' | 'rename' | 'cancel';
+  label: string;
+  destructive: boolean;
+  hint: string;
+};
+
+const CONFLICT_OPTIONS: ConflictOption[] = [
+  {
+    value: 'overwrite',
+    label: '覆盖现有项目',
+    destructive: true,
+    hint: 'Re-run the script with --on-conflict overwrite after explicit user confirmation.',
+  },
+  {
+    value: 'rename',
+    label: '使用新名称重新创建',
+    destructive: false,
+    hint: 'Ask the user for a new app name, then re-run with --on-conflict rename:<NewName>.',
+  },
+  {
+    value: 'cancel',
+    label: '取消创建',
+    destructive: false,
+    hint: 'Do not run the script. Report back that the creation was cancelled.',
+  },
+];
+
+function emitConflictError(targetRoot: string, info: ExistingInfo): void {
+  const payload = {
+    code: 'PROJECT_EXISTS',
+    message: info.isProject
+      ? `A project already exists at "${targetRoot}".`
+      : info.isFile
+        ? `A file (not a directory) already exists at "${targetRoot}".`
+        : `The directory "${targetRoot}" already exists and is not empty.`,
+    targetRoot,
+    isProject: !!info.isProject,
+    isEmpty: !!info.isEmpty,
+    isFile: !!info.isFile,
+    options: CONFLICT_OPTIONS,
+    hint: '检测到目标目录已存在。必须先通过 AskUserQuestion 向用户提供"覆盖 / 重命名 / 取消"三个选项后再决定如何继续。Re-run with --on-conflict overwrite AND --confirm-overwrite-target "<targetRoot>" to replace it (both flags are required), or --on-conflict rename:<NewName> to create under a different name. Never overwrite without explicit user confirmation.',
+  };
+  console.error(JSON.stringify(payload, null, 2));
+}
+
+function emitMissingConfirmation(targetRoot: string): void {
+  const payload = {
+    code: 'OVERWRITE_CONFIRMATION_REQUIRED',
+    message:
+      `--on-conflict overwrite must be accompanied by --confirm-overwrite-target "${targetRoot}" matching the exact target path. ` +
+      'This guard ensures the user has explicitly confirmed overwriting THIS specific directory.',
+    targetRoot,
+    hint: '请通过 AskUserQuestion 向用户确认是否覆盖该具体目录。确认后再以 --confirm-overwrite-target "<targetRoot>" 重新运行脚本。Do not retry overwrite without asking the user about THIS exact path.',
+  };
+  console.error(JSON.stringify(payload, null, 2));
+}
+
+function removeDirectory(targetRoot: string): void {
+  fs.rmSync(targetRoot, { recursive: true, force: true });
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+
+  const appNameValidation = validateAppName(args.appName);
+  if (appNameValidation) {
+    emitInvalidAppName(args.appName, appNameValidation);
+    process.exit(4);
+  }
+  const bundleValidation = validateBundleName(args.bundleName);
+  if (bundleValidation) {
+    emitInvalidBundleName(args.bundleName, bundleValidation.reason);
+    process.exit(5);
+  }
+
   const resolved = await resolve(args);
   if (!fs.existsSync(args.templateDir)) {
     throw new Error(`Template directory not found: ${args.templateDir}`);
@@ -173,6 +393,22 @@ async function main(): Promise<void> {
 
   fs.mkdirSync(args.projectPath, { recursive: true });
   const targetRoot = path.join(args.projectPath, args.appName);
+
+  const existing = detectExistingProject(targetRoot);
+  if (existing.exists && !existing.isEmpty) {
+    if (args.onConflict.kind === 'error') {
+      emitConflictError(targetRoot, existing);
+      process.exit(2);
+    }
+    if (args.onConflict.kind === 'overwrite') {
+      if (!args.confirmOverwriteTarget || args.confirmOverwriteTarget !== targetRoot) {
+        emitMissingConfirmation(targetRoot);
+        process.exit(3);
+      }
+      removeDirectory(targetRoot);
+    }
+  }
+
   copyDirectoryContents(args.templateDir, targetRoot);
 
   replaceInFile(path.join(targetRoot, 'AppScope/resources/base/element/string.json'), [
@@ -197,6 +433,7 @@ async function main(): Promise<void> {
     detectedFrom: resolved.detectedFrom,
     devecoHome: resolved.devecoHome,
     verified: true,
+    onConflict: args.onConflict.kind,
   }, null, 2));
 }
 
