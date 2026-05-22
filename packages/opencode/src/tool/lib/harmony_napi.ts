@@ -46,33 +46,49 @@ const log = Log.create({ service: "harmony-napi" })
 let gate: Promise<void> = Promise.resolve()
 let bound = ""
 
-export async function resolveUIVerifyParams() {
+interface UIVerifyParams {
+  baseURL: string | null
+  apiKey: string | null
+  modelName: string | null
+}
+
+const EMPTY_PARAMS: UIVerifyParams = { baseURL: null, apiKey: null, modelName: null }
+
+async function resolveFromProjectConfig(worktree: string): Promise<UIVerifyParams | null> {
   try {
     const { Effect } = await import("effect")
     const { AppRuntime } = await import("@/effect/app-runtime")
     const { Config } = await import("@/config/config")
     const { Provider } = await import("@/provider/provider")
-    const cfg = await AppRuntime.runPromise(Effect.gen(function* () {
-      const config = yield* Config.Service
-      return yield* config.get()
-    }))
-    const modelStr = cfg.agent?.["ui_verification"]?.model
-    if (modelStr) {
-      const { providerID, modelID } = Provider.parseModel(modelStr)
-      const [provider, model] = await Promise.all([
-        AppRuntime.runPromise(Effect.gen(function* () { const svc = yield* Provider.Service; return yield* svc.getProvider(providerID) })).catch(() => null),
-        AppRuntime.runPromise(Effect.gen(function* () { const svc = yield* Provider.Service; return yield* svc.getModel(providerID, modelID) })).catch(() => null),
-      ])
-      if (provider && model) {
-        const baseURL = (provider.options?.baseURL as string | undefined) ?? model.api.url ?? null
-        const apiKey = provider.key ?? (provider.options?.apiKey as string | undefined) ?? null
-        const modelName = model.api.id ?? null
-        return { baseURL, apiKey, modelName }
-      }
-    }
-  } catch {}
+    const { InstanceStore } = await import("@/project/instance-store")
+    const result = await AppRuntime.runPromise(
+      InstanceStore.Service.use((store) =>
+        store.provide({ directory: worktree }, Effect.gen(function* () {
+          const config = yield* Config.Service
+          const cfg = yield* config.get()
+          const modelStr = cfg.agent?.["ui_verification"]?.model
+          if (!modelStr) return null
+          const { providerID, modelID } = Provider.parseModel(modelStr)
+          const svc = yield* Provider.Service
+          const provider = yield* svc.getProvider(providerID).pipe(Effect.catch(() => Effect.succeed(null)))
+          const model = yield* svc.getModel(providerID, modelID).pipe(Effect.catch(() => Effect.succeed(null)))
+          if (!provider || !model) return null
+          return {
+            baseURL: (provider.options?.baseURL as string | undefined) ?? model.api.url ?? null,
+            apiKey: provider.key ?? (provider.options?.apiKey as string | undefined) ?? null,
+            modelName: model.api.id ?? null,
+          }
+        }))
+      )
+    )
+    return result ?? null
+  } catch (e) {
+    log.warn("resolveFromProjectConfig failed")
+    return null
+  }
+}
 
-  // fallback 1: 环境变量
+function resolveFromEnvVars(): UIVerifyParams | null {
   if (process.env.UI_VERIFY_BASE_URL && process.env.UI_VERIFY_API_KEY && process.env.UI_VERIFY_MODEL_NAME) {
     return {
       baseURL: process.env.UI_VERIFY_BASE_URL ?? null,
@@ -80,45 +96,65 @@ export async function resolveUIVerifyParams() {
       modelName: process.env.UI_VERIFY_MODEL_NAME ?? null,
     }
   }
+  return null
+}
 
-  // fallback 2: deveco 登录态内置模型
+async function refreshDevEcoToken(): Promise<string | null> {
   try {
     const { Effect } = await import("effect")
     const { AppRuntime } = await import("@/effect/app-runtime")
     const { Auth } = await import("@/auth")
-    const getAuth = () => AppRuntime.runPromise(Effect.gen(function* () { const svc = yield* Auth.Service; return yield* svc.get("deveco") })).catch(() => undefined)
+    const getAuth = () => AppRuntime.runPromise(
+      Effect.gen(function* () { const svc = yield* Auth.Service; return yield* svc.get("deveco") })
+    ).catch(() => undefined)
+
     let auth = await getAuth()
-    if (auth instanceof Auth.Oauth && auth.access) {
-      if (!auth.access || auth.expires < Date.now()) {
-        const tokens = await devecoAuth.refreshToken()
-        if (tokens) {
-          await AppRuntime.runPromise(Effect.gen(function* () {
-            const svc = yield* Auth.Service
-            yield* svc.set("deveco", new Auth.Oauth({
-              type: "oauth",
-              access: tokens.accessToken,
-              refresh: tokens.refreshToken,
-              expires: Date.now() + ACCESS_TOKEN_EXPIRES_MS,
-            }))
+    if (!(auth instanceof Auth.Oauth) || !auth.access) return null
+
+    if (auth.expires < Date.now()) {
+      const tokens = await devecoAuth.refreshToken()
+      if (tokens) {
+        await AppRuntime.runPromise(Effect.gen(function* () {
+          const svc = yield* Auth.Service
+          yield* svc.set("deveco", new Auth.Oauth({
+            type: "oauth",
+            access: tokens.accessToken,
+            refresh: tokens.refreshToken,
+            expires: Date.now() + ACCESS_TOKEN_EXPIRES_MS,
           }))
-          auth = await getAuth()
-        }
-      }
-      if (auth instanceof Auth.Oauth && auth.access && auth.expires > Date.now()) {
-        return {
-          baseURL: DEVECO_PROVIDER_CONFIG.api + "/no-stream",
-          apiKey: auth.access,
-          modelName: "Qwen2.5-VL-72B",
-        }
+        }))
+        auth = await getAuth()
       }
     }
-  } catch {}
 
-  return {
-    baseURL: null,
-    apiKey: null,
-    modelName: null,
+    if (auth instanceof Auth.Oauth && auth.access && auth.expires > Date.now()) {
+      return auth.access
+    }
+    return null
+  } catch (e) {
+    log.warn("refreshDevEcoToken failed")
+    return null
   }
+}
+
+async function resolveFromDevEcoAuth(): Promise<UIVerifyParams | null> {
+  const accessToken = await refreshDevEcoToken()
+  if (!accessToken) return null
+  return {
+    baseURL: DEVECO_PROVIDER_CONFIG.api + "/no-stream",
+    apiKey: accessToken,
+    modelName: "Qwen2.5-VL-72B",
+  }
+}
+
+export async function resolveUIVerifyParams(worktree: string): Promise<UIVerifyParams> {
+  const fromConfig = await resolveFromProjectConfig(worktree)
+  if (fromConfig) return fromConfig
+  const fromEnv = resolveFromEnvVars()
+  if (fromEnv) return fromEnv
+  const fromAuth = await resolveFromDevEcoAuth()
+  if (fromAuth) return fromAuth
+  return EMPTY_PARAMS
 }
 
 async function runInit(worktree: string) {
@@ -128,7 +164,7 @@ async function runInit(worktree: string) {
   }
   const logDir = path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share', 'deveco'), 'log', 'deveco-mcp')
   fs.mkdirSync(logDir, { recursive: true })
-  const { baseURL, apiKey, modelName } = await resolveUIVerifyParams()
+  const { baseURL, apiKey, modelName } = await resolveUIVerifyParams(worktree)
   log.info("ui_verification model", { baseURL, modelName })
   await bridge.init(logDir, worktree, devecoHome, baseURL, apiKey, modelName)
 }

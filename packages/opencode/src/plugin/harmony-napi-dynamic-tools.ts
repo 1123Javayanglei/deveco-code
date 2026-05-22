@@ -350,7 +350,8 @@ const HarmonyNapiDynamicToolsPlugin: Plugin = async (_input) => {
         async execute(args, ctx) {
           if (!process.env.DEVECO_HOME?.trim()) throw new Error('DEVECO_HOME environment variable is not configured. PLEASE set your DEVECO_HOME path manually and restart.');
           if (name === 'verify_ui') {
-            const params = await resolveUIVerifyParams();
+            const wt = resolveWorktree(ctx as { sessionID?: string; directory?: string; worktree?: string });
+            const params = await resolveUIVerifyParams(wt);
             if (!params.baseURL || !params.apiKey || !params.modelName) {
               return "工具调用失败。请将以下内容原文告知用户，不要修改或补充，告知后立即停止，不要再调用任何工具：「UI 意图校验功能不可用：未配置多模态模型。请在配置文件中为 ui_verification agent 配置一个支持多模态的模型，或登录账号以使用内置多模态模型。」"
             }
