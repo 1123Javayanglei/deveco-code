@@ -58,12 +58,31 @@ function parseArgs(argv) {
   const templateDir = values.get('template-dir') ??
     path.resolve(scriptDir, '../../deveco-create-project/application');
   const projectPath = values.get('project-path');
-  const appName = values.get('app-name');
-  const bundleName = values.get('bundle-name') ?? (appName
-    ? `com.example.${appName.toLowerCase()}`
-    : undefined);
+  const bundleNameRaw = values.get('bundle-name');
+  let appName = values.get('app-name');
   const apiLevelRaw = values.get('api-level');
   const apiLevel = apiLevelRaw ? Number(apiLevelRaw) : undefined;
+  const onConflictRaw = values.get('on-conflict') ?? 'error';
+
+  let onConflict = { kind: 'error' };
+  if (onConflictRaw === 'error') {
+    onConflict = { kind: 'error' };
+  } else if (onConflictRaw === 'overwrite') {
+    onConflict = { kind: 'overwrite' };
+  } else if (onConflictRaw.startsWith('rename:')) {
+    const renameTo = onConflictRaw.slice('rename:'.length).trim();
+    if (!renameTo) {
+      throw new Error('--on-conflict rename:<NewName> requires a non-empty name');
+    }
+    onConflict = { kind: 'rename', renameTo };
+    appName = renameTo;
+  } else {
+    throw new Error(`Unsupported --on-conflict value: ${onConflictRaw}`);
+  }
+
+  const bundleName = bundleNameRaw ?? (appName
+    ? `com.example.${appName.toLowerCase()}`
+    : undefined);
 
   if (!projectPath) {
     throw new Error('Missing required argument --project-path');
@@ -84,6 +103,7 @@ function parseArgs(argv) {
     bundleName,
     apiLevel,
     templateDir: path.resolve(templateDir),
+    onConflict,
   };
 }
 
@@ -142,6 +162,43 @@ function verifyFiles(targetRoot) {
   return REQUIRED_FILES.filter((relativePath) => !fs.existsSync(path.join(targetRoot, relativePath)));
 }
 
+function detectExistingProject(targetRoot) {
+  if (!fs.existsSync(targetRoot)) {
+    return { exists: false };
+  }
+  const stat = fs.statSync(targetRoot);
+  if (!stat.isDirectory()) {
+    return { exists: true, isProject: false, isEmpty: false, isFile: true };
+  }
+  const entries = fs.readdirSync(targetRoot);
+  if (entries.length === 0) {
+    return { exists: true, isProject: false, isEmpty: true, isFile: false };
+  }
+  const isProject = fs.existsSync(path.join(targetRoot, 'build-profile.json5'));
+  return { exists: true, isProject, isEmpty: false, isFile: false };
+}
+
+function emitConflictError(targetRoot, info) {
+  const payload = {
+    code: 'PROJECT_EXISTS',
+    message: info.isProject
+      ? `A HarmonyOS project already exists at "${targetRoot}".`
+      : info.isFile
+        ? `A file (not a directory) already exists at "${targetRoot}".`
+        : `The directory "${targetRoot}" already exists and is not empty.`,
+    targetRoot,
+    isProject: !!info.isProject,
+    isEmpty: !!info.isEmpty,
+    isFile: !!info.isFile,
+    hint: 'Re-run with --on-conflict overwrite to replace it, or --on-conflict rename:<NewName> to create under a different name. Ask the user before overwriting.',
+  };
+  console.error(JSON.stringify(payload, null, 2));
+}
+
+function removeDirectory(targetRoot) {
+  fs.rmSync(targetRoot, { recursive: true, force: true });
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const resolved = await resolve(args);
@@ -151,6 +208,18 @@ async function main() {
 
   fs.mkdirSync(args.projectPath, { recursive: true });
   const targetRoot = path.join(args.projectPath, args.appName);
+
+  const existing = detectExistingProject(targetRoot);
+  if (existing.exists && !existing.isEmpty) {
+    if (args.onConflict.kind === 'error') {
+      emitConflictError(targetRoot, existing);
+      process.exit(2);
+    }
+    if (args.onConflict.kind === 'overwrite') {
+      removeDirectory(targetRoot);
+    }
+  }
+
   copyDirectoryContents(args.templateDir, targetRoot);
 
   replaceInFile(path.join(targetRoot, 'AppScope/resources/base/element/string.json'), [
@@ -175,6 +244,7 @@ async function main() {
     detectedFrom: resolved.detectedFrom,
     devecoHome: resolved.devecoHome,
     verified: true,
+    onConflict: args.onConflict.kind,
   }, null, 2));
 }
 

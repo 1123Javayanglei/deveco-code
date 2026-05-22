@@ -64,6 +64,40 @@ Execution requirements:
 - The script is responsible for SDK detection. Do not decide the SDK version in the prompt by guesswork.
 - If the script exits with a non-zero code, report the error to the user and stop.
 
+#### Handling existing project at the target path
+
+By default the script refuses to overwrite. If a non-empty directory already exists at `{projectPath}/{appName}`, the script exits with code `2` and prints a JSON payload on stderr like:
+
+```json
+{
+  "code": "PROJECT_EXISTS",
+  "message": "A HarmonyOS project already exists at \"...\".",
+  "targetRoot": "...",
+  "isProject": true,
+  "isEmpty": false,
+  "isFile": false,
+  "hint": "..."
+}
+```
+
+When you see `code: "PROJECT_EXISTS"`, do NOT silently retry, do NOT delete the directory yourself, and do NOT pick a new name without asking. Instead, surface the conflict to the user and ask how to proceed. Offer these three options:
+
+1. **Overwrite** the existing project (destructive). Re-run with `--on-conflict overwrite` only after the user explicitly confirms.
+2. **Rename** the new project. Ask the user for the new name (e.g. `HelloWorld2`), then re-run with `--on-conflict rename:<NewName>`. The script will also re-derive `bundleName` from the new name unless `--bundle-name` was explicitly set.
+3. **Cancel** the creation.
+
+Example re-run after user confirms overwrite:
+
+```bash
+node "{SKILL_DIR}/scripts/copy-template.mjs" --project-path "{projectPath}" --app-name "{appName}" --on-conflict overwrite
+```
+
+Example re-run after user picks a new name:
+
+```bash
+node "{SKILL_DIR}/scripts/copy-template.mjs" --project-path "{projectPath}" --app-name "{NewName}" --on-conflict rename:{NewName}
+```
+
 ### Step 2: Verify the Result
 
 At minimum, verify that the following file exists:
