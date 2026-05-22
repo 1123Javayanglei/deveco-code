@@ -18,6 +18,10 @@ Confirm the following parameters before execution. Ask the user if any required 
 | `bundleName` | Auto-derived, no need to ask | `com.example.{appName lowercase}` | `com.example.helloworld` |
 | `apiLevel` | Optional | Auto-detect from DevEco SDK metadata, fallback to `22` | `21` |
 
+`appName` must match `^[A-Za-z][A-Za-z0-9_]{0,127}$`. If the user provides a Chinese or other non-ASCII name (e.g. `购物车`), translate it to UpperCamelCase by meaning (`购物车` → `ShoppingCart`, `天气预报` → `WeatherForecast`; fall back to pinyin only when meaning is unclear) and confirm via `AskUserQuestion` before invoking the script.
+
+If `{projectPath}/{appName}` already exists and is not empty, the script will exit with code `2` and emit a `PROJECT_EXISTS` JSON payload. When you see it, ask the user via `AskUserQuestion` whether to overwrite, rename, or cancel — do NOT silently re-run or delete the directory yourself. If `appName` does not match the rule above, the script exits with code `4` and emits `APP_NAME_INVALID`; fall back to the translate-and-confirm flow above.
+
 If the user explicitly specifies an SDK/API level, pass it through directly.
 If the user does not specify one, do not let the model invent a version. Let the script detect it using this fixed priority:
 
