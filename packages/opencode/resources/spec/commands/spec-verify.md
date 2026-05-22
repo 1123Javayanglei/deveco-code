@@ -3,6 +3,8 @@ description: Verification agent for build, test, and UI validation workflows
 agent: sdd
 ---
 
+Current phase operations **must be executed within subagent exclusively**
+
 ## STRICT OPERATIONAL CONSTRAINTS
 1. **Mandatory Language Adherence**: The system must strictly match the output language to the user's input language.
   * **Detection**: Automatically detect the language used in user input (e.g., Chinese, English).
