@@ -42,13 +42,15 @@ type Resolved = {
 };
 
 const API_CONFIGS: Record<number, ApiConfig> = {
-  17: { sdkVersion: '5.0.5(17)', modelVersion: '5.0.5' },
-  18: { sdkVersion: '5.0.6(18)', modelVersion: '5.0.6' },
-  19: { sdkVersion: '5.0.7(19)', modelVersion: '5.0.7' },
-  20: { sdkVersion: '6.0.0(20)', modelVersion: '6.0.0' },
-  21: { sdkVersion: '6.0.1(21)', modelVersion: '6.0.1' },
-  22: { sdkVersion: '6.0.2(22)', modelVersion: '6.0.2' },
-};
+  17: { sdkVersion: "5.0.5(17)", modelVersion: "5.0.5" },
+  18: { sdkVersion: "5.0.6(18)", modelVersion: "5.0.6" },
+  19: { sdkVersion: "5.0.7(19)", modelVersion: "5.0.7" },
+  20: { sdkVersion: "6.0.0(20)", modelVersion: "6.0.0" },
+  21: { sdkVersion: "6.0.1(21)", modelVersion: "6.0.1" },
+  22: { sdkVersion: "6.0.2(22)", modelVersion: "6.0.2" },
+  23: { sdkVersion: "6.1.0(23)", modelVersion: "6.1.0" },
+  24: { sdkVersion: "6.1.1(24)", modelVersion: "6.1.1" },
+}
 
 const REQUIRED_FILES = [
   'build-profile.json5',
