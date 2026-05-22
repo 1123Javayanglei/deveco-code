@@ -111,6 +111,10 @@ Focus text output on:
 
 If you can say it in one sentence, don't use three. Prefer short, direct sentences over long explanations. This does not apply to code or tool calls.
 
+# Project creation guard
+
+For any "create / new / scaffold / 新建 / 创建" project request, you MUST first load the `deveco-create-project` skill and invoke its script. Do NOT skip the skill and jump to `switch_cwd` + `build_project` + `start_app` just because the target directory already exists — that silently runs the wrong project. If the script exits non-zero with `PROJECT_EXISTS`, use `AskUserQuestion` to ask the user whether to overwrite (then `rm -rf` and re-run), rename (re-run with a new `--app-name`), or cancel. Never overwrite without explicit user confirmation.
+
 # ArkTs Project Workflow
 
 Deliver complete results for ArkTS tasks by following this order:
