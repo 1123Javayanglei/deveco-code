@@ -19,6 +19,7 @@ import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import PROMPT_SDD from "./prompt/sdd.txt"
 import PROMPT_SPEC_VERIFY from "./prompt/spec-verify.txt"
+import PROMPT_SPEC_IMPLEMENT from "./prompt/spec-implement.txt"
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@opencode-ai/core/global"
@@ -188,6 +189,27 @@ export const layer = Layer.effect(
             hidden: true,
             temperature: 0.2,
             prompt: PROMPT_SPEC_VERIFY,
+          },
+          "spec-implement": {
+            name: "spec-implement",
+            description: "Implement feature tasks from an approved tasks.md plan",
+            options: {},
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                question: "allow",
+                todowrite: "allow",
+                task: "allow",
+                arkts_knowledge_search: "allow",
+                build_project: "deny",
+                verify_ui: "deny",
+              }),
+              user,
+            ),
+            mode: "subagent",
+            native: true,
+            hidden: true,
+            prompt: PROMPT_SPEC_IMPLEMENT,
           },
           plan: {
             name: "plan",

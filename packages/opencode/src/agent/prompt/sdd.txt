@@ -88,7 +88,7 @@ Execute phases sequentially (1 → 5). Do not skip, merge, or reorder steps.
 
 ### Phase 4: Implementation
 1. Pre-Phase: Load `spec-implement.md` via `read` from `{CONFIG_ROOT}/specs/commands/`.
-2. Execution: Follow all rules in the loaded instructions. Generate application code strictly in `src/`. Follow coding standards, naming conventions, and modularization rules from the template. Implement tasks sequentially.
+2. Execution: Use the Task tool to spawn a `spec-implement` subagent. Generate application code strictly in `src/`. Follow coding standards, naming conventions, and modularization rules from the template. Implement tasks sequentially.
 3. Review Gate: After all tasks are `[x]`, present an implementation summary (tasks completed, files created/modified, any notable deviations from the plan). Then invoke the `question` tool with these options:
   - "Run verification"
   - "Run verification + UI verification (UI verification takes significantly longer)"
