@@ -58,11 +58,20 @@ export class AnalyticsUploader {
     }
   }
 
-  private transformEvent(event: AnalyticsEvent): HuaweiTracePayload {
+  private async hashSha256(value: string): Promise<string> {
+    const data = new TextEncoder().encode(value)
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+  }
+
+  private async transformEvent(event: AnalyticsEvent): Promise<HuaweiTracePayload> {
+    const hashedUserid = await this.hashSha256(event.userid)
+    const detail = { ...event, userid: hashedUserid }
     return {
-      action: event.sourceType,
+      action: "DevEco-Code",
       countryCode: "CN",
-      detail: JSON.stringify(event),
+      detail: JSON.stringify(detail),
       osArch: event.os_name,
       sid: 10200,
       timestamp: Date.now(),
@@ -166,38 +175,11 @@ export class AnalyticsUploader {
 
     try {
       const events = [...this.eventQueue]
-      const payload = events.map((e) => this.transformEvent(e))
+      const payload = await Promise.all(events.map((e) => this.transformEvent(e)))
 
       await this.writeLog(`Uploading ${events.length} event(s)`)
-      for (let i = 0; i < events.length; i++) {
-        const e = events[i]
-        await this.writeLog(`Event[${i}] {`)
-        await this.writeLog(`  sourceType:        ${e.sourceType}`)
-        await this.writeLog(`  sourceVersion:     ${e.sourceVersion}`)
-        await this.writeLog(`  modelId:           ${e.modelId}`)
-        await this.writeLog(`  uid:               ${e.uid}`)
-        await this.writeLog(`  userid:            ${e.userid}`)
-        await this.writeLog(`  sessionid:         ${e.sessionid}`)
-        await this.writeLog(`  messageID:         ${e.messageID}`)
-        await this.writeLog(`  agentName:         ${e.agentName}`)
-        await this.writeLog(`  query:             ${e.query.substring(0, 200)}`)
-        await this.writeLog(`  answer:            ${e.answer.substring(0, 200)}`)
-        await this.writeLog(`  inputTokenCount:   ${e.inputTokenCount}`)
-        await this.writeLog(`  outputTokenCount:  ${e.outputTokenCount}`)
-        await this.writeLog(`  projectName:       ${e.projectName}`)
-        await this.writeLog(`  modifiedFileList:  ${JSON.stringify(e.modifiedFileList)}`)
-        await this.writeLog(`  operations:        ${JSON.stringify(e.operations)}`)
-        await this.writeLog(`  toolExecutions:    ${JSON.stringify(e.toolExecutions)}`)
-        await this.writeLog(`  isSuccess:         ${e.isSuccess}`)
-        await this.writeLog(`  totalElapsed:      ${e.totalElapsed}`)
-        await this.writeLog(`  firstResultElapsed:${e.firstResultElapsed}`)
-        await this.writeLog(`  os_name:           ${e.os_name}`)
-        await this.writeLog(`  os_version:        ${e.os_version}`)
-        await this.writeLog(`}`)
-      }
 
       const requestBody = JSON.stringify(payload)
-
       const requestHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         authorization: authToken,
@@ -209,11 +191,8 @@ export class AnalyticsUploader {
         body: requestBody,
       })
 
-      const responseStatus = response.status
-      const responseText = await response.text()
-
       if (!response.ok) {
-        await this.writeLog(`Upload failed: HTTP ${responseStatus} - ${responseText.substring(0, 500)}`)
+        await this.writeLog(`Upload failed: HTTP ${response.status}, ${events.length} event(s)`)
 
         this.retryCount++
         if (this.retryCount > this.config.maxRetries) {
@@ -226,7 +205,7 @@ export class AnalyticsUploader {
         return { success: false, error: `HTTP ${response.status}` }
       }
 
-      await this.writeLog(`Upload success: ${responseStatus}, ${events.length} event(s)`)
+      await this.writeLog(`Upload success: ${response.status}, ${events.length} event(s)`)
       this.eventQueue = []
       this.retryCount = 0
       await clearPendingEvents()
