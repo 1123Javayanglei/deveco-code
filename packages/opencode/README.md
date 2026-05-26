@@ -1,14 +1,34 @@
-# @deveco/deveco
+# DevEco Code
 
 面向 HarmonyOS（鸿蒙）开发场景的 AI CLI 助手。
 
-[npm 包页面](https://www.npmjs.com/package/@deveco/deveco) |
-[GitCode 仓库](https://gitcode.com/openharmony-sig/codegenie_cli) |
+[![npm](https://img.shields.io/npm/v/@deveco/deveco-code?style=flat-square&label=npm)](https://www.npmjs.com/package/@deveco/deveco-code)
+[![license](https://img.shields.io/npm/l/@deveco/deveco-code?style=flat-square&label=license)](https://gitcode.com/openharmony-sig/deveco-code/blob/main/LICENSE)
+[![GitCode](https://img.shields.io/badge/GitCode-openharmony--sig%2Fdeveco--code-blue?style=flat-square)](https://gitcode.com/openharmony-sig/deveco-code)
+
+[npm 包页面](https://www.npmjs.com/package/@deveco/deveco-code) |
+[GitCode 仓库](https://gitcode.com/openharmony-sig/deveco-code) |
 [OpenCode](https://opencode.ai)
+
+***
+
+## Quick Start
+
+```bash
+# 1. 安装
+npm install -g @deveco/deveco-code --registry=https://registry.npmjs.org
+
+# 2. 启动
+deveco
+
+# 3. 开始对话 —— 在终端中直接描述你的鸿蒙开发需求
+```
+
+> 如需编译构建、设备运行等能力，请先安装 [DevEco Studio](https://developer.huawei.com/consumer/cn/deveco-studio/) 并配置 `DEVECO_HOME` 环境变量。
 
 ## 简介
 
-DevEco Code CLI 是一款面向 HarmonyOS 开发场景的 AI CLI 工具，支持代码编写、编译构建、设备运行、文档查阅、运行时调试和 ArkTS 问题修复等能力。
+DevEco Code 是一款面向 HarmonyOS 开发场景的 AI CLI 工具，支持代码编写、编译构建、设备运行、文档查阅、运行时调试及 ArkTS 问题修复等能力。
 
 DevEco Code 基于开源项目 OpenCode 扩展开发，保留了 OpenCode 的终端交互、配置体系、 Provider / MCP / Skill / Plugin 等能力，并针对鸿蒙工程增加了 DevEco Studio、`hvigorw`、`hdc`、ArkTS 检查和设备调试相关集成。
 
@@ -37,7 +57,7 @@ npm -v
 
 ```bash
 # 安装
-npm install -g @deveco/deveco --registry=https://registry.npmjs.org
+npm install -g @deveco/deveco-code --registry=https://registry.npmjs.org
 
 # 查看版本
 deveco --version
@@ -55,7 +75,7 @@ deveco uninstall
 npm uninstall -g @deveco/deveco
 ```
 
-> macOS 如果遇到全局安装权限问题，可尝试 `sudo -i npm install -g @deveco/deveco --registry=https://registry.npmjs.org`。
+> macOS 如果遇到全局安装权限问题，可尝试 `sudo -i npm install -g @deveco/deveco-code --registry=https://registry.npmjs.org`。
 
 ## 登录与模型
 
@@ -102,25 +122,24 @@ deveco auth logout
 
 ## Agent 模式
 
-DevEco Code 面向鸿蒙开发提供以下 Agent 模式：
+DevEco Code 面向鸿蒙开发提供以下 Agent 模式（按 `Tab` 键切换）：
 
 - `build`：默认模式，适合工程生成、代码生成、配置修正、测试执行、推包运行和发布执行
 - `plan`：适合需求拆解、技术方案、发布规划、测试规划和文档生成
-- `general`：用于复杂搜索和多步任务，内部使用，也可在消息中输入 `@general` 调用
+- `sdd`：适合 `spec` 定义、规范驱动、代码生成和功能验证
 
 ## 鸿蒙场景能力
 
 DevEco Code 集成了常用鸿蒙开发工具能力：
 
-| 工具 | 说明 |
-| --- | --- |
-| `build_project` | 执行编译构建并导出构建产物 |
-| `start_app` | 在模拟器或真机上运行应用 |
-| `runtime-calibration` | UI 自动化测试，可通过设置启用 |
-| `runtime-calibration_getLog` | 获取设备运行日志，可通过设置启用 |
-| `execute_uitest` | UI 测试操作，包括点击、滑动、输入、按键、截图等 |
-| `hdc_log` | 收集或清理设备日志 |
-| `check_ets_files` | ArkTS 静态语法检查 |
+| 工具                       | 说明                   |
+| ------------------------ | -------------------- |
+| `build_project`          | 执行编译构建并导出构建产物        |
+| `start_app`              | 在模拟器或真机上运行应用         |
+| `hdc_log`                | 收集/清理设备日志/查看连接模拟器    |
+| `check_ets_files`        | ArkTS 静态语法检查         |
+| `arkts_knowledge_search` | 鸿蒙知识搜索（需要登录华为账号才能使用） |
+| `switch_cwd`             | 切换构建项目路径             |
 
 常见场景包括：从 0 到 1 创建鸿蒙工程、增量开发页面、修复编译报错、真机调试，以及基于多模态模型的图生文界面生成。
 
@@ -164,7 +183,7 @@ npm install -g oh-my-opencode
 ```jsonc
 {
   "plugin": [
-    "file:///C:/Users/tylor/AppData/Roaming/npm/node_modules/oh-my-opencode/dist/index.js"
+    "file:///C:/Users/<username>/AppData/Roaming/npm/node_modules/oh-my-opencode/dist/index.js"
   ]
 }
 ```
@@ -190,3 +209,19 @@ Skills、Agents、Plugins 也可以迁移到 `~/.config/deveco` 下的对应目�
 ### 这和 OpenCode 有什么关系？
 
 DevEco Code 基于 OpenCode 扩展开发，保留其终端 UI、Provider、MCP、Skill、Plugin 和配置体系，并额外针对 HarmonyOS 开发链路加入编译构建、设备运行、日志采集、ArkTS 检查和运行时调试等能力。
+
+## Contributing
+
+欢迎贡献！请在提交 Pull Request 前阅读 [CONTRIBUTING.md](../../CONTRIBUTING.md)。
+
+## License
+
+[MIT License](../../LICENSE)
+
+## 基于 OpenCode 构建的声明
+
+本项目基于开源项目 [OpenCode](https://opencode.ai) 扩展开发。DevEco Code **并非** OpenCode 团队出品，也与 OpenCode 团队无任何附属或关联关系。如有与 DevEco Code 相关的问题，请通过本仓库的 Issue 反馈，而非联系 OpenCode 社区。
+
+***
+
+**反馈与交流** [GitCode Issue](https://gitcode.com/openharmony-sig/deveco-code/issues)
