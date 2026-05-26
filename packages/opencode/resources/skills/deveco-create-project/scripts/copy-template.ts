@@ -160,6 +160,9 @@ function updateApiLevel(targetRoot: string, apiLevel: number): void {
   replaceInFile(path.join(targetRoot, 'hvigor/hvigor-config.json5'), [
     ['6.0.2', config.modelVersion],
   ]);
+  replaceInFile(path.join(targetRoot, 'oh-package.json5'), [
+    ['6.0.2', config.modelVersion],
+  ]);
 }
 
 function verifyFiles(targetRoot: string): string[] {
@@ -177,8 +180,11 @@ async function main(): Promise<void> {
   const targetRoot = path.join(args.projectPath, args.appName);
   copyDirectoryContents(args.templateDir, targetRoot);
 
-  replaceInFile(path.join(targetRoot, 'AppScope/resources/base/element/string.json'), [
-    ['MyApplication', args.appName],
+  replaceInFile(path.join(targetRoot, "AppScope/resources/base/element/string.json"), [
+    ["MyApplication", args.appName],
+  ]);
+  replaceInFile(path.join(targetRoot, 'entry/src/main/resources/base/element/string.json'), [
+    [`"value": "label"`, `"value": "${args.appName}"`]
   ]);
   replaceInFile(path.join(targetRoot, 'AppScope/app.json5'), [
     ['com.example.myapplication', args.bundleName],
