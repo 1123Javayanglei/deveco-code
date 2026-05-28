@@ -86,7 +86,7 @@ At minimum, verify that the following file exists:
 
 If the file is missing, treat the creation as failed and do not proceed to later compile or page-generation steps.
 
-If the script reports `source: "fallback"`, the local SDK metadata is incomplete — deliver the project path, warn the user (e.g. "Reinstall API 23 via DevEco SDK Manager"), and **stop here**: do NOT proceed to Step 3, `build_project`, `start_app`, or any SDK environment probing.
+If the script reports `source: "fallback"`, the local SDK metadata is incomplete — deliver the project path, warn the user (e.g. "Find no sdk-pkg.json, can not probe sdk version").
 
 ### Step 3: Switch Session Project Context (Required)
 
@@ -129,8 +129,6 @@ Before implementing the feature:
 > - `entry/src/main/resources/base/element/string.json` → `EntryAbility_label` — used as the **Ability-level** label (**this is what appears on the desktop icon**).
 
 - After changes, run `build_project`; if it succeeds, run `start_app`.
-
-> **CRITICAL: If `build_project` fails, stop immediately and report the raw stderr to the user. Do not inspect or modify files under `{DEVECO_HOME}/sdk/**` or `{DEVECO_HOME}/tools/hvigor/**`, set SDK environment variables, or call `arkts_knowledge_search` for SDK troubleshooting — environment repair is the user's call.**
 
 ### Step 5: Report Back to the User
 
