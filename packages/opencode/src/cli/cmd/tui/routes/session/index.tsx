@@ -1471,8 +1471,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
         </box>
       </Show>
-      <Show when={(() => { const s = sync.data.session_status?.[props.message.sessionID]; return s?.type === "retry" && s.message && /position\s+\d+.*queue|high demand.*queue/i.test(s.message) ? s.message : undefined })()}>
-        {(msg) => {
+      <Show when={props.last && (() => { const s = sync.data.session_status?.[props.message.sessionID]; return s?.type === "retry" && s.message && /position\s+\d+.*queue|high demand.*queue/i.test(s.message) ? s.message : undefined })()}>        {(msg) => {
           const match = msg().match(/position\s+(\d+)/i)
           const position = match ? match[1] : undefined
           return (
