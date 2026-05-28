@@ -1734,7 +1734,7 @@ export function Prompt(props: PromptProps) {
                       const isQueue = createMemo(() => {
                         const s = status()
                         if (s.type !== "retry") return false
-                        return s.message.includes("in queue")
+                        return /position\s+\d+.*queue|high demand.*queue/i.test(s.message)
                       })
                       // Snail animation for queue
                       // macOS 🐌 faces right, Windows 🐌 faces left — put flag where snail crawls toward
@@ -1808,22 +1808,14 @@ export function Prompt(props: PromptProps) {
 
                       return (
                         <Show when={retry()}>
-                          <Switch>
-                            <Match when={isQueue()}>
-                              <box flexDirection="row" gap={1}>
-                                <text fg={theme.info}>{message() ?? ""}</text>
-                                <text fg={theme.textMuted}>[retrying {(() => { const d = formatDuration(seconds()); return d ? `in ${d} ` : "" })()}attempt #{retry()!.attempt}]</text>
-                                <Show when={kv.get("animations_enabled", true)}>
-                                  <text fg={theme.textMuted}>{snailFrame()}</text>
-                                </Show>
-                              </box>
-                            </Match>
-                            <Match when={true}>
-                              <box onMouseUp={handleMessageClick}>
-                                <text fg={theme.error}>{retryText()}</text>
-                              </box>
-                            </Match>
-                          </Switch>
+                          <Show when={!isQueue()}>
+                            <box onMouseUp={handleMessageClick}>
+                              <text fg={theme.error}>{retryText()}</text>
+                            </box>
+                          </Show>
+                          <Show when={isQueue()}>
+                            <text fg="#e0a800">[retrying {(() => { const d = formatDuration(seconds()); return d ? `in ${d} ` : "" })()}attempt #{retry()!.attempt}]</text>
+                          </Show>
                         </Show>
                       )
                     })()}

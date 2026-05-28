@@ -1471,6 +1471,22 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
         </box>
       </Show>
+      <Show when={(() => { const s = sync.data.session_status?.[props.message.sessionID]; return s?.type === "retry" && s.message && /position\s+\d+.*queue|high demand.*queue/i.test(s.message) ? s.message : undefined })()}>
+        {(msg) => (
+          <box
+            border={["left"]}
+            paddingTop={1}
+            paddingBottom={1}
+            paddingLeft={2}
+            marginTop={1}
+            backgroundColor="#3d3500"
+            customBorderChars={SplitBorder.customBorderChars}
+            borderColor="#e0a800"
+          >
+            <text fg="#e0a800">{msg()}</text>
+          </box>
+        )}
+      </Show>
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
           <box paddingLeft={3}>
