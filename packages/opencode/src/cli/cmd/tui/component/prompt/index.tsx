@@ -1736,28 +1736,6 @@ export function Prompt(props: PromptProps) {
                         if (s.type !== "retry") return false
                         return /position\s+\d+.*queue|high demand.*queue/i.test(s.message)
                       })
-                      // Snail animation for queue
-                      // macOS 🐌 faces right, Windows 🐌 faces left — put flag where snail crawls toward
-                      const snailToRight = process.platform !== "win32"
-                      const SNAIL_TRACK_WIDTH = 20
-                      const [snailPos, setSnailPos] = createSignal(0)
-                      onMount(() => {
-                        if (!kv.get("animations_enabled", true)) return
-                        const timer = setInterval(() => {
-                          setSnailPos((p) => (p + 1) % SNAIL_TRACK_WIDTH)
-                        }, 400)
-                        onCleanup(() => clearInterval(timer))
-                      })
-                      const snailFrame = createMemo(() => {
-                        const raw = snailPos()
-                        // Windows snail faces left: reverse position so it moves left toward flag
-                        const p = snailToRight ? raw : SNAIL_TRACK_WIDTH - 1 - raw
-                        const before = ".".repeat(p)
-                        const after = ".".repeat(SNAIL_TRACK_WIDTH - p - 1)
-                        return snailToRight
-                          ? `${before}🐌${after}🏁`
-                          : `🏁${before}🐌${after}`
-                      })
 
                       const retry = createMemo(() => {
                         const s = status()
