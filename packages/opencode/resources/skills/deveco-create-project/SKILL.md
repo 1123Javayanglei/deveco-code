@@ -35,8 +35,9 @@ If the user explicitly specifies an SDK/API level, pass it through directly.
 If the user does not specify one, do not let the model invent a version. Let the script detect it using this fixed priority:
 
 1. `DEVECO_HOME/sdk/default/sdk-pkg.json` → `data` → `apiVersion`
-2. `DEVECO_HOME/sdk/default/openharmony/*/oh-uni-package.json` → `apiVersion`
-3. fallback to `22`
+2. fallback to `22`
+
+The script's stdout JSON (`apiLevel`, `source`, `detectedFrom`) is authoritative — do not re-read files under `{DEVECO_HOME}/sdk/**` to verify it.
 
 ### Optional: Brief Requirement Checklist for Complex App Requests
 
@@ -85,6 +86,8 @@ At minimum, verify that the following file exists:
 
 If the file is missing, treat the creation as failed and do not proceed to later compile or page-generation steps.
 
+If the script reports `source: "fallback"`, the local SDK metadata is incomplete — deliver the project path, warn the user (e.g. "Reinstall API 23 via DevEco SDK Manager"), and **stop here**: do NOT proceed to Step 3, `build_project`, `start_app`, or any SDK environment probing.
+
 ### Step 3: Switch Session Project Context (Required)
 
 After project creation succeeds, call `switch_cwd` and set the target path to the generated project root (`{projectPath}/{appName}`).
@@ -127,6 +130,8 @@ Before implementing the feature:
 
 - After changes, run `build_project`; if it succeeds, run `start_app`.
 
+> **CRITICAL: If `build_project` fails, stop immediately and report the raw stderr to the user. Do not inspect or modify files under `{DEVECO_HOME}/sdk/**` or `{DEVECO_HOME}/tools/hvigor/**`, set SDK environment variables, or call `arkts_knowledge_search` for SDK troubleshooting — environment repair is the user's call.**
+
 ### Step 5: Report Back to the User
 
 Report after all requested creation, implementation, build, run, and verification work is complete, or immediately when a blocking failure stops the flow.
@@ -135,7 +140,7 @@ Output:
 
 - The absolute project path
 - App name / bundle name / API Level
-- `source` of the selected API level: `user_input` / `sdk_pkg` / `oh_uni_package` / `fallback`
+- `source` of the selected API level: `user_input` / `sdk_pkg` / `fallback`
 - Whether the template integrity check passed
 - Whether `switch_cwd` succeeded
 - Build/run/verification status when feature work was requested
