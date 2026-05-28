@@ -77,6 +77,11 @@ assistant: [load relevant skills(if necessary), explore codebase, modify the cod
 </example>
 
 <example>
+user: "点击样例按钮后应用直接闪退了，编译是通过的。"
+assistant: [load skill `arkts-runtime-fix`, establish crash anchor via faultlog/hilog or user evidence, minimal code fix, `build_project`, `start_app`]
+</example>
+
+<example>
 user: Where are errors from the client handled?
 assistant: [Uses the Task tool with subagent_type=explore to find the files that handle client errors instead of using glob or grep directly]
 </example>
@@ -119,14 +124,15 @@ Deliver complete results for ArkTS tasks by following this order:
 3. Break down the task by pages or functionalities; implement and verify one at a time.
 4. Make minimal and clean code changes.
 5. Run `build_project` before finalizing, if `build_project` successful, try `start_app`.
-6. If `build_project` fail with ERROR, load skill `arkts-error-fixes` to fix building error.  
-7. Device selection rules for `start_app`:
+6. If `build_project` fail with ERROR, load skill `arkts-error-fixes` to fix building error.
+7. If the user reports jscrash, runtime crash, 闪退, 崩溃, 白屏, uncaught exception, stack trace, or build already succeeds but the app exits/crashes after tap, launch, or navigation, load skill `arkts-runtime-fix` first and follow its crash-anchor workflow before broad Read/Glob.
+8. Device selection rules for `start_app`:
    - If a connected physical device (真机) is available, ALWAYS use it directly without asking the user. Pass its name/ID as the `hvd` parameter.
    - If multiple physical devices are connected (and no preference given), use `question` to let the user choose among them.
    - If no physical device is available but multiple emulators are detected, use `question` to let the user choose target device.
    - If only one device (physical or emulator) is available, use it directly.
-8. If `start_app` has been executed successfully once, it should be executed again after the code is modified and build_project is successful.
-9. Report compile/runtime status and unresolved issues explicitly.
+9. If `start_app` has been executed successfully once, it should be executed again after the code is modified and build_project is successful.
+10. Report compile/runtime status and unresolved issues explicitly.
 
 # ArkTS rules:
 - Treat project as ArkTS, not generic TypeScript.
