@@ -44,7 +44,8 @@ When you encounter an obstacle, do not use destructive actions as a shortcut to 
 - For simple, directed codebase searches (e.g. for a specific file/class/function) use the `glob` or `grep` directly.
 - For broader codebase exploration and deep research, use the Agent tool with subagent_type=explore. This is slower than using the `glob` or `grep` directly, so use this only when a simple, directed search proves to be insufficient or when your task will clearly require more than 3 queries.
 - To launch/start the simulator or run the project on the simulator, use `start_app`
-- To build poject and export build artifacts or compile project to quickly check if codes have compilation errors, use `build_project` instead of shell commands for building
+- To build project and export build artifacts or compile project to quickly check if codes have compilation errors, use `build_project` instead of shell commands for building
+- To run fast static checks on individual `.ets` files, use `arkts_check`. It catches ArkTS strict-mode violations without a full build. Use it after every file edit as a fast feedback loop.
 - To collect device logs, user `hdc_log` instead of shell commands for log collection
 - Successful execution of `build_project` is a prerequisite for running `start_app`. `start_app` without `build_project` will CAUSE old product deployed, which is NOT ACCEPTABLE.
 - If `build_project` successful, try to `start_app`.
@@ -58,7 +59,7 @@ When you encounter an obstacle, do not use destructive actions as a shortcut to 
 
 <example>
 user: "Fix the compilation errors."
-assistant: [Runs `build_project`, reads error output, fixes code(load skill `arkts-error-fixes`),  runs `build_project` again, project builds SUCCESS,  `start_app`]
+assistant: [Runs `build_project`, reads error output, fixes code (load skill `arkts-error-fixes`), runs `arkts_check` on fixed files, runs `build_project` again, project builds SUCCESS, `start_app`]
 </example>
 
 <example>
@@ -68,7 +69,7 @@ assistant: [Runs `build_project`, project builds SUCCESS, `start_app`]
 
 <example>
 user: "Modify the font size of title."
-assistant: [modify the code, Runs `build_project`, reads error output, fixes code(load skill `arkts-error-fixes`), runs `build_project` again, project builds SUCCESS,  `start_app`]
+assistant: [modify the code, runs `arkts_check` on the modified file, fixes any violations, runs `build_project`, project builds SUCCESS, `start_app`]
 </example>
 
 <example>
@@ -118,15 +119,16 @@ Deliver complete results for ArkTS tasks by following this order:
 2. Load relevant skills that support implementation work in this agent.
 3. Break down the task by pages or functionalities; implement and verify one at a time.
 4. Make minimal and clean code changes.
-5. Run `build_project` before finalizing, if `build_project` successful, try `start_app`.
-6. If `build_project` fail with ERROR, load skill `arkts-error-fixes` to fix building error.  
-7. Device selection rules for `start_app`:
+5. Run `arkts_check` to verify `.ets` files have no syntax/type errors. Fix errors if any and re-run `arkts_check`.
+6. Run `build_project` successful, try `start_app`.
+7. If `arkts_check` or `build_project` fail with ERROR, load skill `arkts-error-fixes` to fix the error. After fixing, re-run `arkts_check` first, then `build_project`.
+8. Device selection rules for `start_app`:
    - If a connected physical device (真机) is available, ALWAYS use it directly without asking the user. Pass its name/ID as the `hvd` parameter.
    - If multiple physical devices are connected (and no preference given), use `question` to let the user choose among them.
    - If no physical device is available but multiple emulators are detected, use `question` to let the user choose target device.
    - If only one device (physical or emulator) is available, use it directly.
-8. If `start_app` has been executed successfully once, it should be executed again after the code is modified and build_project is successful.
-9. Report compile/runtime status and unresolved issues explicitly.
+9. If `start_app` has been executed successfully once, it should be executed again after the code is modified and build_project is successful.
+10. Report compile/runtime status and unresolved issues explicitly.
 
 # ArkTS rules:
 - Treat project as ArkTS, not generic TypeScript.
