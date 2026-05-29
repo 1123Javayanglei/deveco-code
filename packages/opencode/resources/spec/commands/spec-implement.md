@@ -72,7 +72,7 @@ $ARGUMENTS
    - **Task Marking:** Upon successful completion of any task, mark its corresponding item as `[X]` in `tasks.md`.
 
 6. **Completion Validation:**
-   - Do **not** perform any functional validation within the current phase. If functional validation is required, conclude the current phase, proceed to the next phase, and invoke the `spec-verify` subagent to conduct the functional validation.
-   - Output a final summary report detailing completed work, skipped/failed items (if any), and validation results.
+   - Do **not** perform any functional validation within the current phase. If functional validation is required, conclude the current phase and proceed to the next phase.
+   - Output a final summary report detailing completed work, skipped/failed items (if any), and conclude implementation.
 
 > **Note:** This workflow assumes a complete and valid task breakdown exists in `tasks.md`. If tasks are incomplete, ambiguous, or missing critical dependencies, halt execution and regenerate the plan before proceeding.
