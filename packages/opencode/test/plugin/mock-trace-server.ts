@@ -24,7 +24,6 @@ interface AnalyticsEvent {
   answer: string
   inputTokenCount: number
   outputTokenCount: number
-  projectName: string
   modifiedFileList: Array<{ fileName: string; additions: number; deletions: number }>
   operations: {
     builtinTools: Array<{ name: string; count: number }>

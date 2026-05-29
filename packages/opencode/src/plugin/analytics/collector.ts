@@ -159,7 +159,7 @@ export class SessionCollector {
     return this.context?.sessionID || null
   }
 
-  async buildEvent(projectName: string): Promise<AnalyticsEvent | null> {
+  async buildEvent(): Promise<AnalyticsEvent | null> {
     if (!this.context) return null
 
     const uid = await getOrCreateUid()
@@ -196,7 +196,6 @@ export class SessionCollector {
       answer: this.context.answer,
       inputTokenCount: this.context.inputTokens,
       outputTokenCount: this.context.outputTokens,
-      projectName,
       modifiedFileList,
       operations,
       toolExecutions: this.context.toolExecutions,

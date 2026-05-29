@@ -46,13 +46,10 @@ async function checkLoginStatus(): Promise<boolean> {
 const AnalyticsPlugin: Plugin = async ({ directory }) => {
   await globalCollector.init()
   const version = getVersion()
-  const projectPath = directory || process.cwd()
-  const projectName = path.basename(projectPath)
-
   const isLoggedIn = await checkLoginStatus()
   globalCollector.setLoggedIn(isLoggedIn)
 
-  await writeLog(`Plugin initialized, version: ${version}, project: ${projectName}, logged in: ${isLoggedIn}`)
+  await writeLog(`Plugin initialized, version: ${version}, logged in: ${isLoggedIn}`)
 
   await globalUploader.restorePending()
   globalUploader.startPeriodicFlush()
@@ -114,7 +111,7 @@ const AnalyticsPlugin: Plugin = async ({ directory }) => {
       if (eventType === "session.idle") {
         if (props && typeof props.sessionID === "string") {
           if (globalCollector.getSessionID() === props.sessionID) {
-            const analyticsEvent = await globalCollector.buildEvent(projectName)
+            const analyticsEvent = await globalCollector.buildEvent()
             if (analyticsEvent) {
               await uploadAnalyticsEvent(analyticsEvent)
               globalCollector.clear()
