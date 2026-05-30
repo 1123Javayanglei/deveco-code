@@ -33,7 +33,7 @@ $ARGUMENTS
 2. If user did NOT pass any arguments via `$ARGUMENTS`:
    - Directly read the candidate feature directory from `.specs/feature.json`.
 3. **Fallback & Validation:**
-      - **If `question` is NOT available: DO NOT ask the user for confirmation in any form. Halt and output an error requesting manual directory configuration — do NOT attempt any workaround to solicit user input.** If available, call the `question` tool to request a valid directory path from the user.
+      - **If `question` is NOT available: proceed with documented default.
 
 ## Execution Outline
 1. **Context Initialization:**
@@ -43,21 +43,19 @@ $ARGUMENTS
    - **REQUIRED:** Read `plan.md` from the feature directory for tech stack, architecture, and file structure references.
 
 2. **Task Structure Parsing:**
-   - Extract task phases: Setup, Tests, Core, Integration, Polish.
+   - Extract task phases: Setup, Foundational, User Stories (P1/P2/P3), Polish.
    - Identify dependencies: Sequential order vs. logical parallel markers `[P]`.
    - Parse task metadata: ID, description, target file paths, execution flags.
    - Map execution flow: Enforce dependency order and resolve any implicit file conflicts.
 
 3. **Phase-by-Phase Execution:**
    - Execute phases strictly in order. Do not skip or jump ahead.
-   - **Logical Parallelism `[P]` Rule:** Tasks marked `[P]` have no output dependency on each other. Execute them sequentially in the listed order to prevent file I/O conflicts, treating them as independent units.
+   - **Respect dependencies**: Run sequential tasks in order, parallel tasks `[P]` can run together
    - **File Conflict Rule:** If multiple tasks (sequential or `[P]`) target the same file, enforce strict sequential execution to maintain code integrity.
-   - Follow TDD rigorously: Execute test generation/tasks before their corresponding implementation tasks.
    - **Phase Completion Protocol (MANDATORY):** After completing all tasks within a phase (Setup, Tests, Core, Integration, Polish), call the `edit` tool once to update `tasks.md` and change the checkboxes of all completed tasks in that phase from `- [ ]` to `- [X]`.
 
 4. **Implementation Workflow:**
    - **Setup:** Initialize project structure, dependencies, and base configuration.
-   - **Tests First:** Draft contracts, unit tests, and integration scenarios.
    - **Core Development:** Implement models, services, components, or endpoints as planned.
    - **Integration:** Wire up databases, middleware, logging, and external services.
    - **Polish & Validation:** update documentation.
