@@ -32,8 +32,6 @@ $ARGUMENTS
    - If it does NOT exist: read the current feature directory from `.specs/feature.json`.
 2. If user did NOT pass any arguments via `$ARGUMENTS`:
    - Directly read the candidate feature directory from `.specs/feature.json`.
-3. **Fallback & Validation:**
-      - **If `question` is NOT available: DO NOT ask the user for confirmation in any form. Halt and output an error requesting manual directory configuration — do NOT attempt any workaround to solicit user input.** If available, call the `question` tool to request a valid directory path from the user.
 
 ## Execution Outline
 1. **Context Initialization:**
@@ -58,7 +56,6 @@ $ARGUMENTS
 
 4. **Implementation Workflow:**
    - **Setup:** Initialize project structure, dependencies, and base configuration.
-   - **Tests First:** Draft contracts, unit tests, and integration scenarios.
    - **Core Development:** Implement models, services, components, or endpoints as planned.
    - **Integration:** Wire up databases, middleware, logging, and external services.
    - **Polish & Validation:** update documentation.
