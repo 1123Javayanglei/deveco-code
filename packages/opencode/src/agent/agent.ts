@@ -169,6 +169,7 @@ export const layer = Layer.effect(
                 websearch: "allow",
                 todowrite: "allow",
                 spec_write: "allow",
+                task: "allow",
               }),
               user,
             ),
