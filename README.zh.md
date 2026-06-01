@@ -15,15 +15,14 @@
   <a href="README.zh.md">简体中文</a>
 </p>
 
-[![CodeGenie Terminal UI](packages/web/src/assets/lander/codegenie-terminal-ui.jpg)](https://www.npmjs.com/package/@codegenie-ai/codegenie-cli)
-
+![image.png](https://raw.gitcode.com/user-images/assets/9646014/d8ce2fb6-99ce-4cf3-9665-d6ffd7877b02/image.png 'image.png')
 ---
 
 ### 简介
 
-CodeGenie CLI 是一款面向 HarmonyOS（鸿蒙）开发场景的 AI CLI 助手，支持代码编写、编译构建、设备运行、文档查阅、运行时调试和 ArkTS 问题修复等能力。
+DevEco Code是一款面向 HarmonyOS（鸿蒙）开发场景的 AI CLI 助手，支持代码编写、编译构建、设备运行、文档查阅、运行时调试和 ArkTS 问题修复等能力。
 
-CodeGenie 基于开源项目 [OpenCode](https://opencode.ai) 扩展开发，保留了 OpenCode 的终端交互、配置体系、Provider / MCP / Skill / Plugin 等能力，并针对鸿蒙工程增加了 DevEco Studio、hvigorw、hdc、ArkTS 检查和设备调试相关集成。
+DevEco Code 基于开源项目 [OpenCode](https://opencode.ai) 扩展开发，保留了 OpenCode 的终端交互、配置体系、Provider / MCP / Skill / Plugin 等能力，并针对鸿蒙工程增加了 DevEco Studio、hvigorw、hdc、ArkTS 检查和设备调试相关集成。
 
 ### 安装
 
@@ -37,7 +36,7 @@ CodeGenie 基于开源项目 [OpenCode](https://opencode.ai) 扩展开发，保�
 
 #### 安装前置依赖
 
-CodeGenie 通过 npm 分发，需要先安装 [Node.js LTS](https://nodejs.org)。安装完成后可在终端验证：
+DevEco Code 通过 npm 分发，需要先安装 [Node.js LTS](https://nodejs.org)。安装完成后可在终端验证：
 
 ```bash
 node -v
@@ -73,14 +72,14 @@ npm uninstall -g @codegenie-ai/codegenie-cli
 
 ### 登录与模型
 
-启动 `codegenie` 后可使用华为账号登录。登录后可使用 CodeGenie 提供的免费模型通道；不登录时也可以沿用 OpenCode 的 Provider 配置体系，自行配置模型。
+启动 `deveco` 后可使用华为账号登录。登录后可使用 CodeGenie 提供的免费模型通道；不登录时也可以沿用 OpenCode 的 Provider 配置体系，自行配置模型。
 
 ```bash
 # 退出登录
-codegenie auth logout
+deveco auth logout
 ```
 
-在 CodeGenie 中输入 `/models` 可进入模型配置界面。当前免费提供 `glm-5`、`deepseek-v3.2` 两款模型，单账号默认每分钟 50 次请求。也可以通过 `Ctrl+A` 进入 Provider 选择界面，配置智谱、阿里等 OpenAI-compatible 模型。
+在 DevEco Code 中输入 `/models` 可进入模型配置界面。当前免费提供 `glm-5`、`deepseek-v3.2` 两款模型，单账号默认每分钟 50 次请求。也可以通过 `Ctrl+A` 进入 Provider 选择界面，配置智谱、阿里等 OpenAI-compatible 模型。
 
 也可以通过 `codegenie.jsonc` 配置模型：
 
@@ -116,7 +115,7 @@ codegenie auth logout
 
 ### Agents
 
-CodeGenie 面向鸿蒙开发提供以下 Agent 模式：
+DevEco Code 面向鸿蒙开发提供以下 Agent 模式：
 
 - **build** - 默认模式，适合工程生成、代码生成、配置修正、测试执行、推包运行和发布执行。
 - **plan** - 适合需求拆解、技术方案、发布规划、测试规划和文档生成。
@@ -125,7 +124,7 @@ CodeGenie 面向鸿蒙开发提供以下 Agent 模式：
 
 ### 鸿蒙场景能力
 
-CodeGenie 集成了常用鸿蒙开发工具能力：
+DevEco Code 集成了常用鸿蒙开发工具能力：
 
 | 工具 | 说明 |
 | --- | --- |
@@ -141,7 +140,7 @@ CodeGenie 集成了常用鸿蒙开发工具能力：
 
 ### 扩展能力
 
-CodeGenie 兼容 OpenCode 的 Skill、MCP 和 Plugin 扩展方式。
+DevEco Code 兼容 OpenCode 的 Skill、MCP 和 Plugin 扩展方式。
 
 #### Skills
 
@@ -187,7 +186,7 @@ npm install -g oh-my-opencode
 
 ### 从 OpenCode 迁移
 
-如果需要从 OpenCode 迁移到 CodeGenie，请将配置文件迁移到 CodeGenie 目录。主配置文件可参考：
+如果需要从 OpenCode 迁移到 DevEco Code，请将配置文件迁移到 DevEco Code 目录。主配置文件可参考：
 
 ```powershell
 # Windows PowerShell
@@ -205,4 +204,4 @@ Skills、Agents、Plugins 也可以迁移到 `~/.config/codegenie` 下的对应�
 
 #### 这和 OpenCode 有什么关系？
 
-CodeGenie 基于 OpenCode 扩展开发，保留其终端 UI、Provider、MCP、Skill、Plugin 和配置体系，并额外针对 HarmonyOS 开发链路加入编译构建、设备运行、日志采集、ArkTS 检查和运行时调试等能力。
+DevEco Code 基于 OpenCode 扩展开发，保留其终端 UI、Provider、MCP、Skill、Plugin 和配置体系，并额外针对 HarmonyOS 开发链路加入编译构建、设备运行、日志采集、ArkTS 检查和运行时调试等能力。
