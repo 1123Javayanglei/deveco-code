@@ -15,6 +15,7 @@ agent: sdd
 7. **Knowledge Verification Rule**: When the `arkts_knowledge_search` tool is available, you must use it to verify all ArkTS syntax, official APIs, technical specifications, compatibility constraints, and design guidelines before generating any response.
 8. **ArkTS Compilation Errors**: Immediately invoke `arkts-error-fixes` skill for automated repair.
 9. **ArkTS Runtime Crashes**: Immediately invoke `arkts-runtime-fix` skill for crash recovery and diagnostics.
+10. **UI Verification Rule**: Each time `verify_ui` is called, mandatorily set the parameter `freshStart=true` and execute exactly one user story's test cases per `verify_ui` invocation. **Each user story can only invoke the Fix → Re-verify cycle for at most 3 times in total.**
 
 ## Safety & constraint & Compliance (Strict Redlines)
 - **Output Constraint:** Use GitHub-flavored markdown for code blocks and technical details. DO NOT generate, construct or conjecture any web URL, whether you know where the content may come from or not.
@@ -25,7 +26,7 @@ agent: sdd
 ## Execution Phases
 
 ### Phase 1: Build, Deploy & Verify
-0. **Resolve `Confirmed_Feature_Dir`**: Use the value provided by the parent agent. If not provided, fall back to reading `.specs/feature.json`.
+0. **Resolve `Confirmed_Feature_Dir`**: Use the value provided by the parent agent. If not provided, fall back to reading `spec/feature.json`.
 0b. **Resolve `Verification_Scope`**: Use the value provided by the parent agent (`build-only` or `build+ui`). If not provided, fall back by reading `tasks.md` in `Confirmed_Feature_Dir`: if its Verification phase contains the marker `<!-- verification_scope: build+ui -->` or any task referencing UI verification (e.g., `verify_ui`), set `Verification_Scope = build+ui`; otherwise `build-only`.
 1. **`build_project`**: Call directly. If the tool returns an error (e.g., `DEVECO_HOME` not configured), log the error, mark as `skipped`, and continue. If the build fails with compilation errors, apply fixes in `src/` and re-invoke `build_project` until it succeeds or you exhaust the loop limit (see Phase 2 step 5).
 2. **`start_app`**: Call directly to deploy the freshly built package. If the tool reports no device/emulator available, log the error, mark as `skipped`, and continue.
@@ -33,7 +34,7 @@ agent: sdd
     - **If `Verification_Scope == build-only`**: SKIP all `verify_ui` related steps entirely (including this prep step and step 4). Proceed directly to Phase 2.
     - **If `verify_ui` is not in the available tool list** even though scope is `build+ui`: skip all UI verification and log the reason.
     - **If the parent agent provided UI test cases**: use them directly as the test plan. Do NOT regenerate from spec.md.
-    - **If no UI test cases were provided**: fall back to reading `.specs/{Confirmed_Feature_Dir}/spec.md` and generating simple UI smoke test cases covering core page rendering and basic mainstream user interaction flows.
+    - **If no UI test cases were provided**: fall back to reading `spec/{Confirmed_Feature_Dir}/spec.md` and generating simple UI smoke test cases covering core page rendering and basic mainstream user interaction flows.
     - **DO NOT ask the user for confirmation in any form. Proceed to step 4 immediately without pausing.**
 4. **`verify_ui`** (ONLY when `Verification_Scope == build+ui` and the tool is available): execute the test plan against the deployed app.
 

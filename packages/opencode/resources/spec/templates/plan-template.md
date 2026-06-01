@@ -1,6 +1,6 @@
 # Implementation Plan: [FEATURE]
 
-**Input**: Feature specification from `.specs/[###-feature-name]/spec.md`
+**Input**: Feature specification from `spec/[###-feature-name]/spec.md`
 
 **Note**: This template is filled in by the `/spec-plan` command.
 

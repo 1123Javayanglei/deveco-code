@@ -27,11 +27,11 @@ $ARGUMENTS
 
 ## Feature Directory Resolution Logic
 1. If user passed arguments via `$ARGUMENTS`:
-   - Check whether the specified folder exists under the `.specs/` directory.
+   - Check whether the specified folder exists under the `spec/` directory.
    - If it exists: designate it as the candidate feature directory.
-   - If it does NOT exist: read the current feature directory from `.specs/feature.json`.
+   - If it does NOT exist: read the current feature directory from `spec/feature.json`.
 2. If user did NOT pass any arguments via `$ARGUMENTS`:
-   - Directly read the candidate feature directory from `.specs/feature.json`.
+   - Directly read the candidate feature directory from `spec/feature.json`.
 
 ## Execution Outline
 1. **Context Initialization:**
