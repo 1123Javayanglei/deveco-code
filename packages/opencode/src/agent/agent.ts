@@ -156,8 +156,8 @@ export const layer = Layer.effect(
             native: true,
             prompt: PROMPT_BUILD,
           },
-          SDD: {
-            name: "SDD",
+          goal: {
+            name: "goal",
             description: "Spec-Driven Development (SDD) agent for implementing complex requirements",
             options: {},
             permission: Permission.merge(
@@ -169,6 +169,7 @@ export const layer = Layer.effect(
                 websearch: "allow",
                 todowrite: "allow",
                 spec_write: "allow",
+                task: "allow",
               }),
               user,
             ),
