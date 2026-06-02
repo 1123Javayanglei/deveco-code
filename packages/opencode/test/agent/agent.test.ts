@@ -1,7 +1,7 @@
 import { afterEach, expect } from "bun:test"
 import { Cause, Effect, Exit, Layer } from "effect"
 import path from "path"
-import { disposeAllInstances, TestInstance } from "../fixture/fixture"
+import { disposeAllInstances, provideInstance, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { Agent } from "../../src/agent/agent"
 import { Auth } from "../../src/auth"
@@ -26,6 +26,9 @@ const agentLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
 
 const it = testEffect(agentLayer())
 const scout = testEffect(agentLayer({ experimentalScout: true }))
+const harmonyTemplate = path.resolve(import.meta.dir, "../../resources/skills/deveco-create-project/application")
+const harmonyTaskRoute = testEffect(agentLayer({ exploreTaskRoute: true }))
+const harmonyTaskRouteDisabled = testEffect(agentLayer({ exploreTaskRoute: false }))
 
 // Helper to evaluate permission for a tool with wildcard pattern
 function evalPerm(agent: Agent.Info | undefined, permission: string): Permission.Action | undefined {
@@ -142,6 +145,26 @@ it.instance("explore agent asks for external directories and allows whitelisted 
       Permission.evaluate("external_directory", path.join(Global.Path.tmp, "agent-work"), explore!.permission).action,
     ).toBe("allow")
   }),
+)
+
+harmonyTaskRoute.live("injects task routing into explore prompt for HarmonyOS projects", () =>
+  provideInstance(harmonyTemplate)(
+    Effect.gen(function* () {
+      const explore = yield* load((svc) => svc.get("explore"))
+      expect(explore?.prompt).toContain("## Project configuration")
+      expect(explore?.prompt).toContain("startup_entry_flow (entry)")
+    }),
+  ),
+)
+
+harmonyTaskRouteDisabled.live("skips task routing when exploreTaskRoute is disabled", () =>
+  provideInstance(harmonyTemplate)(
+    Effect.gen(function* () {
+      const explore = yield* load((svc) => svc.get("explore"))
+      expect(explore?.prompt).not.toContain("startup_entry_flow (entry)")
+      expect(explore?.prompt).not.toContain("## Project configuration")
+    }),
+  ),
 )
 
 scout.instance("scout agent allows repo cloning and repo cache reads", () =>
