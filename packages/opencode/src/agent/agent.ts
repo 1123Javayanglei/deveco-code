@@ -97,11 +97,12 @@ export const layer = Layer.effect(
     const state = yield* InstanceState.make<State>(
       Effect.fn("Agent.state")(function* (ctx) {
         const cfg = yield* config.get()
-        const skillDirs = yield* skill.dirs()
+        const skillDirs = yield * skill.dirs()
         const whitelistedDirs = [
           Truncate.GLOB,
           path.join(Global.Path.config, "*"),
           path.join(Global.Path.tmp, "*"),
+          path.join(Global.Path.data, "specs", "*"),
           ...skillDirs.map((dir) => path.join(dir, "*")),
         ]
         const readonlyExternalDirectory = {
