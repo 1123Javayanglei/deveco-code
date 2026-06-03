@@ -17,10 +17,10 @@ import { join, dirname } from "node:path"
 // Config
 // ---------------------------------------------------------------------------
 
-const PROJECT_ROOT = join(import.meta.dir, "..")
-const BUN_MODULES = join(PROJECT_ROOT, "node_modules", ".bun")
-const PACKAGE_JSON = join(PROJECT_ROOT, "packages", "opencode", "package.json")
-const OUTPUT = join(PROJECT_ROOT, "NOTICE")
+const MONOREPO_ROOT = join(import.meta.dir, "..", "..", "..") // /codegenie_cli
+const BUN_MODULES = join(MONOREPO_ROOT, "node_modules", ".bun")
+const PACKAGE_JSON = join(import.meta.dir, "..", "package.json") // packages/opencode/package.json
+const OUTPUT = join(MONOREPO_ROOT, "NOTICE")
 
 // Override licenses for packages whose npm metadata is missing or incorrect.
 // Key = package name, Value = SPDX license identifier.
