@@ -22,7 +22,7 @@ agent: goal
 ## Outline
 1. **Setup & Directory Resolution**:
     - Resolve `Confirmed_Feature_Dir`:
-        - Read the current feature directory from `spec/feature.json` as `Confirmed_Feature_Dir`.
+        - Read the current feature directory from `deveco/goal/feature.json` as `Confirmed_Feature_Dir`.
     - Resolve artifact paths:
         - `FEATURE_SPEC` = `Confirmed_Feature_Dir/spec.md`
         - `IMPL_PLAN` = `Confirmed_Feature_Dir/plan.md`

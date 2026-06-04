@@ -5,7 +5,7 @@ agent: goal
 
 ## Pre-Flow: Confirmed_Feature_Dir Resolution (STRICT SEQUENCE)
 1. Resolve feature directory:
-    - Read the feature directory from `spec/feature.json` (key: `feature_directory`) as `Confirmed_Feature_Dir`.
+    - Read the feature directory from `deveco/goal/feature.json` (key: `feature_directory`) as `Confirmed_Feature_Dir`.
 2. Validate directory:
     - Check if `Confirmed_Feature_Dir` exists.
     - If exists → proceed.
