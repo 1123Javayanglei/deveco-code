@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="https://gitcode.com/openharmony-sig/deveco-code/blob/develop/assets/readme/readme-screenshot.png" alt="DevEco Code" width="600">
+  <img src="./assets/readme/readme-screenshot.png" alt="DevEco Code" width="600">
 </p>
 
 ***
