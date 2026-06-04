@@ -44,8 +44,8 @@ agent: goal
 ### Phase 2: Result Review & Per-Story Fix Loop
 
 1. **Evaluate Initial Results** (from Phase 1):
-    - **All verifications passed** (or `build-only` scope completed successfully) → Proceed directly to step 4 (Report). Mark workflow as `completed`.
-    - **Build failures remain** → Continue build fix loop from Phase 1 step 1 (build fix iterations are unlimited). If build succeeds after a fix, run `start_app`, then evaluate UI results (if `build+ui`) or proceed to step 4 (Report).
+    - **All verifications passed** (or `build-only` scope completed successfully) → Proceed directly to step 5 (Report). Mark workflow as `completed`.
+    - **Build failures remain** → Continue build fix loop from Phase 1 step 1 (build fix iterations are unlimited). If build succeeds after a fix, run `start_app`, then evaluate UI results (if `build+ui`) or proceed to step 5 (Report).
     - **UI verification failures** (`build+ui` scope only) → Identify which user stories failed. Proceed to step 2 for per-story remediation.
 
 2. **Per-Story Fix → Re-verify Cycle** (ONLY when `Verification_Scope == build+ui`):
@@ -61,13 +61,16 @@ agent: goal
        - **Story still fails AND `retry_count[story] < 3`** → Increment counter, repeat from step a.
        - **Story still fails AND `retry_count[story] ≥ 3`** → Record this story as FAILED (retries exhausted). Move to the next failed story.
 
-    After all failed stories have been processed, proceed to step 4 (Report).
+    After all failed stories have been processed, proceed to step 3 (Full Verification).
 
-3. **Build-Only Fix Cycle** (when `Verification_Scope == build-only` and build is still failing):
-    Apply the same fix → rebuild → redeploy loop from Phase 1 step 1 (build fix iterations are unlimited). If build succeeds, run `start_app` and proceed to step 4 (Report). If the build remains intractable after repeated attempts, proceed to step 4 with failure status.
+3. **Full Verification** (ONLY when `Verification_Scope == build+ui` AND step 2 was executed):
+    Call `verify_ui` once with **ALL user stories' test cases** and `freshStart=true`. **Do NOT modify code or perform any other work.** Record per-story pass/fail outcomes — these are the definitive results used in the Report (step 5). Proceed to step 5.
 
-4. **Report**: Output summary covering: step-by-step results (executed/skipped/failed + reasons), test plan overview (only when scope is `build+ui`), per-story pass/fail/retry details, verification outputs/errors, and final status (completed or failed with details).
+4. **Build-Only Fix Cycle** (when `Verification_Scope == build-only` and build is still failing):
+    Apply the same fix → rebuild → redeploy loop from Phase 1 step 1 (build fix iterations are unlimited). If build succeeds, run `start_app` and proceed to step 5 (Report). If the build remains intractable after repeated attempts, proceed to step 5 with failure status.
 
-5. **Loop Limits**:
+5. **Report**: Output summary covering: step-by-step results (executed/skipped/failed + reasons), test plan overview (only when scope is `build+ui`), per-story pass/fail/retry details (when scope is `build+ui`, use the results from step 3 Full Verification as the definitive per-story outcomes), verification outputs/errors, and final status (completed or failed with details).
+
+6. **Loop Limits**:
     - **Build fix**: **unlimited** iterations — keep fixing until the build passes or the issue becomes intractable.
     - **Per-story UI fix**: max **3 iterations** per user story, tracked independently. This is a hard cap — under no circumstances should this cycle exceed 3 rounds.
