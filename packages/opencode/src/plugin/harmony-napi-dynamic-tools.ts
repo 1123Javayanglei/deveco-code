@@ -21,6 +21,15 @@ import emulatorTools from '../tool/lib/emulator_tools.json' with { type: "json" 
 import { Schema, Exit, Cause } from "effect"
 import path from 'node:path'
 import fs from 'node:fs'
+import { Hash } from '@opencode-ai/core/util/hash'
+
+const VERIFY_UI_MAX_CALLS = 3
+const verifyUiCallCounters = new Map<string, number>()
+
+function verifyUiCounterKey(sessionID: string, testPlan: unknown): string {
+  const plan = typeof testPlan === 'string' ? testPlan : ''
+  return Hash.fast(JSON.stringify({ sid: sessionID, plan }))
+}
 
 
 type ListedTool = {
@@ -362,6 +371,13 @@ const HarmonyNapiDynamicToolsPlugin: Plugin = async (_input) => {
 
           if (name === 'verify_ui') {
             const typedCtx = ctx as { sessionID?: string };
+            const sessionID = typedCtx.sessionID ?? '__unknown__';
+            const counterKey = verifyUiCounterKey(sessionID, payload.testPlan);
+            const callCount = verifyUiCallCounters.get(counterKey) ?? 0;
+            if (callCount >= VERIFY_UI_MAX_CALLS) {
+              return `已对该验证目标连续调用 ${VERIFY_UI_MAX_CALLS} 次仍未通过。按规格停止重试，请将累计失败现象汇报给用户，由用户决定下一步。`;
+            }
+            verifyUiCallCounters.set(counterKey, callCount + 1);
             if (typedCtx.sessionID) {
               payload.sessionId = typedCtx.sessionID;
             }
