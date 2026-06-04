@@ -349,7 +349,7 @@ const HarmonyNapiDynamicToolsPlugin: Plugin = async (_input) => {
         async execute(args, ctx) {
           if (!process.env.DEVECO_HOME?.trim()) throw new Error('DEVECO_HOME environment variable is not configured. PLEASE set your DEVECO_HOME path manually and restart.');
           const worktree = resolveWorktree(ctx as { sessionID?: string; directory?: string; worktree?: string });
-          if (UI_VERIFICATION_TOOLS.has(name)) {
+          if (UI_VERIFICATION_TOOLS.has(name) && ctx.agent === 'build') {
             await ctx.ask({
               permission: name,
               patterns: ['*'],
