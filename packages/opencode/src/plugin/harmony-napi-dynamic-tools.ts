@@ -330,6 +330,7 @@ function resolveWorktree(ctx: { sessionID?: string; directory?: string; worktree
   return process.cwd();
 }
 
+const UI_VERIFICATION_TOOLS = new Set(['verify_ui', 'save_ui_screenshot', 'get_ui_verification_log'])
 
 const HarmonyNapiDynamicToolsPlugin: Plugin = async (_input) => {
   const listed = normalizeToolList(emulatorTools);
@@ -348,6 +349,14 @@ const HarmonyNapiDynamicToolsPlugin: Plugin = async (_input) => {
         async execute(args, ctx) {
           if (!process.env.DEVECO_HOME?.trim()) throw new Error('DEVECO_HOME environment variable is not configured. PLEASE set your DEVECO_HOME path manually and restart.');
           const worktree = resolveWorktree(ctx as { sessionID?: string; directory?: string; worktree?: string });
+          if (UI_VERIFICATION_TOOLS.has(name)) {
+            await ctx.ask({
+              permission: name,
+              patterns: ['*'],
+              always: ['*'],
+              metadata: {},
+            })
+          }
           if (name === 'verify_ui') {
             const params = await resolveUIVerifyParams(worktree);
             if (!params.baseURL || !params.apiKey || !params.modelName) {
