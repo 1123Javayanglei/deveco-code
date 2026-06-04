@@ -1,4 +1,12 @@
 <p align="center">
+  <h1 align="center">DevEco Code</h1>
+</p>
+<p align="center">面向 HarmonyOS 开发场景的 AI Agent 工具。</p>
+<p align="center">
+  <a href="README_EN.md">English</a> · 简体中文
+</p>
+
+<p align="center">
   <a href="https://www.npmjs.com/package/@deveco/deveco-code"><img alt="npm" src="https://img.shields.io/npm/v/@deveco/deveco-code?style=flat-square&label=npm" /></a>
   <a href="https://gitcode.com/openharmony-sig/deveco-code/blob/develop/LICENSE"><img alt="license" src="https://img.shields.io/npm/l/@deveco/deveco-code?style=flat-square&label=MIT" /></a>
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20(Arm%20%7C%20x64)-lightgrey?style=flat-square" />
