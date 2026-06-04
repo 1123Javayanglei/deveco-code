@@ -180,8 +180,8 @@ async function main(): Promise<void> {
   const targetRoot = path.join(args.projectPath, args.appName);
   copyDirectoryContents(args.templateDir, targetRoot);
 
-  replaceInFile(path.join(targetRoot, "AppScope/resources/base/element/string.json"), [
-    ["MyApplication", args.appName],
+  replaceInFile(path.join(targetRoot, 'AppScope/resources/base/element/string.json'), [
+    ['MyApplication', args.appName],
   ]);
   replaceInFile(path.join(targetRoot, 'entry/src/main/resources/base/element/string.json'), [
     [`"value": "label"`, `"value": "${args.appName}"`]
