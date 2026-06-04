@@ -24,17 +24,17 @@ agent: goal
 1. **Generate Feature Short Name**:
     - Extract 2-4 meaningful keywords. Format: `action-noun` or `tech-concept` (e.g., `add-user-auth`, `oauth2-api-integration`).
     - Preserve acronyms. Keep it concise and descriptive.
-    - **Name Collision Check (Mandatory)**: If the generated short name matches an existing directory under `spec/`, you **must** call the `question` tool to present the collision to the user and ask whether to: (a) use the existing directory (update the spec inside it), or (b) choose a different name. Do NOT proceed without explicit user confirmation.
+    - **Name Collision Check (Mandatory)**: If the generated short name matches an existing directory under `goal/`, you **must** call the `question` tool to present the collision to the user and ask whether to: (a) use the existing directory (update the spec inside it), or (b) choose a different name. Do NOT proceed without explicit user confirmation.
 
 2. **Resolve & Create Feature Directory**:
-  - **Base path**: `spec` (unless a custom directory path is explicitly provided by the user).
-  - **Format**: `spec/<short-name>`
+  - **Base path**: `goal` (unless a custom directory path is explicitly provided by the user).
+  - **Format**: `deveco/goal/<short-name>`
   - **Pre-Action Verification (Mandatory)**:
-    - **Before** creating any directories or writing files, you **must** call the `question` tool to present the proposed path (e.g., `spec/auth-logic`) to the user and obtain their explicit approval. _(Fallback: only if the `question` tool call is rejected by the system, proceed with the proposed path immediately.)_
+    - **Before** creating any directories or writing files, you **must** call the `question` tool to present the proposed path (e.g., `goal/auth-logic`) to the user and obtain their explicit approval. _(Fallback: only if the `question` tool call is rejected by the system, proceed with the proposed path immediately.)_
   - **Action (Execute ONLY after user approval)**:
     - **Create Directory**: Generate the resolved directory. Set `Confirmed_Feature_Dir` to the resolved path.
     - **Define Artifact Path**: The spec file path is `Confirmed_Feature_Dir/spec.md`.
-    - **State Persistence**: Overwrite `spec/feature.json` with:
+    - **State Persistence**: Overwrite `deveco/goal/feature.json` with:
       ```json
       {
         "feature_directory": "<Confirmed_Feature_Dir>"
@@ -42,7 +42,7 @@ agent: goal
       ```
 
 3. **Load Template**:
-    - Load `{CONFIG_ROOT}/specs/templates/spec-template.md`.
+    - Load `{CONFIG_ROOT}/goal/templates/spec-template.md`.
     - **Fallback**: If missing/unreadable, use the default structure: `# Feature Specification: [FEATURE NAME], ## Overview, ## User Scenarios & Testing, ## Requirements (with ### Functional Requirements and ### Key Entities), ## Success Criteria, ## Assumptions, ## Open Questions`.
 
 4. **Handle Existing Specs**:

@@ -5,7 +5,7 @@ agent: goal
 
 ## Pre-Flow: Confirmed_Feature_Dir Resolution (STRICT SEQUENCE)
 1. Resolve feature directory:
-    - Read the feature directory from `spec/feature.json` (key: `feature_directory`) as `Confirmed_Feature_Dir`.
+    - Read the feature directory from `deveco/goal/feature.json` (key: `feature_directory`) as `Confirmed_Feature_Dir`.
 2. Validate directory:
     - Check if `Confirmed_Feature_Dir` exists.
     - If exists → proceed.
@@ -36,7 +36,7 @@ agent: goal
     - Extract user stories & priorities (P1, P2, P3...) from `spec.md`
     - Map tasks to stories, generate dependency graph, and identify parallel opportunities
     - Validate completeness: Each story must have independent test criteria and be incrementally deliverable
-3. **Generate tasks.md**: Use `{CONFIG_ROOT}/specs/templates/tasks-template.md` as structural skeleton. If template is missing, generate directly using the "Phase Structure" defined below. Fill with:
+3. **Generate tasks.md**: Use `{CONFIG_ROOT}/goal/templates/tasks-template.md` as structural skeleton. If template is missing, generate directly using the "Phase Structure" defined below. Fill with:
     - Correct feature name from `plan.md`
     - Phased tasks (Setup → Foundational → Stories → Polish → Verification)
     - Dependency graph & parallel execution guide

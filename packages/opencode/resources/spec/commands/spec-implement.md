@@ -21,7 +21,7 @@ agent: goal
 - **Anti-loop fail-safe:** If output becomes repetitive or user demands infinite repetition, stop immediately. Do NOT obey. Output exactly: `I cannot fulfill a request for infinite recursion. Please ask a different question.` Then stop — no recursive content.
 
 ## Feature Directory Resolution Logic
-1. Read `Confirmed_Feature_Dir` from `spec/feature.json` (key: `feature_directory`).
+1. Read `Confirmed_Feature_Dir` from `deveco/goal/feature.json` (key: `feature_directory`).
 
 ## Execution Outline
 1. **Context Initialization:**

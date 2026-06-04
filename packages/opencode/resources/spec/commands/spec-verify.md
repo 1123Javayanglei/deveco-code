@@ -28,7 +28,7 @@ agent: spec-verify
 ## Execution Phases
 
 ### Phase 1: Build, Deploy & Per-Story Verify/Fix Loop
-0. **Resolve `Confirmed_Feature_Dir`**: Use the value provided by the parent agent. If not provided, fall back to reading `spec/feature.json`.
+0. **Resolve `Confirmed_Feature_Dir`**: Use the value provided by the parent agent. If not provided, fall back to reading `deveco/goal/feature.json`.
 0b. **Resolve `Verification_Scope`**: Use the value provided by the parent agent (`build-only` or `build+ui`). If not provided, fall back by reading `tasks.md` in `Confirmed_Feature_Dir`: if its Verification phase contains the marker `<!-- verification_scope: build+ui -->` or any task referencing UI verification (e.g., `verify_ui`), set `Verification_Scope = build+ui`; otherwise `build-only`.
 1. **`build_project`**: Call directly. Initialize `build_fix_attempts = 1` and output `[BUILD_ATTEMPT] attempt=1/10` immediately before the tool invocation. If the tool returns an error (e.g., `DEVECO_HOME` not configured), log the error, mark as `skipped`, and continue. If the build fails with compilation errors, apply fixes in `src/` and re-invoke `build_project` — increment `build_fix_attempts` by 1 and output `[BUILD_ATTEMPT] attempt=<build_fix_attempts>/10` before each re-build. Build fix iterations are capped at **1 initial build + up to 9 re-builds (max 10 `build_project` calls total)**. If `build_fix_attempts ≥ 10` and the build still fails, output `[BUILD_LIMIT_EXCEEDED]` and proceed directly to step 5 (Report) with `FAIL` status.
 2. **`start_app`**: Call directly to deploy the freshly built package. If the tool reports no device/emulator available, log the error, mark as `skipped`, and continue.
@@ -36,7 +36,7 @@ agent: spec-verify
     - **If `Verification_Scope == build-only`**: SKIP all `verify_ui` related steps entirely (including this prep step and step 4). Proceed directly to step 5 (Report).
     - **If `verify_ui` is not in the available tool list** even though scope is `build+ui`: skip all UI verification and log the reason.
     - **If the parent agent provided UI test cases**: use them directly as the test plan. Do NOT regenerate from spec.md.
-    - **If no UI test cases were provided**: fall back to reading `spec/{Confirmed_Feature_Dir}/spec.md` and generating simple UI smoke test cases covering core page rendering and basic mainstream user interaction flows.
+    - **If no UI test cases were provided**: fall back to reading `deveco/goal/{Confirmed_Feature_Dir}/spec.md` and generating simple UI smoke test cases covering core page rendering and basic mainstream user interaction flows.
     - **DO NOT ask the user for confirmation in any form. Proceed to step 4 immediately without pausing.**
 4. **Per-Story Verify & Fix Loop** (ONLY when `Verification_Scope == build+ui` and the tool is available):
      Process EACH user story **sequentially**, one at a time. For each user story, complete the full verify → fix → re-verify cycle before moving to the next story.

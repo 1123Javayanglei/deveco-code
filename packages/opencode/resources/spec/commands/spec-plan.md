@@ -22,7 +22,7 @@ agent: goal
 ## Outline
 1. **Setup & Directory Resolution**:
     - Resolve `Confirmed_Feature_Dir`:
-        - Read the current feature directory from `spec/feature.json` as `Confirmed_Feature_Dir`.
+        - Read the current feature directory from `deveco/goal/feature.json` as `Confirmed_Feature_Dir`.
     - Resolve artifact paths:
         - `FEATURE_SPEC` = `Confirmed_Feature_Dir/spec.md`
         - `IMPL_PLAN` = `Confirmed_Feature_Dir/plan.md`
@@ -34,7 +34,7 @@ agent: goal
 
 3. **Load Context & Template**:
     - Read `FEATURE_SPEC`.
-    - Load plan template from `{CONFIG_ROOT}/specs/templates/plan-template.md`.
+    - Load plan template from `{CONFIG_ROOT}/goal/templates/plan-template.md`.
     - **Fallback:** If the template is missing, initialize `IMPL_PLAN` with the minimal required structure: `## Summary`, `## Technical Context`, `## Project Structure`, `## Complexity Tracking`, `## Research & Decisions`, `## Data Model`, `## Contracts & Interfaces`.
 
 4. **Execute Plan Workflow**: Follow the loaded/initialized template structure to:

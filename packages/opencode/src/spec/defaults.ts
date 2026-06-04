@@ -60,7 +60,7 @@ export namespace Defaults {
   const log = Log.create({ service: "spec-defaults" })
 
   export const ensure = Effect.fn("Spec.Defaults.ensure")(function* (version: string, fsys: AppFileSystem.Interface) {
-    const specDir = path.join(Global.Path.data, "specs")
+    const specDir = path.join(Global.Path.data, "deveco", "goal")
     const versionFile = path.join(specDir, ".version")
 
     const current = yield* Effect.gen(function* () {
