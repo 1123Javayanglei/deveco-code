@@ -25,6 +25,7 @@
 
 ```bash
 # 1. 安装
+# 推荐使用官方源[https://registry.npmjs.org/]或阿里云源[https://registry.npmmirror.com/]
 npm install -g @deveco/deveco-code
 
 # 2. 启动
