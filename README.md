@@ -37,6 +37,8 @@ deveco
 - 帮我检查并修复语法错误
 ```
 
+> 建议使用 [npm 官方源](https://registry.npmjs.org/) 或 [淘宝镜像源](https://registry.npmmirror.com/) 安装，其他镜像源可能因同步延迟导致安装失败或版本滞后。
+
 > 如需编译构建、设备运行等能力，请先安装 [DevEco Studio](https://developer.huawei.com/consumer/cn/deveco-studio/) 并配置 `DEVECO_HOME` 环境变量。
 
 ## 简介
@@ -90,7 +92,9 @@ DevEco Code 通过 npm 分发，安装前请先准备以下环境：
 
 1. 安装 [Node.js](https://nodejs.org)，**推荐使用 22 及更高版本**
 2. （可选）安装 [DevEco Studio](https://developer.huawei.com/consumer/cn/deveco-studio/)，**推荐使用 6.1 及更高版本**；若不安装，构建、推包等 HarmonyOS 工程工具将无法使用
-3. （可选）配置 `DEVECO_HOME` 环境变量指向 DevEco Studio 安装目录（安装 DevEco Studio 时需要）
+3. （可选）配置 `DEVECO_HOME` 环境变量指向 DevEco Studio 安装目录（安装 DevEco Studio 时需要），默认路径示例：
+   - **macOS**：`/Applications/DevEco-Studio.app`
+   - **Windows**：`C:\Program Files\Huawei\DevEco Studio`
 
 可先在终端验证 Node.js 环境：
 
