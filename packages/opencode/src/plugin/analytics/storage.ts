@@ -33,8 +33,7 @@ async function ensureDir(): Promise<void> {
 
 export async function getOrCreateUid(): Promise<string> {
   const storage = await loadStorage()
-  if (storage.uid.trim()) return storage.uid
-  storage.uid = randomUUID()
+  if (!storage.uid.trim()) storage.uid = randomUUID()
   await saveStorage(storage)
   return storage.uid
 }

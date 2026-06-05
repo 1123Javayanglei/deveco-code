@@ -2,6 +2,7 @@ import { spawn } from "node:child_process"
 import { existsSync, readFileSync, rmSync } from "node:fs"
 import { homedir, tmpdir } from "node:os"
 import { join } from "node:path"
+import { getOrCreateUid } from "@/plugin/analytics/storage"
 import { devecoAuth } from "@/plugin/deveco"
 
 const TARGET_URL = "https://css-complain-drcn.platform.dbankcloud.cn/?next=1&theme=light&lang=zh-cn"
@@ -66,7 +67,7 @@ async function createComplainPayload(latestConversation: string) {
       dialogCard1: latestConversation,
     },
     appId: "5006203948",
-    deviceId: "270086000122081382",
+    deviceId: await getOrCreateUid(),
     disableUserUpload: false,
     sceneId: "7",
     subSceneId: "20",
