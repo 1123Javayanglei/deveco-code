@@ -3,7 +3,7 @@
 </p>
 <p align="center">面向 HarmonyOS 开发场景的 AI Agent 工具。</p>
 <p align="center">
-  <a href="README_EN.md">English</a> · 简体中文
+  <a href="README.en.md">English</a> · 简体中文
 </p>
 
 <p align="center">
