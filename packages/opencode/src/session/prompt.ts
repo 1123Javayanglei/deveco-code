@@ -1426,6 +1426,10 @@ export const layer = Layer.effect(
             const system = [...env, ...instructions, ...(skills ? [skills] : [])]
             const format = lastUser.format ?? { type: "text" as const }
             if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
+            const requireDeliverableTools = SessionReminders.shouldRequireDeliverableToolChoice({
+              agentName: agent.name,
+              messages: msgs,
+            })
             const result = yield* handle.process({
               user: lastUser,
               agent,
@@ -1436,7 +1440,7 @@ export const layer = Layer.effect(
               messages: [...modelMsgs, ...(isLastStep ? [{ role: "assistant" as const, content: MAX_STEPS }] : [])],
               tools,
               model,
-              toolChoice: format.type === "json_schema" ? "required" : undefined,
+              toolChoice: format.type === "json_schema" ? "required" : requireDeliverableTools ? "required" : undefined,
             })
 
             if (structured !== undefined) {

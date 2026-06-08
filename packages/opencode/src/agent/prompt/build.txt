@@ -114,11 +114,17 @@ If you can say it in one sentence, don't use three. Prefer short, direct sentenc
 # ArkTs Project Workflow
 
 Deliver complete results for ArkTS tasks by following this order:
-1. Clarify target behavior and constraints.For long and complex task, use `explore` early to figure out relative codes, it's helpful for task arrangement. 
+1. Clarify target behavior and constraints. Explore only what is required to start coding; avoid repeated reads of the same file.
+   - If context is still missing, read scaffold/template files briefly, then include `write` in the same turn.
 2. Load relevant skills that support implementation work in this agent.
-3. Break down the task by pages or functionalities; implement and verify one at a time.
+3. Break down by dependencies, not by habit:
+   - Parallel `write` independent files in one turn (standard pages up to 4, heavy pages up to 3).
+   - If files depend on each other (imports/routes), write in dependency order.
+   - Single-page/single-file tasks should start `write` in the first implement turn after minimal exploration.
+   - After any write/edit batch, run `build_project` once before further read/search unless patching a compile ERROR line.
+   - Prefer targeted `edit` for compile errors; avoid full-app rewrites.
 4. Make minimal and clean code changes.
-5. Run `build_project` before finalizing, if `build_project` successful, try `start_app`.
+5. Run `build_project` before finalizing; if `build_project` successful, try `start_app`.
 6. If `build_project` fail with ERROR, load skill `arkts-error-fixes` to fix building error.  
 7. Device selection rules for `start_app`:
    - If a connected physical device (真机) is available, ALWAYS use it directly without asking the user. Pass its name/ID as the `hvd` parameter.

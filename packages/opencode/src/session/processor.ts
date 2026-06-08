@@ -32,6 +32,7 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Usage, type LLMEvent } from "@opencode-ai/llm"
 
 const DOOM_LOOP_THRESHOLD = 3
+const DEFAULT_IN_TURN_ABORT_NO_TOOL_MS = 90_000
 const log = Log.create({ service: "session.processor" })
 
 export type Result = "compact" | "stop" | "continue"
@@ -80,6 +81,9 @@ interface ProcessorContext extends Input {
   needsCompaction: boolean
   currentText: MessageV2.TextPart | undefined
   reasoningMap: Record<string, MessageV2.ReasoningPart>
+  streamStartedAt: number
+  sawToolEvent: boolean
+  softAbortedNoTool: boolean
 }
 
 type StreamEvent = LLMEvent
@@ -121,6 +125,9 @@ export const layer = Layer.effect(
         needsCompaction: false,
         currentText: undefined,
         reasoningMap: {},
+        streamStartedAt: 0,
+        sawToolEvent: false,
+        softAbortedNoTool: false,
       }
       let aborted = false
       const slog = log.clone().tag("session.id", input.sessionID).tag("messageID", input.assistantMessage.id)
@@ -784,15 +791,52 @@ export const layer = Layer.effect(
         ctx.shouldBreak = (yield* config.get()).experimental?.continue_loop_on_deny !== true
 
         return yield* Effect.gen(function* () {
+          const abortNoToolMsRaw = globalThis.process?.env?.IN_TURN_ABORT_NO_TOOL_MS?.trim()
+          const abortNoToolMsParsed = abortNoToolMsRaw ? Number.parseInt(abortNoToolMsRaw, 10) : NaN
+          const abortNoToolMs =
+            Number.isFinite(abortNoToolMsParsed) && abortNoToolMsParsed >= 10_000
+              ? abortNoToolMsParsed
+              : DEFAULT_IN_TURN_ABORT_NO_TOOL_MS
+          const shouldSoftAbortNoTool =
+            ctx.assistantMessage.agent === "build" &&
+            streamInput.toolChoice === "required" &&
+            !ctx.assistantMessage.summary
+
           yield* Effect.gen(function* () {
             ctx.currentText = undefined
             ctx.reasoningMap = {}
+            ctx.sawToolEvent = false
+            ctx.softAbortedNoTool = false
+            ctx.streamStartedAt = Date.now()
             yield* status.set(ctx.sessionID, { type: "busy" })
             const stream = llm.stream(streamInput)
 
+            const shouldAbortNow = () => {
+              if (ctx.needsCompaction) return true
+              if (!shouldSoftAbortNoTool) return false
+              if (ctx.sawToolEvent) return false
+              const elapsed = Date.now() - ctx.streamStartedAt
+              if (elapsed < abortNoToolMs) return false
+              ctx.softAbortedNoTool = true
+              slog.info("soft_abort_no_tool", { elapsed, abortNoToolMs })
+              return true
+            }
+
             yield* stream.pipe(
-              Stream.tap((event) => handleEvent(event)),
-              Stream.takeUntil(() => ctx.needsCompaction),
+              Stream.tap((event) =>
+                Effect.gen(function* () {
+                  if (
+                    event.type === "tool-input-start" ||
+                    event.type === "tool-call" ||
+                    event.type === "tool-result" ||
+                    event.type === "tool-error"
+                  ) {
+                    ctx.sawToolEvent = true
+                  }
+                  yield* handleEvent(event)
+                }),
+              ),
+              Stream.takeUntil(shouldAbortNow),
               Stream.runDrain,
             )
           }).pipe(
@@ -848,6 +892,7 @@ export const layer = Layer.effect(
           )
 
           if (ctx.needsCompaction) return "compact"
+          if (ctx.softAbortedNoTool) return "continue"
           if (ctx.blocked || ctx.assistantMessage.error) return "stop"
           return "continue"
         })
