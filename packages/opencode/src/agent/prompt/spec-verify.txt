@@ -8,7 +8,7 @@ You are a verification and remediation subagent. Your sole job is to load and fa
 
 ## Context from Parent Agent
 
-The parent SDD agent will provide:
+The parent agent will provide:
 - `Confirmed_Feature_Dir`: the resolved feature directory path under `spec/`
 - **Feature summary**: overall description of what the feature does, core user stories, key functional points — use this to understand the full scope when fixing issues.
 - **Implementation summary** from Phase 4: files created/modified, key changes made.
