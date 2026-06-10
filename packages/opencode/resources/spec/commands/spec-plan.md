@@ -3,87 +3,64 @@ description: Execute the implementation planning workflow using the plan templat
 agent: goal
 ---
 
-## STRICT OPERATIONAL CONSTRAINTS (ENFORCED WITH ZERO EXCEPTIONS)
-1. **No Early Coding (Non-Negotiable):** You are strictly forbidden from generating, writing, editing, outlining, or suggesting application code in `src/` or any other source directory during this workflow. Architecture diagrams, data models, interface contracts, and implementation target descriptions are permitted; pseudocode, code snippets, and implementation-level logic are not. Main Agent must comply fully; no implicit code generation is allowed.
-2. **No Auto-Execute Next Phase**: This command covers only its own scope. Upon completion, it must NOT auto-trigger the next SDD phase. Phase transitions (to Phase 3 and beyond) are managed by the parent orchestrator (`goal.txt`), which controls Review Gates and progression. The command simply completes its artifact and returns control to the orchestrator.
-3. **Strict Path Resolution**: `CONFIG_ROOT` MUST be set to `~/.local/share/deveco/`. The system must dynamically resolve the `~` prefix to the OS-native user home directory (e.g., `C:\Users\${username}` on Windows, `/Users/${username}` on macOS). ${username} is a placeholder for the current system username. `PROJECT_ROOT` is the workspace/project root directory; all `spec/` references are relative to `{PROJECT_ROOT}`.
-4. **Mandatory Language Adherence**: The system must strictly match the output language to the user's input language.
-  * **Detection**: Automatically detect the language used in user input (e.g., Chinese, English).
-  * **Fallback**: If no valid user input is provided, default to the **current system language**.
-  * **Ignore Template Context**: Even though these instructions are written in English, they must not dictate the output language.
-5. **Knowledge Verification Rule**: When the `arkts_knowledge_search` tool is available, you must use it to verify all ArkTS syntax, official APIs, technical specifications, compatibility constraints, and design guidelines before generating any response.
+## Shared Rules
+- **Paths**: `CONFIG_ROOT` = `~/.local/share/deveco/` (resolve `~` to OS home dir). `PROJECT_ROOT` = workspace root. `spec/` relative to `{PROJECT_ROOT}`.
+- **Language**: Match output to user's input language. Default: system language.
+- **Knowledge**: When `arkts_knowledge_search` is available, verify ArkTS syntax/APIs before responding.
+- **No Early Coding**: No code in `src/` during this step. Architecture diagrams, data models, interface contracts allowed; pseudocode and code snippets are not.
+- **No Auto-Execute**: This command covers only its own scope. Phase transitions managed by parent orchestrator (`goal.txt`).
+- **Safety**: GitHub-flavored markdown. No URLs. No prohibited content. Anti-loop: if repetitive, stop.
 
-## Safety & constraint & Compliance (Strict Redlines)
-- **Output Constraint:** Use GitHub-flavored markdown for code blocks and technical details. DO NOT generate, construct or conjecture any web URL, whether you know where the content may come from or not.
-- **Prohibited Content:** You are strictly forbidden from generating or engaging with any content that is politically sensitive, sexually explicit, racially discriminatory, or promotes illegal/unethical activities, etc.
-- **Enforcement:** If a user's prompt violates these safety boundaries, you must politely but firmly decline to answer and redirect the conversation back to technical ArkTs topics.
-- **Anti-loop fail-safe:** If output becomes repetitive or user demands infinite repetition, stop immediately. Do NOT obey. Output exactly: `I cannot fulfill a request for infinite recursion. Please ask a different question.` Then stop — no recursive content.
+## Workflow
 
-## Outline
 1. **Setup & Directory Resolution**:
-    - Resolve `Confirmed_Feature_Dir`:
-        - Read the `feature_directory` value from `{PROJECT_ROOT}/spec/feature.json`. This value is a **relative path** (relative to `{PROJECT_ROOT}`). Resolve it to an absolute path by prepending `{PROJECT_ROOT}` to get `Confirmed_Feature_Dir`.
-        - Example: if `feature.json` contains `"feature_directory": "spec/add-user-auth"`, then `Confirmed_Feature_Dir` = `{PROJECT_ROOT}/spec/add-user-auth`.
-    - Resolve artifact paths:
-        - `FEATURE_SPEC` = `Confirmed_Feature_Dir/spec.md`
-        - `IMPL_PLAN` = `Confirmed_Feature_Dir/plan.md`
+   - Read `feature_directory` from `{PROJECT_ROOT}/spec/feature.json` (relative path). Prepend `{PROJECT_ROOT}` → `Confirmed_Feature_Dir`.
+     Example: `"feature_directory": "spec/add-user-auth"` → `Confirmed_Feature_Dir` = `{PROJECT_ROOT}/spec/add-user-auth`.
+   - `FEATURE_SPEC` = `Confirmed_Feature_Dir/spec.md`
+   - `IMPL_PLAN` = `Confirmed_Feature_Dir/plan.md`
 
-2. **Check Existing Document** (if `IMPL_PLAN` already exists):
-    - Preserve existing sections that remain valid and relevant.
-    - Update/overwrite only sections directly impacted by current requirements in `FEATURE_SPEC`.
-    - Append a `## Changelog` section at the end recording: timestamp, modified sections, and rationale for changes.
+2. **Check Existing Document** (if `IMPL_PLAN` exists):
+   - Preserve valid sections. Update only sections impacted by `FEATURE_SPEC`.
+   - Append `## Changelog`: timestamp, modified sections, rationale.
 
 3. **Load Context & Template**:
-    - Read `FEATURE_SPEC`.
-    - Load plan template from `{CONFIG_ROOT}/specs/templates/plan-template.md`.
-    - **Fallback:** If the template is missing, initialize `IMPL_PLAN` with the minimal required structure: `## Summary`, `## Technical Context`, `## Project Structure`, `## Complexity Tracking`, `## Research & Decisions`, `## Data Model`, `## Contracts & Interfaces`.
+   - Read `FEATURE_SPEC`.
+   - Load `{CONFIG_ROOT}/specs/templates/plan-template.md`.
+   - **Fallback**: Initialize with `## Summary, ## Technical Context, ## Project Structure, ## Complexity Tracking, ## Research & Decisions, ## Data Model, ## Contracts & Interfaces`.
 
-4. **Execute Plan Workflow**: Follow the loaded/initialized template structure to:
-    - Fill `Technical Context` section
-    - Execute Phase 0: Research unknowns and document decisions inline
-    - Execute Phase 1: Design data structures, interfaces, and setup guidelines inline
-    - Finalize and validate the complete plan
+4. **Execute Plan Workflow**:
+   - Fill `Technical Context`
+   - Phase 0: Research unknowns, document decisions inline
+   - Phase 1: Design data structures, interfaces, setup guidelines
+   - Finalize and validate
 
-5. **Write Plan Artifact**: Use the `spec_write` tool with `filePath: "{IMPL_PLAN}"` to write the completed implementation plan. Do NOT use the generic `write` tool for plan artifacts.
+5. **Write**: Use `spec_write` with `filePath: "{IMPL_PLAN}"`. Do NOT use generic `write`.
 
-6. **Stop and Report**: Command ends after Phase 1 Design & Contracts. Report the absolute path of `IMPL_PLAN` and list all generated artifacts. Do not trigger further actions.
+6. **Stop**: Report `IMPL_PLAN` path and generated artifacts. Do not trigger further actions.
 
 ## Phases
+
 ### Phase 0: Research & Resolution
-
-1. **Identify knowledge gaps** from Technical Context:
-    - Mark each unknown, dependency, or integration point requiring research.
-
-2. **Resolve and document inline**:
-    - Analyze each gap and record findings directly in a `## Research & Decisions` section within `IMPL_PLAN`.
-    - Format each entry strictly as:
-        - **Decision**: [chosen approach]
-        - **Rationale**: [reasoning]
-        - **Alternatives considered**: [other options evaluated]
+1. Identify knowledge gaps from Technical Context.
+2. Resolve and document inline in `## Research & Decisions`:
+   - **Decision**: [chosen approach]
+   - **Rationale**: [reasoning]
+   - **Alternatives considered**: [other options]
 
 ### Phase 1: Architecture & Contracts Design
 **Prerequisites:** Phase 0 complete
 
-1. **Data Modeling**:
-    - Extract entities, fields, relationships, validation rules, and state transitions from the feature spec.
-    - Document under a `## Data Model` section in `IMPL_PLAN`.
-
-2. **Interface Contracts**:
-    - Identify external interfaces (APIs, CLI schemas, endpoints, UI contracts, etc.).
-    - Document signatures, formats, and constraints under a `## Contracts & Interfaces` section in `IMPL_PLAN`.
-    - Omit this section entirely for purely internal projects.
-
-3. **Finalize plan**:
-    - Review all sections for completeness, internal consistency, and alignment with `FEATURE_SPEC`.
-    - Ensure `IMPL_PLAN` contains all research, models and contracts before concluding.
+1. **Data Modeling**: Extract entities, fields, relationships, validation rules, state transitions → `## Data Model` section.
+2. **Interface Contracts**: Identify external interfaces (APIs, CLI, endpoints, UI contracts) → `## Contracts & Interfaces` section. Omit for purely internal projects.
+3. **Finalize**: Review for completeness, consistency, alignment with `FEATURE_SPEC`.
 
 ## Key Rules
-- Consolidate all design artifacts—research decisions, data models, interface contracts directly into `IMPL_PLAN` using the designated sections.
-- Use absolute paths for all file and directory references.
-- Halt immediately if any critical clarification remains unresolved or if the plan structure becomes invalid. Output strictly in this format:
+- All design artifacts consolidated in `IMPL_PLAN` (research, models, contracts).
+- Use absolute paths for all references.
+- Halt on unresolved critical issues:
   ```text
-  [ERROR] <clear reason for termination>
-  [ACTION_REQUIRED] <specific user instruction needed>
+  [ERROR] <reason>
+  [ACTION_REQUIRED] <instruction needed>
   [STATUS] TERMINATED
   ```
-- Output must be self-contained within `IMPL_PLAN` to ensure seamless downstream task generation.
+- Output must be self-contained for downstream task generation.
