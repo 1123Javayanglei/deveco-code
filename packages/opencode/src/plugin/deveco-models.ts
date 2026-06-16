@@ -26,17 +26,16 @@ export const DEVECO_DEFAULTS = {
         limit: { context: 202752, output: 131072 },
         modalities: { input: ["text"], output: ["text"] },
       },
-      "Qwen2.5-VL-72B": {
-        name: "Qwen2.5-VL-72B",
+      "Qwen3-VL-72B": {
+        name: "Qwen3-VL-72B",
         limit: { context: 32768, output: 8192 },
         modalities: { input: ["text", "image"], output: ["text"] },
       },
-    },
   } satisfies ProviderInfo,
   taskDefaultModelMap: {
     small_model: "glm-5",
-    ui_verification: "Qwen2.5-VL-72B",
-    blacklist: "Qwen2.5-VL-72B",
+    ui_verification: "Qwen3-VL-72B",
+    blacklist: "Qwen3-VL-72B",
   } as Record<string, string>,
 }
 
