@@ -21,7 +21,6 @@ import {
 } from "@opencode-ai/core/util/opencode-process"
 import { validateSession } from "./validate-session"
 import * as prompts from "@clack/prompts"
-import { requireLogin } from "@/plugin/deveco"
 import { findDevEcoHomes, isDevEcoHome, loadSavedDevEcoHome, resolveDevEcoHome, saveDevEcoHome } from "@/tool/lib/env"
 
 declare global {
@@ -191,11 +190,6 @@ export const TuiThreadCommand = cmd({
         describe: "agent to use",
       }),
   handler: async (args) => {
-    const loggedIn = await requireLogin()
-    if (!loggedIn) {
-      process.exit(1)
-    }
-
     await ensureDevEcoHomeForTuiStartup()
 
     const { TuiConfig } = await import("./config/tui")
