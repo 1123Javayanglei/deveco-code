@@ -893,6 +893,61 @@ export const devecoAuth = new DevEcoAuth()
 
 export { ACCESS_TOKEN_EXPIRES_MS }
 
+/** Module-level dedup: concurrent callers share a single in-flight refresh. */
+let refreshPromise: Promise<string | null> | null = null
+
+async function doRefreshToken(): Promise<string | null> {
+  log.info("ensureValidToken: token expired, refreshing")
+  const newTokens = await devecoAuth.refreshToken()
+  if (!newTokens) {
+    log.warn("ensureValidToken: token refresh failed")
+    return null
+  }
+
+  await saveAuthToDisk("deveco", {
+    type: "oauth",
+    access: newTokens.accessToken,
+    refresh: newTokens.refreshToken,
+    expires: Date.now() + ACCESS_TOKEN_EXPIRES_MS,
+  })
+
+  log.info("ensureValidToken: token refreshed successfully")
+  return newTokens.accessToken
+}
+
+/**
+ * Ensure the deveco access token is valid. If expired, refresh it and persist to disk.
+ * Returns a valid access token string, or null if no auth is available or refresh fails.
+ *
+ * Consolidates the token-refresh logic previously duplicated between
+ * provider init (model config fetch) and the custom loader.
+ * Concurrent callers share a single in-flight refresh (no duplicate API calls).
+ */
+export async function ensureValidToken(): Promise<string | null> {
+  try {
+    if (!fs.existsSync(authFilePath)) return null
+    const raw = JSON.parse(fs.readFileSync(authFilePath, "utf-8")) as Record<string, unknown>
+    const data = LocalCrypto.decryptAuthData(raw) as Record<string, unknown>
+    const deveco = data.deveco as Record<string, unknown> | undefined
+    if (!deveco || deveco.type !== "oauth" || typeof deveco.access !== "string") return null
+
+    const expires = typeof deveco.expires === "number" ? deveco.expires : 0
+    if (expires && Date.now() < expires) {
+      return deveco.access
+    }
+
+    if (!refreshPromise) {
+      refreshPromise = doRefreshToken().finally(() => {
+        refreshPromise = null
+      })
+    }
+    return refreshPromise
+  } catch (err) {
+    log.warn("ensureValidToken: unexpected error", { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
+
 export async function requireLogin(): Promise<boolean> {
   if (await devecoAuth.isLoggedIn()) return true
 
@@ -996,15 +1051,9 @@ export async function DevEcoAuthPlugin(_input: PluginInput): Promise<Hooks> {
             const currentAuth = await getAuth()
             if (currentAuth?.type === "oauth") {
               if (!currentAuth.access || currentAuth.expires < Date.now()) {
-                const newTokens = await devecoAuth.refreshToken()
-                if (newTokens?.accessToken) {
-                  await saveAuthToDisk("deveco", {
-                    type: "oauth",
-                    access: newTokens.accessToken,
-                    refresh: newTokens.refreshToken,
-                    expires: Date.now() + ACCESS_TOKEN_EXPIRES_MS,
-                  })
-                  currentAuth.access = newTokens.accessToken
+                const newToken = await ensureValidToken()
+                if (newToken) {
+                  currentAuth.access = newToken
                 } else {
                   log.error("DevEco Code token refresh failed, user needs to re-login")
                   GlobalBus.emit("event", {
