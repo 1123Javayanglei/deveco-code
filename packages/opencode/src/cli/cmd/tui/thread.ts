@@ -1,4 +1,5 @@
 import { cmd } from "@/cli/cmd/cmd"
+import { requireLogin } from "@/plugin/deveco"
 import { Rpc } from "@/util/rpc"
 import { type rpc } from "./worker"
 import path from "path"
@@ -190,6 +191,11 @@ export const TuiThreadCommand = cmd({
         describe: "agent to use",
       }),
   handler: async (args) => {
+    const loggedIn = await requireLogin()
+    if (!loggedIn) {
+      process.exit(1)
+    }
+
     await ensureDevEcoHomeForTuiStartup()
 
     const { TuiConfig } = await import("./config/tui")
