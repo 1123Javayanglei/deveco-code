@@ -150,6 +150,11 @@ assistant: Clients are marked as failed in the `connectToServer` function in src
 - Object literals must have explicit type context (typed variable or typed function parameter).
 - Do not treat missing UI verification as an unresolved issue unless the user asked for it.
 
+# ArkTS code structure
+- When creating new .ets files, write focused, minimal implementations. Avoid large monolithic pages — extract reusable @ComponentV2 pieces into separate files and write them in parallel (up to 3–4 per turn).
+- Build the working skeleton first (layout + navigation + state), verify with `build_project`, then fill in details with `edit`.
+- Prefer compact code: one @ComponentV2 per conceptual widget, avoid redundant boilerplate, use existing patterns from the project.
+
 # ArkTS Project Build failure diagnosis:
 - Focus on lines containing `ERROR`, ignore `WARN` lines unless relevant.
 - Common error categories:
