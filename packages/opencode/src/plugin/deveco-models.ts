@@ -1,9 +1,9 @@
 import { Schema } from "effect"
-import { Model as ModelSchema, type Info as ProviderInfo } from "../provider/provider"
+import { ConfigProviderV1 } from "@opencode-ai/core/v1/config/provider"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import * as Log from "@opencode-ai/core/util/log"
 
-type Model = Schema.Schema.Type<typeof ModelSchema>
+type Model = Schema.Schema.Type<typeof ConfigProviderV1.Model>
 type ModelsMap = Record<string, Model>
 
 const DEVECO_BASE_URL = "https://cn.devecostudio.huawei.com"
@@ -32,7 +32,7 @@ export const DEVECO_DEFAULTS = {
         modalities: { input: ["text", "image"], output: ["text"] },
       },
     },
-  } satisfies ProviderInfo,
+  } satisfies ConfigProviderV1.Info,
   taskDefaultModelMap: {
     small_model: "glm-5",
     ui_verification: "Qwen2.5-VL-72B",
@@ -41,7 +41,7 @@ export const DEVECO_DEFAULTS = {
 }
 
 /** @deprecated Use getDevecoProviderConfig() for dynamic model fetching */
-export const DEVECO_PROVIDER_CONFIG: ProviderInfo = DEVECO_DEFAULTS.provider
+export const DEVECO_PROVIDER_CONFIG: ConfigProviderV1.Info = DEVECO_DEFAULTS.provider
 
 // ============ API response schema ============
 
@@ -99,7 +99,7 @@ function mapModelConfigToInternal(config: Schema.Schema.Type<typeof ModelConfigS
 
 // ============ Cache ============
 
-let cachedConfig: ProviderInfo | null = null
+let cachedConfig: ConfigProviderV1.Info | null = null
 let cachedTaskDefaultModelMap: Record<string, string> | null = null
 
 // ============ API fetch ============
@@ -150,7 +150,7 @@ async function fetchModelsFromAPI(accessToken: string): Promise<{ models: Models
   return { models, taskDefaultModelMap }
 }
 
-function filterBlacklist(models: ModelsMap, blacklist: string[]): ProviderInfo {
+function filterBlacklist(models: ModelsMap, blacklist: string[]): ConfigProviderV1.Info {
   const filteredModels = Object.fromEntries(
     Object.entries(models).filter(([id]) => !blacklist.includes(id)),
   )
@@ -159,7 +159,7 @@ function filterBlacklist(models: ModelsMap, blacklist: string[]): ProviderInfo {
 
 // ============ Public API ============
 
-export async function getDevecoProviderConfig(accessToken: string): Promise<ProviderInfo> {
+export async function getDevecoProviderConfig(accessToken: string): Promise<ConfigProviderV1.Info> {
   if (cachedConfig) return cachedConfig
 
   const defaultBlacklist = DEVECO_DEFAULTS.taskDefaultModelMap.blacklist?.split(",") ?? []

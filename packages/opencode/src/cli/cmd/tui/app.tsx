@@ -708,7 +708,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         name: "workspace.list",
         title: "Manage workspaces",
         category: "Workspace",
-        hidden: !Flag.OPENCODE_EXPERIMENTAL_WORKSPACES,
+        hidden: !Flag.DEVECO_EXPERIMENTAL_WORKSPACES,
         slashName: "workspaces",
         run: () => {
           dialog.replace(() => <DialogWorkspaceList />)
@@ -729,6 +729,8 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         suggested: true,
         category: "Agent",
         slashName: "models",
+        // Bias /mo toward /models over /move without changing global fuzzy scoring.
+        slashAliases: ["mo"],
         run: () => {
           dialog.replace(() => <DialogModel />)
         },
