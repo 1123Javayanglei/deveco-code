@@ -4,6 +4,9 @@ import type { JSONSchema7 } from "@ai-sdk/provider"
 import type * as Provider from "./provider"
 import type * as ModelsDev from "@opencode-ai/core/models-dev"
 import { iife } from "@/util/iife"
+import * as Log from "@opencode-ai/core/util/log"
+
+const log = Log.create({ service: "provider.transform" })
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -1034,6 +1037,8 @@ export function options(input: {
   model: Provider.Model
   sessionID: string
   providerOptions?: Record<string, any>
+  agentName?: string
+  inBuildFixLoop?: boolean
 }): Record<string, any> {
   const result: Record<string, any> = {}
 
@@ -1081,6 +1086,33 @@ export function options(input: {
     result["thinking"] = {
       type: "enabled",
       clear_thinking: false,
+    }
+  }
+
+  // DevEco Code GLM-5 series: enable deep thinking for plan/coding,
+  // disable thinking during build/fix retry loops to reduce latency.
+  if (
+    input.model.providerID.startsWith("deveco") &&
+    input.model.api.id.toLowerCase().includes("glm-5")
+  ) {
+    if (input.agentName === "plan" || (input.agentName === "build" && !input.inBuildFixLoop)) {
+      result["thinking"] = {
+        type: "enabled",
+        clear_thinking: true,
+      }
+      log.info("GLM-5 thinking enabled", {
+        agentName: input.agentName,
+        modelID: input.model.api.id,
+        inBuildFixLoop: input.inBuildFixLoop ?? false,
+      })
+    } else if (input.agentName === "build" && input.inBuildFixLoop) {
+      result["thinking"] = {
+        type: "disabled",
+      }
+      log.info("GLM-5 thinking disabled (build/fix loop)", {
+        agentName: input.agentName,
+        modelID: input.model.api.id,
+      })
     }
   }
 

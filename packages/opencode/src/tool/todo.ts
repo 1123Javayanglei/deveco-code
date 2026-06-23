@@ -2,6 +2,10 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION_WRITE from "./todowrite.txt"
 import { Todo } from "../session/todo"
+import { isSoloTodoBatch, SOLO_TODO_REJECT } from "./todo-solo"
+import * as Log from "@opencode-ai/core/util/log"
+
+const log = Log.create({ service: "tool.todo" })
 
 // Todo.Info is still a zod schema (session/todo.ts). Inline the field shape
 // here rather than referencing its `.shape` — the LLM-visible JSON Schema is
@@ -32,6 +36,16 @@ export const TodoWriteTool = Tool.define<typeof Parameters, Metadata, Todo.Servi
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
+          const solo = yield* isSoloTodoBatch(ctx.messageID)
+          if (solo) {
+            log.info("solo todowrite rejected", { messageID: ctx.messageID, sessionID: ctx.sessionID })
+            return {
+              title: "todowrite rejected (solo)",
+              output: SOLO_TODO_REJECT,
+              metadata: { todos: params.todos },
+            }
+          }
+
           yield* ctx.ask({
             permission: "todowrite",
             patterns: ["*"],

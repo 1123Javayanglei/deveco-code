@@ -172,6 +172,128 @@ describe("ProviderTransform.options - zai/zhipuai thinking", () => {
   }
 })
 
+describe("ProviderTransform.options - deveco GLM-5 thinking", () => {
+  const sessionID = "test-session-123"
+
+  const createDevecoModel = (modelId: string) =>
+    ({
+      id: `deveco/${modelId}`,
+      providerID: "deveco",
+      api: {
+        id: modelId,
+        url: "https://cn.devecostudio.huawei.com/sse/codeGenie/maas/v2",
+        npm: "@ai-sdk/openai-compatible",
+      },
+      name: modelId,
+      capabilities: {
+        temperature: true,
+        reasoning: true,
+        attachment: true,
+        toolcall: true,
+        input: { text: true, audio: false, image: false, video: false, pdf: false },
+        output: { text: true, audio: false, image: false, video: false, pdf: false },
+        interleaved: false,
+      },
+      cost: {
+        input: 0.001,
+        output: 0.002,
+        cache: { read: 0.0001, write: 0.0002 },
+      },
+      limit: {
+        context: 202752,
+        output: 131072,
+      },
+      status: "active",
+      options: {},
+      headers: {},
+    }) as any
+
+  test("plan agent should enable thinking with clear_thinking", () => {
+    const result = ProviderTransform.options({
+      model: createDevecoModel("glm-5"),
+      sessionID,
+      providerOptions: {},
+      agentName: "plan",
+    })
+    expect(result.thinking).toEqual({
+      type: "enabled",
+      clear_thinking: true,
+    })
+  })
+
+  test("build agent (normal) should enable thinking with clear_thinking", () => {
+    const result = ProviderTransform.options({
+      model: createDevecoModel("glm-5"),
+      sessionID,
+      providerOptions: {},
+      agentName: "build",
+      inBuildFixLoop: false,
+    })
+    expect(result.thinking).toEqual({
+      type: "enabled",
+      clear_thinking: true,
+    })
+  })
+
+  test("build agent in build/fix loop should disable thinking", () => {
+    const result = ProviderTransform.options({
+      model: createDevecoModel("glm-5"),
+      sessionID,
+      providerOptions: {},
+      agentName: "build",
+      inBuildFixLoop: true,
+    })
+    expect(result.thinking).toEqual({
+      type: "disabled",
+    })
+  })
+
+  test("GLM-5.1 model (case-insensitive) should also match", () => {
+    const result = ProviderTransform.options({
+      model: createDevecoModel("GLM-5.1"),
+      sessionID,
+      providerOptions: {},
+      agentName: "plan",
+    })
+    expect(result.thinking).toEqual({
+      type: "enabled",
+      clear_thinking: true,
+    })
+  })
+
+  test("non-GLM-5 model should not set thinking", () => {
+    const result = ProviderTransform.options({
+      model: createDevecoModel("Qwen2.5-VL-72B"),
+      sessionID,
+      providerOptions: {},
+      agentName: "build",
+    })
+    expect(result.thinking).toBeUndefined()
+  })
+
+  test("non-deveco provider with GLM-5 should not match", () => {
+    const model = createDevecoModel("glm-5")
+    model.providerID = "opencode"
+    const result = ProviderTransform.options({
+      model,
+      sessionID,
+      providerOptions: {},
+      agentName: "build",
+    })
+    expect(result.thinking).toBeUndefined()
+  })
+
+  test("goal agent should not set thinking", () => {
+    const result = ProviderTransform.options({
+      model: createDevecoModel("glm-5"),
+      sessionID,
+      providerOptions: {},
+      agentName: "goal",
+    })
+    expect(result.thinking).toBeUndefined()
+  })
+})
+
 describe("ProviderTransform.options - google thinkingConfig gating", () => {
   const sessionID = "test-session-123"
 

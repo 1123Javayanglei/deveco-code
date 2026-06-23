@@ -151,12 +151,21 @@ const live: Layer.Layer<
         !input.small && input.model.variants && input.user.model.variant
           ? input.model.variants[input.user.model.variant]
           : {}
+      const inBuildFixLoop = input.agent.name === "build" && isBuildFixLoop(input.messages)
+      if (inBuildFixLoop) {
+        l.info("build/fix loop detected, thinking will be disabled", {
+          agentName: input.agent.name,
+          modelID: input.model.id,
+        })
+      }
       const base = input.small
         ? ProviderTransform.smallOptions(input.model)
         : ProviderTransform.options({
             model: input.model,
             sessionID: input.sessionID,
             providerOptions: item.options,
+            agentName: input.agent.name,
+            inBuildFixLoop,
           })
       const options = mergeOptions(mergeOptions(mergeOptions(base, input.model.options), input.agent.options), variant)
       if (isOpenaiOauth) {
@@ -548,6 +557,38 @@ export function hasToolCalls(messages: ModelMessage[]): boolean {
     if (!Array.isArray(msg.content)) continue
     for (const part of msg.content) {
       if (part.type === "tool-call" || part.type === "tool-result") return true
+    }
+  }
+  return false
+}
+
+// Detect whether the build agent is in a build/fix retry loop by checking
+// for a previous failed build_project tool result in the message history.
+function isBuildFixLoop(messages: ModelMessage[]): boolean {
+  for (const msg of messages) {
+    if (!Array.isArray(msg.content)) continue
+    for (const part of msg.content) {
+      if ((part as any).type !== "tool-result") continue
+      if ((part as any).toolName !== "build_project") continue
+      // Explicit error flag from AI SDK
+      if ((part as any).isError === true) {
+        log.info("build/fix loop: build_project isError flag found")
+        return true
+      }
+      // Inspect result content for failure indicators
+      const result = (part as any).result
+      if (typeof result === "string") {
+        const lower = result.toLowerCase()
+        if (
+          lower.includes("error") ||
+          lower.includes("fail") ||
+          lower.includes("❌") ||
+          lower.includes("compilation failed")
+        ) {
+          log.info("build/fix loop: build_project failure content detected", { indicator: lower.includes("error") ? "error" : lower.includes("fail") ? "fail" : lower.includes("❌") ? "❌" : "compilation failed" })
+          return true
+        }
+      }
     }
   }
   return false
