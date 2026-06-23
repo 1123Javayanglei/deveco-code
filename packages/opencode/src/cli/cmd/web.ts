@@ -5,6 +5,7 @@ import { effectCmd } from "../effect-cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import open from "open"
+import { formatCliHelpBannerLogoBlock } from "./tui/component/banner-logo"
 import { networkInterfaces } from "os"
 
 function getNetworkIPs() {
@@ -43,7 +44,8 @@ export const WebCommand = effectCmd({
     const opts = yield* resolveNetworkOptions(args)
     const server = yield* Effect.promise(() => Server.listen(opts))
     UI.empty()
-    UI.println(UI.logo("  "))
+    const cols = process.stderr.columns ?? process.stdout.columns
+    process.stderr.write(formatCliHelpBannerLogoBlock(cols) + "\n")
     UI.empty()
 
     if (opts.hostname === "0.0.0.0") {

@@ -113,7 +113,7 @@ export async function resolveUIVerifyParams(worktree: string) {
       }
       if (auth instanceof Auth.Oauth && auth.access && auth.expires > Date.now()) {
         return {
-          baseURL: DEVECO_DEFAULTS.provider.api + "/no-stream",
+          baseURL: DEVECO_DEFAULTS.provider.api! + "/no-stream",
           apiKey: auth.access,
           modelName: getTaskDefaultModelMap()["ui_verification"] ?? "Qwen3_VL_235B_A22B_Instruct",
         }

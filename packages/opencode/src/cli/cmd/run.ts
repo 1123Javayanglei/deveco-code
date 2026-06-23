@@ -23,6 +23,7 @@ import { Filesystem } from "@/util/filesystem"
 import { createOpencodeClient, type OpencodeClient, type ToolPart } from "@opencode-ai/sdk/v2"
 import { Agent } from "@/agent/agent"
 import { Permission } from "@/permission"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceRef } from "@/effect/instance-ref"
 import { FormatError, FormatUnknownError } from "../error"
@@ -367,7 +368,7 @@ export const RunCommand = effectCmd({
         process.exit(1)
       }
 
-      const rules: Permission.Ruleset = args.interactive
+      const rules: PermissionV1.Ruleset = args.interactive
         ? []
         : [
             {
