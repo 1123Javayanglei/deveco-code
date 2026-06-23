@@ -52,6 +52,7 @@ it.instance("returns default native agents when no config", () =>
     const agents = yield* load((svc) => svc.list())
     const names = agents.map((a) => a.name)
     expect(names).toContain("build")
+    expect(names).toContain("debug")
     expect(names).toContain("plan")
     expect(names).toContain("general")
     expect(names).toContain("explore")
@@ -69,6 +70,23 @@ it.instance("build agent has correct default properties", () =>
     expect(build?.native).toBe(true)
     expect(evalPerm(build, "edit")).toBe("allow")
     expect(evalPerm(build, "bash")).toBe("allow")
+  }),
+)
+
+it.instance("debug agent is a hidden native subagent with interactive debug permissions", () =>
+  Effect.gen(function* () {
+    const debug = yield* load((svc) => svc.get("debug"))
+    expect(debug).toBeDefined()
+    expect(debug?.mode).toBe("subagent")
+    expect(debug?.native).toBe(true)
+    expect(debug?.hidden).toBe(true)
+    expect(evalPerm(debug, "question")).toBe("allow")
+    expect(evalPerm(debug, "todowrite")).toBe("allow")
+    expect(evalPerm(debug, "arkts_knowledge_search")).toBe("allow")
+    expect(evalPerm(debug, "check_ets_files")).toBe("allow")
+    expect(evalPerm(debug, "build_project")).toBe("allow")
+    expect(evalPerm(debug, "start_app")).toBe("allow")
+    expect(evalPerm(debug, "hdc_log")).toBe("allow")
   }),
 )
 

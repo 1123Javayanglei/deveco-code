@@ -751,6 +751,48 @@ it.instance("loop continues when finish is stop but assistant has tool parts", (
   }),
 )
 
+it.instance(
+  "debug command creates a debug subtask",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "Pinned" })
+      yield* llm.hang
+
+      const fiber = yield* prompt
+        .command({
+          sessionID: chat.id,
+          command: "debug",
+          arguments: "页面点击后没有跳转",
+          agent: "build",
+          model: "test/test-model",
+        })
+        .pipe(Effect.forkChild)
+
+      const subtask = yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+          return msgs
+            .flatMap((msg) => msg.parts)
+            .find((part): part is MessageV2.SubtaskPart => part.type === "subtask")
+        }),
+        "timed out waiting for debug subtask",
+      )
+
+      expect(subtask.agent).toBe("debug")
+      expect(subtask.command).toBe("debug")
+      expect(subtask.description).toBe("debug ArkTS issues with runtime evidence")
+      expect(subtask.prompt).toContain("Debug the following ArkTS issue")
+      expect(subtask.prompt).toContain("页面点击后没有跳转")
+
+      yield* prompt.cancel(chat.id)
+      yield* Fiber.await(fiber)
+    }),
+  10_000,
+)
+
 it.instance("failed subtask preserves metadata on error tool state", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig((url) => ({
