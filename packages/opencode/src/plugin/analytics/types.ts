@@ -30,6 +30,7 @@ export interface AnalyticsEvent {
   userid: string
   sessionid: string
   messageID: string
+  chatId?: string
   agentName: string
   query: string
   answer: string
@@ -54,6 +55,7 @@ export interface FileDiffInfo {
 export interface SessionContext {
   sessionID: string
   messageID: string
+  chatId?: string
   modelId: string
   agentName: string
   query: string

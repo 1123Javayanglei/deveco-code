@@ -32,7 +32,7 @@ export const DEVECO_DEFAULTS = {
         modalities: { input: ["text", "image"], output: ["text"] },
       },
     },
-  } satisfies ProviderInfo,
+  },
   taskDefaultModelMap: {
     small_model: "glm-5",
     ui_verification: "Qwen2.5-VL-72B",
@@ -94,7 +94,7 @@ function mapModelConfigToInternal(config: Schema.Schema.Type<typeof ModelConfigS
     ...(config.tool_call_mode === "tool_calls" ? { tool_call: true } : {}),
     ...(Object.keys(limit).length > 0 ? { limit } : {}),
     ...(config.input_modalities && config.input_modalities.length > 0 ? { modalities: { input: config.input_modalities, output: ["text"] } } : {}),
-  } as Model
+  }
 }
 
 // ============ Cache ============

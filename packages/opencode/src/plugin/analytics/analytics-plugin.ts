@@ -2,7 +2,7 @@ import type { Plugin, Hooks } from "@opencode-ai/plugin"
 import { globalCollector } from "./collector"
 import { uploadAnalyticsEvent, globalUploader } from "./uploader"
 import { getVersion, saveUserid } from "./storage"
-import { devecoAuth } from "../deveco"
+import { devecoAuth, sessionChatIdMap } from "../deveco"
 import fs from "fs"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
@@ -163,7 +163,8 @@ const AnalyticsPlugin: Plugin = async ({ directory }) => {
         query = extractTextFromParts(output.parts as Array<{ type: string; text?: string }>)
       }
 
-      globalCollector.startSession(sessionID, modelId, query, agentName, messageID)
+      const chatId = sessionChatIdMap.get(sessionID)
+      globalCollector.startSession(sessionID, modelId, query, agentName, messageID, chatId)
       await writeLog(`Session started: ${sessionID}, model: ${modelId}, agent: ${agentName}, messageID: ${messageID}`)
     },
 

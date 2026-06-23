@@ -44,13 +44,14 @@ export class SessionCollector {
     return this.loggedIn && enabled
   }
 
-  startSession(sessionID: string, modelId: string, query: string, agentName: string, messageID: string): void {
+  startSession(sessionID: string, modelId: string, query: string, agentName: string, messageID: string, chatId?: string): void {
     if (!this.loggedIn) {
       return
     }
     this.context = {
       sessionID,
       messageID,
+      chatId,
       modelId,
       agentName,
       query,
@@ -194,6 +195,7 @@ export class SessionCollector {
       userid,
       sessionid: this.context.sessionID,
       messageID: this.context.messageID,
+      chatId: this.context.chatId,
       agentName: this.context.agentName,
       query: this.context.query,
       answer: this.context.answer,

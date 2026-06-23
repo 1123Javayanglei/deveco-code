@@ -1,4 +1,4 @@
-// CLI entry point for `opencode run`.
+// CLI entry point for `deveco run`.
 //
 // Handles three modes:
 //   1. Non-interactive (default): sends a single prompt, streams events to
@@ -6,7 +6,7 @@
 //   2. Interactive local (`--interactive`): boots the split-footer direct mode
 //      with an in-process server (no external HTTP).
 //   3. Interactive attach (`--interactive --attach`): connects to a running
-//      opencode server and runs interactive mode against it.
+//      deveco server and runs interactive mode against it.
 //
 // Also supports `--command` for slash-command execution, `--format json` for
 // raw event streaming, `--continue` / `--session` for session resumption,
@@ -126,7 +126,7 @@ async function toolError(part: ToolPart) {
 
 export const RunCommand = effectCmd({
   command: "run [message..]",
-  describe: "run opencode with a message",
+  describe: "run deveco with a message",
   // --attach connects to a remote server (no local instance needed); the
   // default path runs an in-process server and needs the project instance.
   instance: (args) => !args.attach,
@@ -190,7 +190,7 @@ export const RunCommand = effectCmd({
       })
       .option("attach", {
         type: "string",
-        describe: "attach to a running opencode server (e.g., http://localhost:4096)",
+        describe: "attach to a running deveco server (e.g., http://localhost:4096)",
       })
       .option("password", {
         alias: ["p"],
@@ -200,7 +200,7 @@ export const RunCommand = effectCmd({
       .option("username", {
         alias: ["u"],
         type: "string",
-        describe: "basic auth username (defaults to DEVECO_SERVER_USERNAME or 'opencode')",
+        describe: "basic auth username (defaults to DEVECO_SERVER_USERNAME or 'deveco')",
       })
       .option("dir", {
         type: "string",
@@ -872,7 +872,7 @@ export const RunCommand = effectCmd({
         return Server.Default().app.fetch(request)
       }) as typeof globalThis.fetch
       const sdk = createOpencodeClient({
-        baseUrl: "http://opencode.internal",
+        baseUrl: "http://deveco.internal",
         fetch: fetchFn,
         directory,
       })

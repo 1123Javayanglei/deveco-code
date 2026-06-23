@@ -927,9 +927,8 @@ export async function requireLogin(): Promise<boolean> {
     if (!result.success) {
       spinner.stop("Login failed")
       if (result.cancelled) {
-        // 用户在浏览器登录页面取消了登录，直接退出 deveco
         prompts.outro("Goodbye!")
-        process.exit(1)
+        return false
       }
       if (result.unsupportedRegion) {
         log.error("login failed: unsupported region")
@@ -1093,7 +1092,6 @@ export async function DevEcoAuthPlugin(_input: PluginInput): Promise<Hooks> {
                 const result = await devecoAuth.login()
 
                 if (!result.success) {
-                  process.exit(1)
                   if (result.unsupportedRegion) {
                     return { type: "failed" as const, error: "Sorry, only China site accounts are currently supported" }
                   }

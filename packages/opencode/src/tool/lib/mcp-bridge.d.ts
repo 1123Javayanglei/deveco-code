@@ -14,7 +14,7 @@
  */
 
 declare module "@deveco-codegenie/mcp-bridge" {
-  export function init(logDir: string, projectPath: string, devecoHome: string): Promise<void>
+  export function init(logDir: string, projectPath: string, devecoHome: string, baseURL: string | null, apiKey: string | null, modelName: string | null): Promise<void>
   export function listTools(): string
   export function callTool(name: string, argsJson: string): Promise<string> | string
   export function stop(): Promise<string>

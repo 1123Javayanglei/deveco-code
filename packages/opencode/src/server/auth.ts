@@ -37,7 +37,7 @@ export function header(credentials?: Credentials) {
   const password = credentials?.password ?? Flag.DEVECO_SERVER_PASSWORD
   if (!password) return undefined
 
-  const username = credentials?.username ?? Flag.DEVECO_SERVER_USERNAME ?? "opencode"
+  const username = credentials?.username ?? Flag.DEVECO_SERVER_USERNAME ?? "deveco"
   return `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
 }
 

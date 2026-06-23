@@ -545,7 +545,7 @@ export class Agent implements ACPAgent {
       },
       authMethods: [authMethod],
       agentInfo: {
-        name: "OpenCode",
+        name: "DevEco",
         version: InstallationVersion,
       },
     }
