@@ -1,8 +1,4 @@
 import { SyntaxStyle, RGBA, type TerminalColors } from "@opentui/core"
-import { Global } from "@opencode-ai/core/global"
-import { Glob } from "@opencode-ai/core/util/glob"
-import path from "path"
-import { readJson, up } from "../util/persistence"
 import aura from "./assets/aura.json" with { type: "json" }
 import ayu from "./assets/ayu.json" with { type: "json" }
 import carbonfox from "./assets/carbonfox.json" with { type: "json" }
@@ -347,33 +343,6 @@ function ansiToRgba(code: number): RGBA {
   return RGBA.fromInts(0, 0, 0)
 }
 
-
-async function getCustomThemes() {
-  const directories = [
-    Global.Path.config,
-    ...(await Array.fromAsync(
-      up({
-        targets: [".deveco"],
-        start: process.cwd(),
-      }),
-    )),
-  ]
-
-  const result: Record<string, ThemeJson> = {}
-  for (const dir of directories) {
-    for (const item of await Glob.scan("themes/*.json", {
-      cwd: dir,
-      absolute: true,
-      dot: true,
-      symlink: true,
-    })) {
-      const name = path.basename(item, ".json")
-      const theme = await readJson(item)
-      if (isTheme(theme)) result[name] = theme
-    }
-  }
-  return result
-}
 
 export function tint(base: RGBA, overlay: RGBA, alpha: number): RGBA {
   const r = base.r + (overlay.r - base.r) * alpha
