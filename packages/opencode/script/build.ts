@@ -194,50 +194,12 @@ const allTargets: {
   avx2?: false
 }[] = [
   {
-    os: "linux",
-    arch: "arm64",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-    avx2: false,
-  },
-  {
-    os: "linux",
-    arch: "arm64",
-    abi: "musl",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-    abi: "musl",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-    abi: "musl",
-    avx2: false,
-  },
-  {
     os: "darwin",
     arch: "arm64",
   },
   {
     os: "darwin",
     arch: "x64",
-  },
-  {
-    os: "darwin",
-    arch: "x64",
-    avx2: false,
-  },
-  {
-    os: "win32",
-    arch: "arm64",
   },
   {
     os: "win32",
@@ -272,6 +234,18 @@ const targets = singleFlag
   : allTargets
 
 await $`rm -rf dist`
+
+// Vendored binaries cache (downloaded by postinstall.ts during bun install)
+const cacheDir = path.join(dir, ".build-cache")
+const rgCacheDir = path.join(cacheDir, "ripgrep")
+const mcpCacheDir = path.join(cacheDir, "mcp-bridge")
+
+const RG_VERSION = "15.1.0"
+const rgArchiveMap: Record<string, { archive: string; binary: string }> = {
+  "darwin-arm64": { archive: `ripgrep-${RG_VERSION}-aarch64-apple-darwin.tar.gz`, binary: "rg" },
+  "darwin-x64":   { archive: `ripgrep-${RG_VERSION}-x86_64-apple-darwin.tar.gz`, binary: "rg" },
+  "win32-x64":    { archive: `ripgrep-${RG_VERSION}-x86_64-pc-windows-msvc.zip`, binary: "rg.exe" },
+}
 
 const binaries: Record<string, string> = {}
 if (!skipInstall) {
@@ -353,6 +327,46 @@ for (const item of targets) {
   }
 
   await $`rm -rf ./dist/${name}/bin/tui`
+
+  // Copy mcp-bridge-native from cache (when available for this platform)
+  const mcpKey = `${item.os}-${item.arch}`
+  const mcpCache = path.join(mcpCacheDir, mcpKey)
+  const cachedNode = path.join(mcpCache, "napi_bridge.node")
+  if (fs.existsSync(cachedNode)) {
+    const vendorDir = path.join(dir, "dist", name, "bin", "vendor", "mcp-bridge-native")
+    await fs.promises.mkdir(vendorDir, { recursive: true })
+    await fs.promises.copyFile(path.join(mcpCache, "package.json"), path.join(vendorDir, "package.json"))
+    await fs.promises.copyFile(cachedNode, path.join(vendorDir, "napi_bridge.node"))
+    console.log(`  Bundled mcp-bridge for ${mcpKey}`)
+  } else {
+    console.log(`  Skipped mcp-bridge for ${mcpKey} (not in .build-cache/)`)
+  }
+
+  // Copy ripgrep from cache (when available for this platform)
+  const rgKey = `${item.os}-${item.arch}`
+  const rgInfo = rgArchiveMap[rgKey]
+  if (rgInfo) {
+    const cachePath = path.join(rgCacheDir, rgKey, rgInfo.binary)
+    if (fs.existsSync(cachePath)) {
+      const vendorDir = path.join(dir, "dist", name, "bin", "vendor", "ripgrep")
+      await fs.promises.mkdir(vendorDir, { recursive: true })
+      const rgBinaryName = item.os === "win32" ? "rg.exe" : "rg"
+      const rgDest = path.join(vendorDir, rgBinaryName)
+      await fs.promises.copyFile(cachePath, rgDest)
+      if (item.os !== "win32") {
+        await fs.promises.chmod(rgDest, 0o755)
+      }
+      console.log(`  Bundled ripgrep for ${rgKey}`)
+    } else {
+      console.log(`  Skipped ripgrep for ${rgKey} (not in .build-cache/)`)
+    }
+  }
+
+  await fs.promises.copyFile(
+    path.join(dir, "README.md"),
+    path.join(dir, "dist", name, "bin", "README.md"),
+  )
+
   await Bun.file(`dist/${name}/package.json`).write(
     JSON.stringify(
       {
@@ -361,6 +375,10 @@ for (const item of targets) {
         preferUnplugged: true,
         os: [item.os],
         cpu: [item.arch],
+        files: [
+          "bin/**/*",
+          "README.md",
+        ],
         ...(item.abi ? { libc: [item.abi] } : {}),
       },
       null,
