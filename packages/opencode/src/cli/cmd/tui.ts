@@ -283,6 +283,11 @@ export const TuiThreadCommand = cmd({
         const { Effect } = await import("effect")
         const { run } = await import("../tui/layer")
         const { createLegacyTuiPluginHost } = await import("@/plugin/tui/runtime")
+        // Register DevEco-specific extensions into the generic TUI package before
+        // rendering. This is the only site that bridges deveco → TUI, which keeps
+        // TUI free of `deveco` imports (breaks the workspace cycle).
+        const { registerDevEcoTuiExtensions } = await import("@/cli/deveco-ui/register")
+        registerDevEcoTuiExtensions()
         await Effect.runPromise(
           run({
             url: transport.url,

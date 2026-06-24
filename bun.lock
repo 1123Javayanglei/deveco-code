@@ -806,7 +806,6 @@
         "@opentui/keymap": "catalog:",
         "@opentui/solid": "catalog:",
         "clipboardy": "4.0.0",
-        "deveco": "workspace:*",
         "diff": "catalog:",
         "effect": "catalog:",
         "fuzzysort": "catalog:",

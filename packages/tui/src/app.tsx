@@ -47,7 +47,6 @@ import { DialogAgent } from "./component/dialog-agent"
 import { DialogSessionList } from "./component/dialog-session-list"
 import { DialogWorkspaceList } from "./component/dialog-workspace-list"
 import { DialogConsoleOrg } from "./component/dialog-console-org"
-import { DialogPrivacy } from "./component/dialog-privacy"
 import { ThemeProvider, useTheme } from "./context/theme"
 import { Home } from "./routes/home"
 import { Session } from "./routes/session"
@@ -76,7 +75,7 @@ import {
   useBindings,
   useOpencodeKeymap,
 } from "./keymap"
-import { openComplainPage } from "./util/complain"
+import { getDevEcoExtensions } from "./deveco-extensions"
 import path from "path"
 
 import type { EventSource } from "./context/sdk"
@@ -932,7 +931,10 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         slashName: "complain",
         run: () => {
           void (async () => {
-            const result = await openComplainPage("")
+            const opener = getDevEcoExtensions().openComplainPage
+            const result = opener
+              ? await opener("")
+              : { ok: false as const, message: "Complain feature is not available in this build." }
             if (result.ok) {
               dialog.clear()
               return
@@ -955,7 +957,15 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
               description: "Privacy settings",
               slashName: "privacy",
               run: () => {
-                dialog.replace(() => <DialogPrivacy />)
+                const PrivacyDialog = getDevEcoExtensions().privacyDialog
+                if (!PrivacyDialog) {
+                  toast.show({
+                    message: "Privacy dialog is not available in this build.",
+                    variant: "error",
+                  })
+                  return
+                }
+                dialog.replace(() => <PrivacyDialog />)
               },
               category: "System",
             },
