@@ -1,8 +1,8 @@
 import { SyntaxStyle, RGBA, type TerminalColors } from "@opentui/core"
 import { Global } from "@opencode-ai/core/global"
-import { Filesystem } from "deveco/util/filesystem"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
+import { readJson, up } from "../util/persistence"
 import aura from "./assets/aura.json" with { type: "json" }
 import ayu from "./assets/ayu.json" with { type: "json" }
 import carbonfox from "./assets/carbonfox.json" with { type: "json" }
@@ -352,7 +352,7 @@ async function getCustomThemes() {
   const directories = [
     Global.Path.config,
     ...(await Array.fromAsync(
-      Filesystem.up({
+      up({
         targets: [".deveco"],
         start: process.cwd(),
       }),
@@ -368,7 +368,7 @@ async function getCustomThemes() {
       symlink: true,
     })) {
       const name = path.basename(item, ".json")
-      const theme = await Filesystem.readJson(item)
+      const theme = await readJson(item)
       if (isTheme(theme)) result[name] = theme
     }
   }
