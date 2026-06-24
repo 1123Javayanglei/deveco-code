@@ -20,7 +20,8 @@
   },
   "exports": {
     "./auth": "./src/auth/index.ts",
-    "./*": "./src/*.ts"
+    "./*": "./src/*.ts",
+    "./plugin/deveco": "./src/plugin/deveco/index.ts"
   },
   "imports": {
     "#db": {
