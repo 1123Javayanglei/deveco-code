@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from "effect"
-import * as Log from "@opencode-ai/core/util/log"
+import { logBridge } from "@opencode-ai/core/util/log-bridge"
 import { Global } from "@opencode-ai/core/global"
 import { LocalCrypto } from "@/security/local-crypto"
 import { sessionChatIdMap } from "@/plugin/deveco"
@@ -29,7 +29,7 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ExitQueue") {}
 
-const log = Log.create({ service: "session.exit-queue" })
+const log = logBridge("session.exit-queue")
 
 export const layer = Layer.effect(
   Service,
