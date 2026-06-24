@@ -81,6 +81,8 @@ export const dict = {
   "command.session.redo.description": "Повторить отменённое сообщение",
   "command.session.compact": "Сжать сессию",
   "command.session.compact.description": "Сократить сессию для уменьшения размера контекста",
+  "command.session.recap": "Обзор сессии",
+  "command.session.recap.description": "Создать краткий итог сделанного и следующих шагов",
   "command.session.fork": "Создать ответвление",
   "command.session.fork.description": "Создать новую сессию из сообщения",
   "command.session.share": "Поделиться сессией",

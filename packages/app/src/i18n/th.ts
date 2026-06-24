@@ -81,6 +81,8 @@ export const dict = {
   "command.session.redo.description": "ทำซ้ำข้อความที่ถูกยกเลิกล่าสุด",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.compact.description": "สรุปเซสชันเพื่อลดขนาดบริบท",
+  "command.session.recap": "สรุปเซสชัน",
+  "command.session.recap.description": "สร้างสรุปสั้นๆ ของสิ่งที่ทำและสิ่งที่ต้องทำต่อไป",
   "command.session.fork": "แตกแขนงจากข้อความ",
   "command.session.fork.description": "สร้างเซสชันใหม่จากข้อความก่อนหน้า",
   "command.session.share": "แชร์เซสชัน",

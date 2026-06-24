@@ -29,6 +29,14 @@ import { useEvent } from "../../context/event"
 import { editorSelectionKey, useEditorContext, type EditorSelection } from "../../context/editor"
 import { normalizePromptContent, openEditor } from "../../editor"
 import { useExit } from "../../context/exit"
+import { PartID } from "@opencode-ai/core/v1/session"
+
+const RECAP_INSTRUCTION = [
+  "Provide a brief recap of this conversation session in about 40 words.",
+  "Summarize what was accomplished in this session.",
+  "Match the language of the conversation (e.g. if the conversation is in Chinese, respond in Chinese; if in English, respond in English).",
+  "Be direct and specific. Do not add preamble, greetings, or filler.",
+].join("\n")
 import { promptOffsetWidth } from "../../prompt/display"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { usePromptHistory, type PromptInfo } from "../../prompt/history"
@@ -1088,25 +1096,56 @@ export function Prompt(props: PromptProps) {
       setStore("mode", "normal")
     } else if (
       inputText.startsWith("/") &&
-      sync.data.command.some((x) => x.name === inputText.split("\n")[0].split(" ")[0].slice(1))
+      (() => {
+        const firstLine = inputText.split("\n")[0]
+        const command = firstLine.split(" ")[0].slice(1)
+        return command === "recap" || sync.data.command.some((x) => x.name === command)
+      })()
     ) {
       move.startSubmit()
-      // Parse command from first line, preserve multi-line content in arguments
+      // Parse command from first line, preserving multi-line content in arguments
       const firstLineEnd = inputText.indexOf("\n")
       const firstLine = firstLineEnd === -1 ? inputText : inputText.slice(0, firstLineEnd)
       const [command, ...firstLineArgs] = firstLine.split(" ")
       const restOfInput = firstLineEnd === -1 ? "" : inputText.slice(firstLineEnd + 1)
       const args = firstLineArgs.join(" ") + (restOfInput ? "\n" + restOfInput : "")
+      const commandName = command.slice(1)
 
-      void sdk.client.session.command({
-        sessionID,
-        command: command.slice(1),
-        arguments: args,
-        agent: agent.name,
-        model: `${selectedModel.providerID}/${selectedModel.modelID}`,
-        variant,
-        parts: nonTextParts.filter((x) => x.type === "file"),
-      })
+      if (commandName === "recap") {
+        sdk.client.session
+          .prompt({
+            sessionID,
+            ...selectedModel,
+            agent: agent.name,
+            model: selectedModel,
+            variant,
+            parts: [
+              {
+                id: PartID.ascending(),
+                type: "text",
+                text: RECAP_INSTRUCTION,
+                synthetic: true,
+                metadata: { kind: "recap" },
+              },
+            ],
+          })
+          .catch(() => {})
+      } else {
+        void sdk.client.session.command({
+          sessionID,
+          command: commandName,
+          arguments: args,
+          agent: agent.name,
+          model: `${selectedModel.providerID}/${selectedModel.modelID}`,
+          variant,
+          parts: nonTextParts
+            .filter((x) => x.type === "file")
+            .map((x) => ({
+              id: PartID.ascending(),
+              ...x,
+            })),
+        })
+      }
     } else {
       move.startSubmit()
       sdk.client.session

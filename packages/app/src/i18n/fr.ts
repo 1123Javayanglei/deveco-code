@@ -75,6 +75,8 @@ export const dict = {
   "command.session.redo.description": "Rétablir le dernier message annulé",
   "command.session.compact": "Compacter la session",
   "command.session.compact.description": "Résumer la session pour réduire la taille du contexte",
+  "command.session.recap": "Récapituler la session",
+  "command.session.recap.description": "Générer un bref résumé de ce qui a été fait et de la suite",
   "command.session.fork": "Bifurquer à partir du message",
   "command.session.fork.description": "Créer une nouvelle session à partir d'un message précédent",
   "command.session.share": "Partager la session",

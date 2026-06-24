@@ -64,6 +64,15 @@ import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
+import { useExit } from "../../context/exit"
+import { PartID } from "@opencode-ai/core/v1/session"
+
+const RECAP_INSTRUCTION = [
+  "Provide a brief recap of this conversation session in about 40 words.",
+  "Summarize what was accomplished in this session.",
+  "Match the language of the conversation (e.g. if the conversation is in Chinese, you must respond in Chinese; if in English, you must respond in English).",
+  "Be direct and specific. Do not add preamble, greetings, or filler.",
+].join("\n")
 import { PermissionPrompt } from "./permission"
 import { QuestionPrompt } from "./question"
 import { DialogExportOptions } from "../../ui/dialog-export-options"
@@ -119,6 +128,7 @@ const sessionBindingCommands = [
   "session.timeline",
   "session.fork",
   "session.compact",
+  "session.recap",
   "session.unshare",
   "session.undo",
   "session.redo",
@@ -595,6 +605,42 @@ export function Session() {
           sessionID: route.sessionID,
           modelID: selectedModel.modelID,
           providerID: selectedModel.providerID,
+        })
+        dialog.clear()
+      },
+    },
+    {
+      title: "Recap session",
+      value: "session.recap",
+      category: "Session",
+      slash: {
+        name: "recap",
+      },
+      run: () => {
+        const selectedModel = local.model.current()
+        if (!selectedModel) {
+          toast.show({
+            variant: "warning",
+            message: "Connect a provider to recap this session",
+            duration: 3000,
+          })
+          return
+        }
+        void sdk.client.session.prompt({
+          sessionID: route.sessionID,
+          ...selectedModel,
+          agent: local.agent.current()?.name ?? "build",
+          model: selectedModel,
+          variant: local.model.variant.current(),
+          parts: [
+            {
+              id: PartID.ascending(),
+              type: "text",
+              text: RECAP_INSTRUCTION,
+              synthetic: true,
+              metadata: { kind: "recap" },
+            },
+          ],
         })
         dialog.clear()
       },
@@ -1499,10 +1545,19 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
   })
 
+  const isRecap = createMemo(() => {
+    const parentID = props.message.parentID
+    if (!parentID) return false
+    const userMsg = messages().find((x) => x.role === "user" && x.id === parentID)
+    if (!userMsg) return false
+    const parts = sync.data.part[userMsg.id] ?? []
+    return parts.some((p) => p.type === "text" && (p as any).metadata?.kind === "recap")
+  })
+
   const hasOutput = createMemo(() => {
     const hasText = props.parts.some((p) => p.type === "text")
     const hasReasoning = props.parts.some((p) => p.type === "reasoning")
-    return hasText || (hasReasoning && ctx.showThinking())
+    return hasText || (hasReasoning && (ctx.showThinking() || isRecap()))
   })
 
   const duration = createMemo(() => {
@@ -1528,6 +1583,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
                 component={component()}
                 part={part as any}
                 message={props.message}
+                isRecap={isRecap()}
               />
             </Show>
           )
@@ -1658,7 +1714,7 @@ const PART_MAPPING = {
 
 const INLINE_TOOL_ICON_WIDTH = 2
 
-function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: AssistantMessage }) {
+function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: AssistantMessage; isRecap?: boolean }) {
   const { theme, syntax, subtleSyntax } = useTheme()
   const ctx = use()
   const [expanded, setExpanded] = createSignal(false)
@@ -1675,6 +1731,7 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
   const summary = createMemo(() => reasoningSummary(content()))
 
   const toggle = () => {
+    if (props.isRecap) return
     if (!inMinimal()) return
     setExpanded((prev) => !prev)
   }
@@ -1689,15 +1746,36 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
         flexShrink={0}
       >
         <box onMouseUp={toggle}>
-          <ReasoningHeader
-            toggleable={inMinimal()}
-            open={!inMinimal() || expanded()}
-            done={isDone()}
-            title={summary().title}
-            duration={isDone() ? Locale.duration(duration()) : undefined}
-          />
+          <Switch>
+            <Match when={props.isRecap}>
+              <Switch>
+                <Match when={!isDone()}>
+                  <box flexDirection="row">
+                    <Spinner color={theme.warning}>Recapping...</Spinner>
+                  </box>
+                </Match>
+                <Match when={true}>
+                  <text fg={theme.warning} wrapMode="none">
+                    <span>Recapped</span>
+                    <Show when={duration() > 0}>
+                      <span>: {Locale.duration(duration())}</span>
+                    </Show>
+                  </text>
+                </Match>
+              </Switch>
+            </Match>
+            <Match when={true}>
+              <ReasoningHeader
+                toggleable={inMinimal()}
+                open={!inMinimal() || expanded()}
+                done={isDone()}
+                title={summary().title}
+                duration={isDone() ? Locale.duration(duration()) : undefined}
+              />
+            </Match>
+          </Switch>
         </box>
-        <Show when={(!inMinimal() || expanded()) && summary().body}>
+        <Show when={!props.isRecap && (!inMinimal() || expanded()) && summary().body}>
           <box
             id={"text-" + props.part.id}
             paddingLeft={inMinimal() ? 2 : 0}

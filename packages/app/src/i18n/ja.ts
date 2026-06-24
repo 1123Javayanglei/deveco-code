@@ -75,6 +75,8 @@ export const dict = {
   "command.session.redo.description": "元に戻したメッセージをやり直す",
   "command.session.compact": "セッションを圧縮",
   "command.session.compact.description": "セッションを要約してコンテキストサイズを削減",
+  "command.session.recap": "セッション要約",
+  "command.session.recap.description": "完了した作業と次のステップの簡潔な要約を生成",
   "command.session.fork": "メッセージからフォーク",
   "command.session.fork.description": "以前のメッセージから新しいセッションを作成",
   "command.session.share": "セッションを共有",

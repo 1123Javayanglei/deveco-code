@@ -75,6 +75,8 @@ export const dict = {
   "command.session.redo.description": "Ponów ostatnią cofniętą wiadomość",
   "command.session.compact": "Kompaktuj sesję",
   "command.session.compact.description": "Podsumuj sesję, aby zmniejszyć rozmiar kontekstu",
+  "command.session.recap": "Podsumuj sesję",
+  "command.session.recap.description": "Wygeneruj krótkie podsumowanie wykonanych zadań i kolejnych kroków",
   "command.session.fork": "Rozwidlij od wiadomości",
   "command.session.fork.description": "Utwórz nową sesję od poprzedniej wiadomości",
   "command.session.share": "Udostępnij sesję",

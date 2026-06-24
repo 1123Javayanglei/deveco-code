@@ -75,6 +75,8 @@ export const dict = {
   "command.session.redo.description": "إعادة الرسالة التي تم التراجع عنها",
   "command.session.compact": "ضغط الجلسة",
   "command.session.compact.description": "تلخيص الجلسة لتقليل حجم السياق",
+  "command.session.recap": "ملخص الجلسة",
+  "command.session.recap.description": "إنشاء ملخص موجز لما تم إنجازه والخطوات التالية",
   "command.session.fork": "تشعب من الرسالة",
   "command.session.fork.description": "إنشاء جلسة جديدة من رسالة سابقة",
   "command.session.share": "مشاركة الجلسة",

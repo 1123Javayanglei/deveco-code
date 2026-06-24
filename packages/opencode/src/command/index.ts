@@ -11,6 +11,13 @@ import { EventV2 } from "@opencode-ai/core/event"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
 
+export const RECAP_INSTRUCTION = [
+  "Provide a brief recap of this conversation session in about 40 words.",
+  "Summarize what was accomplished in this session.",
+  "Match the language of the conversation (e.g. if the conversation is in Chinese, respond in Chinese; if in English, respond in English).",
+  "Be direct and specific. Do not add preamble, greetings, or filler.",
+].join("\n")
+
 type State = {
   commands: Record<string, Info>
 }

@@ -23,7 +23,7 @@ export type TimelineRowMap = {
     group: PartGroup
     previousAssistantPart: boolean
   }
-  Thinking: { userMessageID: string; reasoningHeading?: string }
+  Thinking: { userMessageID: string; reasoningHeading?: string; recap?: boolean }
   Retry: { userMessageID: string }
   DiffSummary: { userMessageID: string; diffs: SummaryDiff[] }
   Error: { userMessageID: string; text: string }
@@ -52,6 +52,7 @@ export namespace TimelineRow {
   export class Thinking extends Data.TaggedClass("Thinking")<{
     userMessageID: string
     reasoningHeading?: string
+    recap?: boolean
   }> {}
   export class DiffSummary extends Data.TaggedClass("DiffSummary")<{
     userMessageID: string
@@ -118,6 +119,10 @@ export namespace Timeline {
 
     const previousUserMessage = index > 0
     const userParts = getMessageParts(userMessage.id)
+    const isRecap = userParts.some(
+      (p) => p.type === "text" && (p as any).metadata?.kind === "recap",
+    )
+    const effectiveShowReasoning = isRecap ? false : showReasoning
     const comments = userParts.flatMap((p) => MessageComment.fromPart(p) ?? [])
     const compaction = userParts.some((p) => p.type === "compaction")
     const interruptedMessageIndex = assistantMessages.findIndex((m) => m.error?.name === "MessageAbortedError")
@@ -126,7 +131,7 @@ export namespace Timeline {
 
     const assistantPartRefs = assistantMessages.flatMap((message, messageIndex) =>
       getMessageParts(message.id)
-        .filter((part) => renderable(part, showReasoning))
+        .filter((part) => renderable(part, effectiveShowReasoning))
         .map((part) => ({ messageID: message.id, messageIndex, part })),
     )
     const assistantItems =
@@ -194,7 +199,7 @@ export namespace Timeline {
       assistantGroupIndex += 1
     })
 
-    if (isActive && status === "busy" && !error && (showReasoning ? assistantPartRefs.length === 0 : true)) {
+    if (isActive && status === "busy" && !error && (isRecap || (effectiveShowReasoning ? assistantPartRefs.length === 0 : true))) {
       const heading = assistantMessages
         .flatMap((message) => getMessageParts(message.id))
         .map((part) => (part.type === "reasoning" && part.text ? reasoningHeading(part.text) : undefined))
@@ -204,6 +209,7 @@ export namespace Timeline {
         new TimelineRow.Thinking({
           userMessageID: userMessage.id,
           reasoningHeading: heading,
+          recap: isRecap,
         }),
       )
     }

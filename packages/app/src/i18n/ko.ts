@@ -75,6 +75,8 @@ export const dict = {
   "command.session.redo.description": "마지막 실행 취소된 메시지 다시 실행",
   "command.session.compact": "세션 압축",
   "command.session.compact.description": "컨텍스트 크기를 줄이기 위해 세션 요약",
+  "command.session.recap": "세션 요약",
+  "command.session.recap.description": "완료된 작업과 다음 단계의 간결한 요약을 생성",
   "command.session.fork": "메시지에서 분기",
   "command.session.fork.description": "이전 메시지에서 새 세션 생성",
   "command.session.share": "세션 공유",

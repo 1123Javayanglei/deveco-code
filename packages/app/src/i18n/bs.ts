@@ -81,6 +81,8 @@ export const dict = {
   "command.session.redo.description": "Vrati posljednju poništenu poruku",
   "command.session.compact": "Sažmi sesiju",
   "command.session.compact.description": "Sažmi sesiju kako bi se smanjio kontekst",
+  "command.session.recap": "Pregled sesije",
+  "command.session.recap.description": "Generiši kratak pregled urađenog i sljedećih koraka",
   "command.session.fork": "Fork iz poruke",
   "command.session.fork.description": "Kreiraj novu sesiju iz prethodne poruke",
   "command.session.share": "Podijeli sesiju",

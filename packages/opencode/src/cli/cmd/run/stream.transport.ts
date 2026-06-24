@@ -43,6 +43,7 @@ import {
   type SubagentData,
 } from "./subagent-data"
 import { traceFooterOutput, writeSessionOutput } from "./stream"
+import { RECAP_INSTRUCTION } from "@/command"
 import type {
   FooterApi,
   FooterOutput,
@@ -1217,19 +1218,26 @@ function createLayer(input: StreamInput) {
           abort.signal.addEventListener("abort", stop, { once: true })
           yield* poll(item, turn.signal).pipe(Effect.forkIn(scope, { startImmediately: true }), Effect.asVoid)
 
+          const command = next.prompt.command
+          const isRecap = command?.name === "recap"
           const req = {
             sessionID: input.sessionID,
             messageID: next.prompt.messageID,
             agent: next.agent,
             model: next.model,
             variant: next.variant,
-            parts: [
-              ...(next.includeFiles ? next.files : []),
-              { type: "text" as const, text: next.prompt.text },
-              ...next.prompt.parts,
-            ],
+            parts: isRecap
+              ? [
+                  ...(next.includeFiles ? next.files : []),
+                  { type: "text" as const, text: RECAP_INSTRUCTION, synthetic: true, metadata: { kind: "recap" } },
+                  ...next.prompt.parts,
+                ]
+              : [
+                  ...(next.includeFiles ? next.files : []),
+                  { type: "text" as const, text: next.prompt.text },
+                  ...next.prompt.parts,
+                ],
           }
-          const command = next.prompt.command
           const send =
             next.prompt.mode === "shell"
               ? Effect.sync(() => {
@@ -1272,7 +1280,7 @@ function createLayer(input: StreamInput) {
                       ),
                   ),
                 )
-              : command
+              : command && !isRecap
                 ? Effect.sync(() => {
                     input.trace?.write("send.command", { sessionID: input.sessionID, command: command.name })
                   }).pipe(

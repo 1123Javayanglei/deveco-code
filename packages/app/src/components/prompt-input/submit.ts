@@ -22,6 +22,13 @@ import { setCursorPosition } from "./editor-dom"
 import { formatServerError } from "@/utils/server-errors"
 import { ScopedKey } from "@/utils/server-scope"
 
+const RECAP_INSTRUCTION = [
+  "Provide a brief recap of this conversation session in about 40 words.",
+  "Summarize what was accomplished in this session.",
+  "Match the language of the conversation (e.g. if the conversation is in Chinese, respond in Chinese; if in English, respond in English).",
+  "Be direct and specific. Do not add preamble, greetings, or filler.",
+].join("\n")
+
 type PendingPrompt = {
   abort: AbortController
   cleanup: VoidFunction
@@ -76,6 +83,36 @@ export async function sendFollowupDraft(input: FollowupSendInput) {
 
   const [head, ...tail] = text.split(" ")
   const cmd = head?.startsWith("/") ? head.slice(1) : undefined
+  if (cmd === "recap") {
+    setBusy()
+    try {
+      if (!(await wait())) {
+        setIdle()
+        return false
+      }
+
+      await input.client.session.promptAsync({
+        sessionID: input.draft.sessionID,
+        agent: input.draft.agent,
+        model: input.draft.model,
+        messageID: input.messageID ?? Identifier.ascending("message"),
+        variant: input.draft.variant,
+        parts: [
+          {
+            id: Identifier.ascending("part"),
+            type: "text" as const,
+            text: RECAP_INSTRUCTION,
+            synthetic: true,
+            metadata: { kind: "recap" },
+          },
+        ],
+      })
+      return true
+    } catch (err) {
+      setIdle()
+      throw err
+    }
+  }
   if (cmd && input.sync.data.command.find((item) => item.name === cmd)) {
     setBusy()
     try {
@@ -471,6 +508,33 @@ export function createPromptSubmit(input: PromptSubmitInput) {
     if (text.startsWith("/")) {
       const [cmdName, ...args] = text.split(" ")
       const commandName = cmdName.slice(1)
+      if (commandName === "recap") {
+        clearInput()
+        client.session
+          .promptAsync({
+            sessionID: session.id,
+            agent,
+            model,
+            variant,
+            parts: [
+              {
+                id: Identifier.ascending("part"),
+                type: "text" as const,
+                text: RECAP_INSTRUCTION,
+                synthetic: true,
+                metadata: { kind: "recap" },
+              },
+            ],
+          })
+          .catch((err) => {
+            showToast({
+              title: language.t("prompt.toast.commandSendFailed.title"),
+              description: formatServerError(err, language.t, language.t("common.requestFailed")),
+            })
+            restoreInput()
+          })
+        return
+      }
       const customCommand = sync().data.command.find((c) => c.name === commandName)
       if (customCommand) {
         clearInput()

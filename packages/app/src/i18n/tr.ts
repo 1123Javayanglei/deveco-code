@@ -85,6 +85,8 @@ export const dict = {
   "command.session.redo.description": "Son geri alınan mesajı yinele",
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.compact.description": "Bağlam boyutunu azaltmak için oturumu özetle",
+  "command.session.recap": "Oturumu özetle",
+  "command.session.recap.description": "Yapılanların ve sıradakilerin kısa bir özetini oluştur",
   "command.session.fork": "Mesajdan dallandır",
   "command.session.fork.description": "Önceki bir mesajdan yeni oturum oluştur",
   "command.session.share": "Oturumu paylaş",

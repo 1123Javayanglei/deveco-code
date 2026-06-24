@@ -81,6 +81,8 @@ export const dict = {
   "command.session.redo.description": "Omgør den sidste fortrudte besked",
   "command.session.compact": "Komprimér session",
   "command.session.compact.description": "Opsummer sessionen for at reducere kontekststørrelsen",
+  "command.session.recap": "Opsummer session",
+  "command.session.recap.description": "Generer en kort opsummering af hvad der er gjort og hvad der kommer næste",
   "command.session.fork": "Forgren fra besked",
   "command.session.fork.description": "Opret en ny session fra en tidligere besked",
   "command.session.share": "Del session",

@@ -19,6 +19,13 @@ import { extractPromptFromParts } from "@/utils/prompt"
 import { UserMessage } from "@opencode-ai/sdk/v2"
 import { useSessionLayout } from "@/pages/session/session-layout"
 
+const RECAP_INSTRUCTION = [
+  "Provide a brief recap of this conversation session in about 40 words.",
+  "Summarize what was accomplished in this session.",
+  "Match the language of the conversation (e.g. if the conversation is in Chinese, respond in Chinese; if in English, respond in English).",
+  "Be direct and specific. Do not add preamble, greetings, or filler.",
+].join("\n")
+
 
 export type SessionCommandContext = {
   navigateMessageByOffset: (offset: number) => void
@@ -346,6 +353,37 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
     })
   }
 
+  const recap = async () => {
+    const sessionID = params.id
+    if (!sessionID) return
+
+    const model = local.model.current()
+    if (!model) {
+      showToast({
+        title: language.t("toast.model.none.title"),
+        description: language.t("toast.model.none.description"),
+      })
+      return
+    }
+
+    await sdk.client.session.promptAsync({
+      sessionID,
+      agent: local.agent.current()?.name ?? "build",
+      model: {
+        providerID: model.provider.id,
+        modelID: model.id,
+      },
+      parts: [
+        {
+          type: "text" as const,
+          text: RECAP_INSTRUCTION,
+          synthetic: true,
+          metadata: { kind: "recap" },
+        },
+      ],
+    })
+  }
+
   const fork = () => {
     void import("@/components/dialog-fork").then((x) => {
       dialog.show(() => <x.DialogFork />)
@@ -407,6 +445,14 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       slash: "compact",
       disabled: !params.id || visibleUserMessages().length === 0,
       onSelect: compact,
+    }),
+    sessionCommand({
+      id: "session.recap",
+      title: language.t("command.session.recap"),
+      description: language.t("command.session.recap.description"),
+      slash: "recap",
+      disabled: !params.id || visibleUserMessages().length === 0,
+      onSelect: recap,
     }),
     sessionCommand({
       id: "session.fork",

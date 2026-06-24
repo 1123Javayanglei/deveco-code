@@ -84,6 +84,8 @@ export const dict = {
   "command.session.redo.description": "Повторити останнє скасоване повідомлення",
   "command.session.compact": "Стиснути сесію",
   "command.session.compact.description": "Підсумувати сесію, щоб зменшити розмір контексту",
+  "command.session.recap": "Огляд сесії",
+  "command.session.recap.description": "Створити короткий підсумок зробленого та наступних кроків",
   "command.session.fork": "Відгалузити від повідомлення",
   "command.session.fork.description": "Створити нову сесію з попереднього повідомлення",
   "command.session.share": "Поділитися сесією",
