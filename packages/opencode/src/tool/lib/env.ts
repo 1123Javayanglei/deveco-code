@@ -124,7 +124,7 @@ function meetsMinDevEcoVersion(version: string) {
 export async function resolveDevEcoHome(home: string): Promise<string | undefined> {
   for (const candidate of devEcoHomeCandidates(home)) {
     if (!(await isDir(candidate))) continue;
-    if (!(await Bun.file(nodePath(candidate)).exists())) continue;
+    if (!(await fs.access(nodePath(candidate)).then(() => true).catch(() => false))) continue;
     const version = await readDevEcoStudioVersion(candidate);
     if (!version || !meetsMinDevEcoVersion(version)) continue;
     return candidate;

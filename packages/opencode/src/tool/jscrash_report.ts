@@ -14,6 +14,8 @@
  */
 
 import { Effect, Schema } from "effect"
+import { spawn } from "node:child_process"
+import { access } from "node:fs/promises"
 import * as Tool from "./tool"
 import { findDevEcoHome, hdcPath } from "./lib/env"
 import DESCRIPTION from "./jscrash-report.txt"
@@ -53,17 +55,24 @@ function target(device: string | undefined) {
 }
 
 async function run(cmd: string[]) {
-  const proc = Bun.spawn({
-    cmd,
-    stdout: "pipe",
-    stderr: "pipe",
+  return new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
+    const proc = spawn(cmd[0], cmd.slice(1), {
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    })
+    let stdout = ""
+    let stderr = ""
+    proc.stdout?.setEncoding("utf8")
+    proc.stderr?.setEncoding("utf8")
+    proc.stdout?.on("data", (chunk) => { stdout += chunk })
+    proc.stderr?.on("data", (chunk) => { stderr += chunk })
+    proc.on("error", (error) => {
+      resolve({ stdout, stderr: error.message || stderr, exitCode: 1 })
+    })
+    proc.on("close", (code) => {
+      resolve({ stdout, stderr, exitCode: code ?? 1 })
+    })
   })
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout ? Bun.readableStreamToText(proc.stdout) : Promise.resolve(""),
-    proc.stderr ? Bun.readableStreamToText(proc.stderr) : Promise.resolve(""),
-    proc.exited,
-  ])
-  return { stdout, stderr, exitCode }
 }
 
 function cleanLines(input: string) {
@@ -409,7 +418,7 @@ export const JscrashReportTool = Tool.define("jscrash_report", Effect.gen(functi
           return yield* Effect.fail(new Error("DevEco Studio path not found. Set DEVECO_HOME and retry, or pass crash_log directly."))
         }
         const hdc = hdcPath(home)
-        const hdcExists = yield* Effect.tryPromise(() => Bun.file(hdc).exists())
+        const hdcExists = yield* Effect.tryPromise(() => access(hdc).then(() => true).catch(() => false))
         if (!hdcExists) {
           return yield* Effect.fail(new Error(`hdc not found: ${hdc}`))
         }

@@ -47,6 +47,7 @@ export async function runHdc(cmd: string[]) {
     cmd,
     stdout: 'pipe',
     stderr: 'pipe',
+    windowsHide: true,
   });
   const [stdout, stderr, exitCode] = await Promise.all([
     proc.stdout ? Bun.readableStreamToText(proc.stdout) : Promise.resolve(''),

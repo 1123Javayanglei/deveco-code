@@ -252,6 +252,13 @@ export type ApiError = {
   }
 }
 
+export type ModelServiceRateLimitError = {
+  name: "ModelServiceRateLimitError"
+  data: {
+    message: string
+  }
+}
+
 export type QuestionOption = {
   /**
    * Display text (1-5 words, concise)
@@ -437,6 +444,7 @@ export type AssistantMessage = {
     | ContextOverflowError
     | QueueError
     | ApiError
+    | ModelServiceRateLimitError
   parentID: string
   modelID: string
   providerID: string

@@ -129,12 +129,18 @@ function openControllingTty(): { fd: number; close: () => void } | undefined {
 
 function setFdNonblock(fd: number): (() => void) | undefined {
   try {
-    const { fcntlSync, constants } = fs
-    if (!constants?.O_NONBLOCK) return undefined
-    const flags = fcntlSync(fd, constants.F_GETFL)
-    fcntlSync(fd, constants.F_SETFL, flags | constants.O_NONBLOCK)
+    // fcntlSync is a Bun-specific API not present in Node.js fs types
+    const fsBun = fs as typeof fs & { fcntlSync: (fd: number, cmd: number, arg?: number) => number }
+    const { constants } = fs
+    if (!(constants as Record<string, number>)?.O_NONBLOCK) return undefined
+    const F_GETFL = (constants as Record<string, number>).F_GETFL
+    const F_SETFL = (constants as Record<string, number>).F_SETFL
+    const O_NONBLOCK = (constants as Record<string, number>).O_NONBLOCK
+    if (F_GETFL === undefined || F_SETFL === undefined || O_NONBLOCK === undefined) return undefined
+    const flags = fsBun.fcntlSync(fd, F_GETFL)
+    fsBun.fcntlSync(fd, F_SETFL, flags | O_NONBLOCK)
     return () => {
-      fcntlSync(fd, constants.F_SETFL, flags)
+      fsBun.fcntlSync(fd, F_SETFL, flags)
     }
   } catch {
     return undefined

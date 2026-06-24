@@ -14,7 +14,7 @@ import { NpmConfig } from "@opencode-ai/core/npm-config"
 
 const log = Log.create({ service: "installation" })
 
-export type Method = "npm" | "pnpm" | "bun" | "unknown"
+export type Method = "npm" | "pnpm" | "bun" | "curl" | "scoop" | "choco" | "brew" | "unknown"
 
 export type ReleaseType = "patch" | "minor" | "major"
 
