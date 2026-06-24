@@ -144,11 +144,11 @@ async function ensureDevEcoHomeForTuiStartup() {
     if (candidates[0]) await applyDevEcoHome(candidates[0])
     return
   }
-  UI.println(
-    UI.Style.TEXT_DANGER_BOLD +
-      "DEVECO_HOME environment variable is not configured, features may be unusable." +
-      UI.Style.TEXT_NORMAL,
-  )
+  // Skip the stderr warning (was: "DEVECO_HOME environment variable is not
+  // configured, features may be unusable"). Auto-detection below resolves a
+  // DevEco Studio path silently; the warning was alarming and preceded the
+  // TUI render, briefly leaking text onto the terminal before the UI took
+  // over the screen.
   const selected = await selectDevEcoHome(candidates)
   if (selected) await applyDevEcoHome(selected)
 }
