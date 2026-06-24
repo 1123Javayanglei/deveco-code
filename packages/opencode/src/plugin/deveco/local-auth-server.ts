@@ -1,10 +1,10 @@
 import http, { IncomingMessage, ServerResponse } from "http"
 import { URL } from "url"
-import { logBridge } from "@opencode-ai/core/util/log-bridge"
+import * as Log from "@opencode-ai/core/util/log"
 import { LoginCancelledError, UnsupportedRegionError } from "./errors"
 import type { CallbackData } from "./types"
 
-const log = logBridge("deveco")
+const log = Log.create({ service: "deveco" })
 
 export class LocalAuthServer {
   private server: http.Server | null = null

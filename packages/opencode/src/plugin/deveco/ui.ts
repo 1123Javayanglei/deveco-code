@@ -1,10 +1,10 @@
 import * as prompts from "@clack/prompts"
-import { logBridge } from "@opencode-ai/core/util/log-bridge"
+import * as Log from "@opencode-ai/core/util/log"
 import { devecoAuth } from "./auth"
 import { saveAuthToDisk } from "./storage"
 import { ACCESS_TOKEN_EXPIRES_MS } from "./types"
 
-const log = logBridge("deveco")
+const log = Log.create({ service: "deveco" })
 
 export async function requireLogin(): Promise<boolean> {
   if (await devecoAuth.isLoggedIn()) return true

@@ -18,7 +18,7 @@ import { createRequire } from "node:module"
 import os from "node:os"
 import path from "path"
 import { findDevEcoHome } from "./env"
-import { logBridge } from "@opencode-ai/core/util/log-bridge"
+import * as Log from "@opencode-ai/core/util/log"
 import { DEVECO_API_URL, getTaskDefaultModelMap } from "@/plugin/deveco-models"
 import { devecoAuth, ACCESS_TOKEN_EXPIRES_MS } from "@/plugin/deveco"
 
@@ -41,7 +41,7 @@ function addon() {
 }
 
 const bridge = addon()
-const log = logBridge("harmony-napi")
+const log = Log.create({ service: "harmony-napi" })
 
 let gate: Promise<void> = Promise.resolve()
 let bound = ""

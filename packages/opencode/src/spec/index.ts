@@ -3,7 +3,10 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { withStatics } from "@opencode-ai/core/schema"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import * as Log from "@opencode-ai/core/util/log"
 import { Defaults } from "./defaults"
+
+const log = Log.create({ service: "spec" })
 
 export const Info = Schema.Struct({
   commandsPath: Schema.String,
@@ -24,7 +27,7 @@ export const layer = Layer.effect(
 
     const { specDir } = yield* Defaults.ensure(InstallationVersion, fsys).pipe(Effect.orDie)
 
-    yield* Effect.logInfo("spec resources initialized", {
+    log.info("spec resources initialized", {
       commands: path.join(specDir, "commands"),
       templates: path.join(specDir, "templates"),
     })

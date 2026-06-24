@@ -1,10 +1,10 @@
-import { logBridge } from "@opencode-ai/core/util/log-bridge"
+import * as Log from "@opencode-ai/core/util/log"
 import { loginService } from "./login-service"
 import { tokenStorage } from "./token-storage"
 import { loadAccessTokenFromDisk } from "./storage"
 import type { DevEcoSession, LoginResult } from "./types"
 
-const log = logBridge("deveco")
+const log = Log.create({ service: "deveco" })
 
 export class DevEcoAuth {
   async isLoggedIn(): Promise<boolean> {

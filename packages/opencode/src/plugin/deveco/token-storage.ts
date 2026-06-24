@@ -2,9 +2,9 @@ import fs from "fs"
 import path from "path"
 import { LocalCrypto } from "@/security/local-crypto"
 import { Global } from "@opencode-ai/core/global"
-import { logBridge } from "@opencode-ai/core/util/log-bridge"
+import * as Log from "@opencode-ai/core/util/log"
 
-const log = logBridge("deveco")
+const log = Log.create({ service: "deveco" })
 
 export class TokenStorage {
   private tokenFilePath: string
