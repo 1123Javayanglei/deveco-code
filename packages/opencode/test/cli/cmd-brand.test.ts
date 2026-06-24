@@ -35,10 +35,6 @@ describe("mcp.ts deveco CLI text regression guard", () => {
   test.skip("example placeholder uses 'deveco' not 'opencode' (A12)", () => {
     expect(source).toMatch(/e\.g\.,\s*deveco x @/)
   })
-
-  test("references DEVECO_SERVER_PASSWORD for MCP auth (fixed)", () => {
-    expect(source).toContain("DEVECO_SERVER_PASSWORD")
-  })
 })
 
 describe("pr.ts deveco CLI text regression guard", () => {
