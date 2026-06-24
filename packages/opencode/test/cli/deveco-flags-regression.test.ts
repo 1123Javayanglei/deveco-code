@@ -23,16 +23,19 @@ const FLAG_TS_FLAGS = [
   "DEVECO_DISABLE_TERMINAL_TITLE",
   "DEVECO_SHOW_TTFD",
   "DEVECO_PERMISSION",
-  "DEVECO_DISABLE_DEFAULT_PLUGINS",
   "DEVECO_DISABLE_AUTOCOMPACT",
   "DEVECO_DISABLE_MODELS_FETCH",
   "DEVECO_DISABLE_MOUSE",
   "DEVECO_FAKE_VCS",
-  "DEVECO_ENABLE_QUESTION_TOOL",
   "DEVECO_MODELS_URL",
   "DEVECO_MODELS_PATH",
   "DEVECO_PLUGIN_META_FILE",
   "DEVECO_CLIENT",
+]
+
+const RUNTIME_FLAGS_FLAGS = [
+  "DEVECO_DISABLE_DEFAULT_PLUGINS",
+  "DEVECO_ENABLE_QUESTION_TOOL",
 ]
 
 describe("deveco-flags regression guard", () => {
@@ -51,6 +54,12 @@ describe("deveco-flags regression guard", () => {
 
 describe("runtime-flags DEVECO_ prefix regression guard", () => {
   const source = readSource("packages/opencode/src/effect/runtime-flags.ts")
+
+  for (const flag of RUNTIME_FLAGS_FLAGS) {
+    test(`${flag} exists in runtime-flags.ts`, () => {
+      expect(source).toContain(flag)
+    })
+  }
 
   test("runtime-flags uses DEVECO_ prefix for all flag references", () => {
     expect(source).toMatch(/DEVECO_/)

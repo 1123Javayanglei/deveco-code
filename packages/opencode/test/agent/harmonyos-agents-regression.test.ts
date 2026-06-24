@@ -11,7 +11,6 @@ const AGENT_PROMPTS_IN_SUBDIR = [
   "compaction",
   "summary",
   "title",
-  "scout",
 ]
 
 describe("harmonyos-agents prompt regression guard (spec #9)", () => {
@@ -40,7 +39,6 @@ const AGENT_IMPORTED_PROMPTS = [
   "compaction",
   "summary",
   "title",
-  "scout",
 ]
 
 describe("harmonyos-agents registration regression guard", () => {
