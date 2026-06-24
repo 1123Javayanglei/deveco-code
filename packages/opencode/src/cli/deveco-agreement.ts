@@ -3,9 +3,9 @@ import http from "http"
 import querystring from "querystring"
 import { resolveAgreementConfig, getPrivacyAcceptedKey, getSignPendingKey, type AgreementConfig } from "@/cli/deveco-legal"
 import { devecoAuth, saveAuthToDisk, ACCESS_TOKEN_EXPIRES_MS } from "@/plugin/deveco"
-import * as Log from "@opencode-ai/core/util/log"
+import { logBridge } from "@opencode-ai/core/util/log-bridge"
 
-const log = Log.create({ service: "deveco-agreement" })
+const log = logBridge("deveco-agreement")
 
 // ============ Data Models ============
 
