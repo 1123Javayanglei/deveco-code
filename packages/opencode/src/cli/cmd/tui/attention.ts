@@ -20,6 +20,7 @@ import errorSoundPath from "@opencode-ai/ui/audio/nope-03.mp3" with { type: "fil
 import doneSoundPath from "@opencode-ai/ui/audio/bip-bop-01.mp3" with { type: "file" }
 import subagentDoneSoundPath from "@opencode-ai/ui/audio/yup-01.mp3" with { type: "file" }
 import * as Log from "@opencode-ai/core/util/log"
+import { createOsNotification } from "./os-notification"
 
 type FocusState = "unknown" | "focused" | "blurred"
 
@@ -124,6 +125,7 @@ export function createTuiAttention(input: {
   let activePackID: string | undefined
   const packs = new Map<string, RegisteredSoundPack>([[BUILTIN_PACK.id, BUILTIN_PACK]])
   const audio = input.audio ?? TuiAudio
+  const osNotification = createOsNotification()
 
   const onFocus = () => {
     focus = "focused"
@@ -180,19 +182,21 @@ export function createTuiAttention(input: {
         const requestedNotification = typeof request.notification === "object" ? request.notification : undefined
         const notificationSkip = focusSkip(requestedNotification?.when ?? "blurred", focus)
         const notificationRequested = input.config.attention.notifications && request.notification !== false
-        const shouldNotify = notificationRequested && !notificationSkip
+        const shouldNotify = notificationRequested
+        const notificationTitle = normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT)
         const notification = shouldNotify
           ? (() => {
-              try {
-                return input.renderer.triggerNotification(
-                  message,
-                  normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT),
-                )
-              } catch (error) {
-                log.debug("failed to trigger attention notification", { error })
-                return false
-              }
-            })()
+            try {
+              osNotification.send(notificationTitle, message)
+              return input.renderer.triggerNotification(
+                message,
+                notificationTitle,
+              )
+            } catch (error) {
+              log.debug("failed to trigger attention notification", { error })
+              return false
+            }
+          })()
           : false
         const volume = soundVolume(request, input.config)
         const requestedSound = typeof request.sound === "object" ? request.sound : undefined
@@ -255,6 +259,7 @@ export function createTuiAttention(input: {
     dispose() {
       if (disposed) return
       disposed = true
+      osNotification.dispose()
       input.renderer.off("focus", onFocus)
       input.renderer.off("blur", onBlur)
     },
