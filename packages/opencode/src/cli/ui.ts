@@ -2,7 +2,7 @@ import z from "zod"
 import { EOL } from "os"
 import { Schema } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
-import { logo as glyphs, marks } from "./logo"
+import { logo as glyphs, marks } from "@opencode-ai/tui/logo"
 
 type LogoGlyphs = typeof glyphs & {
   charMap?: Record<string, string>
