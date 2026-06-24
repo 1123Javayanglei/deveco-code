@@ -1,10 +1,10 @@
 import { readFileSync } from "fs"
-import * as Log from "@opencode-ai/core/util/log"
+import { logBridge } from "@opencode-ai/core/util/log-bridge"
 import { SddMarkdownParser } from "./markdown-parser"
 import { FORMAT_RULES } from "./config"
 import type { Section } from "./models"
 
-const log = Log.create({ service: "document-validation" })
+const log = logBridge("document-validation")
 
 const SECTION_ALIASES: Record<string, string[]> = {
   "Feature Specification:": ["功能规格:", "特性规格:", "Feature Specification"],

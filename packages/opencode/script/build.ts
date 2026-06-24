@@ -87,19 +87,79 @@ const defaultSkillsData = Object.fromEntries(
 console.log(`Loaded ${Object.keys(defaultSkillsData).length} default skills`)
 
 // Load default spec resources
+//
+// Mirrors the loader in src/spec/defaults.ts: the top level of resources/spec/
+// may contain both files (embedded as strings / base64) and subdirectories
+// (embedded as { [relPath]: content } maps). Build output shape:
+//
+//   {
+//     "some-top-level-file.md": "<content>",
+//     "commands":   { "spec-implement.md": "<content>", ... },
+//     "templates":  { "plan-template.md":  "<content>", ... },
+//   }
 const defaultSpecDir = path.join(dir, "resources/spec")
-const defaultSpecFiles = fs.existsSync(defaultSpecDir)
-  ? (await fs.promises.readdir(defaultSpecDir)).filter((f) => f !== ".DS_Store")
-  : []
-const defaultSpecData = Object.fromEntries(
-  await Promise.all(
-    defaultSpecFiles.map(async (file) => {
-      const content = await Bun.file(path.join(defaultSpecDir, file)).text()
-      return [file, content] as const
-    }),
-  ),
-)
-console.log(`Loaded ${Object.keys(defaultSpecData).length} default spec resources`)
+const binaryExtensions = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bin"])
+
+type EmbeddedSpecFile = string | { encoding: "base64"; content: string }
+// Recursive mirror of src/spec/defaults.ts's EmbeddedSpecFileMap. Top-level
+// entries can be files (string/base64) or subdirectory maps (Record<string, EmbeddedSpecEntry>).
+type EmbeddedSpecEntry = EmbeddedSpecFile | Record<string, EmbeddedSpecFile>
+
+async function readSpecFile(filePath: string): Promise<EmbeddedSpecFile> {
+  if (binaryExtensions.has(path.extname(filePath).toLowerCase())) {
+    const buf = await Bun.file(filePath).arrayBuffer()
+    return { encoding: "base64", content: Buffer.from(buf).toString("base64") }
+  }
+  return await Bun.file(filePath).text()
+}
+
+async function walkSpecDir(dir: string): Promise<Record<string, EmbeddedSpecFile>> {
+  const result: Record<string, EmbeddedSpecFile> = {}
+  const entries = await fs.promises.readdir(dir, { withFileTypes: true })
+  for (const entry of entries) {
+    if (entry.name === ".DS_Store") continue
+    const full = path.join(dir, entry.name)
+    if (entry.isFile()) {
+      const rel = path.relative(dir, full).replaceAll("\\", "/")
+      result[rel] = await readSpecFile(full)
+    } else if (entry.isDirectory()) {
+      // Flatten nested subdirs (resources/spec/<subdir>/<deep>/<file>.md) into a
+      // single-level map keyed by path relative to <subdir>.
+      const nested = await walkSpecDir(full)
+      for (const [k, v] of Object.entries(nested)) result[k] = v
+    }
+  }
+  return result
+}
+
+const defaultSpecData: Record<string, EmbeddedSpecEntry> = fs.existsSync(defaultSpecDir)
+  ? await (async () => {
+      const data: Record<string, EmbeddedSpecEntry> = {}
+      for (const entry of await fs.promises.readdir(defaultSpecDir, { withFileTypes: true })) {
+        if (entry.name === ".DS_Store") continue
+        const full = path.join(defaultSpecDir, entry.name)
+        if (entry.isFile()) {
+          data[entry.name] = await readSpecFile(full)
+        } else if (entry.isDirectory()) {
+          data[entry.name] = await walkSpecDir(full)
+        }
+      }
+      return data
+    })()
+  : {}
+
+const countSpecEntries = (obj: Record<string, EmbeddedSpecEntry>): number => {
+  let n = 0
+  for (const v of Object.values(obj)) {
+    if (typeof v === "string" || (typeof v === "object" && v !== null && "encoding" in v)) {
+      n += 1
+    } else if (typeof v === "object" && v !== null) {
+      n += countSpecEntries(v as Record<string, EmbeddedSpecEntry>)
+    }
+  }
+  return n
+}
+console.log(`Loaded ${countSpecEntries(defaultSpecData)} default spec resources`)
 
 const createEmbeddedWebUIBundle = async () => {
   console.log(`Building Web UI to embed in the binary`)

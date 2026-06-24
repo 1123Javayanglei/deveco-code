@@ -1,7 +1,7 @@
 import { Schema } from "effect"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import * as ModelsDev from "@opencode-ai/core/models-dev"
-import * as Log from "@opencode-ai/core/util/log"
+import { logBridge } from "@opencode-ai/core/util/log-bridge"
 
 type ModelsMap = Record<string, ModelsDev.Model>
 
@@ -10,7 +10,7 @@ const DEVECO_PROVIDER_ID = "deveco"
 export const DEVECO_API_URL = `${DEVECO_BASE_URL}/sse/codeGenie/maas/v2`
 const DEVECO_NPM = "@ai-sdk/openai-compatible"
 
-const log = Log.create({ service: "deveco-models" })
+const log = logBridge("deveco-models")
 
 function makeModel(modelId: string, opts: {
   reasoning?: boolean

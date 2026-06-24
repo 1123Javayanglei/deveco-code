@@ -7,9 +7,9 @@ import type { Permission } from "../permission"
 import type { SessionID, MessageID } from "../session/schema"
 import * as Truncate from "./truncate"
 import { Agent } from "@/agent/agent"
-import * as Log from "@opencode-ai/core/util/log"
+import { logBridge } from "@opencode-ai/core/util/log-bridge"
 
-const log = Log.create({ service: "tool" })
+const log = logBridge("tool")
 
 interface Metadata {
   [key: string]: any
