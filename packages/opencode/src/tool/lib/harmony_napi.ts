@@ -23,8 +23,17 @@ import { DEVECO_DEFAULTS, getTaskDefaultModelMap } from "@/plugin/deveco-models"
 import { devecoAuth, ACCESS_TOKEN_EXPIRES_MS } from "@/plugin/deveco"
 
 function addon() {
-  const execDir = path.dirname(process.execPath)
+  // 0. Electron packaged app: process.resourcesPath points to the resources/ dir
+  const electronResources = (process as unknown as { resourcesPath?: string }).resourcesPath
+  if (electronResources) {
+    const electronMarker = path.join(electronResources, "vendor", "mcp-bridge-native", "package.json")
+    if (fs.existsSync(electronMarker)) {
+      const r = createRequire(electronMarker)
+      return r("./napi_bridge.node") as typeof import("@deveco-codegenie/mcp-bridge")
+    }
+  }
   // 1. vendor directory (npm / production mode)
+  const execDir = path.dirname(process.execPath)
   const vendorMarker = path.join(execDir, "..", "vendor", "mcp-bridge-native", "package.json")
   if (fs.existsSync(vendorMarker)) {
     const r = createRequire(vendorMarker)

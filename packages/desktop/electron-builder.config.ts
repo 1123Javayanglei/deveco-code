@@ -39,6 +39,11 @@ const getBase = (): Configuration => ({
       to: "native/",
       filter: ["index.js", "index.d.ts", "build/Release/mac_window.node", "swift-build/**"],
     },
+    {
+      from: "resources/vendor/",
+      to: "vendor/",
+      filter: ["mcp-bridge-native/**"],
+    },
   ],
   mac: {
     category: "public.app-category.developer-tools",

@@ -1,6 +1,16 @@
 import { drizzle } from "drizzle-orm/node-sqlite/driver"
 import * as http from "node:http"
 import * as tls from "node:tls"
+import { writeFileSync, appendFileSync } from "node:fs"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
+
+const debugFile = join(tmpdir(), "sidecar-debug.log")
+function debug(msg: string) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`
+  try { appendFileSync(debugFile, line) } catch {}
+}
+debug("sidecar module loaded")
 
 type NodeHttpWithEnvProxy = typeof http & {
   setGlobalProxyFromEnv: () => void
@@ -41,6 +51,19 @@ type Listener = {
 const parentPort = getParentPort()
 let listener: Listener | undefined
 
+process.on("uncaughtException", (err) => {
+  debug(`uncaughtException: ${err?.stack ?? err}`)
+})
+process.on("unhandledRejection", (err) => {
+  debug(`unhandledRejection: ${err instanceof Error ? err.stack : String(err)}`)
+})
+process.on("beforeExit", (code) => {
+  debug(`beforeExit code: ${code}`)
+})
+process.on("exit", (code) => {
+  debug(`exit code: ${code}`)
+})
+
 parentPort.on("message", (event) => {
   const command = parseCommand(event.data)
   if (!command) return
@@ -53,14 +76,19 @@ parentPort.on("message", (event) => {
 
 async function start(command: StartCommand) {
   try {
+    debug(`start called: port=${command.port} hostname=${command.hostname} needsMigration=${command.needsMigration}`)
     prepareSidecarEnv(command.password, command.userDataPath)
     ensureLoopbackNoProxy()
     useSystemCertificates()
     useEnvProxy()
+    debug("importing server module")
     const { Database, JsonMigration, Log, Server } = await import("virtual:opencode-server")
+    debug("server module imported")
     await Log.init({ level: "WARN" })
+    debug("log initialized")
 
     if (command.needsMigration) {
+      debug("starting migration")
       await JsonMigration.run(drizzle({ client: Database.Client().$client }), {
         progress: (event: { current: number; total: number }) => {
           parentPort.postMessage({
@@ -73,8 +101,10 @@ async function start(command: StartCommand) {
         },
       })
       parentPort.postMessage({ type: "sqlite", progress: { type: "Done" } })
+      debug("migration done")
     }
 
+    debug("calling Server.listen")
     listener = await Server.listen({
       port: command.port,
       hostname: command.hostname,
@@ -82,8 +112,15 @@ async function start(command: StartCommand) {
       password: command.password,
       cors: ["oc://renderer"],
     })
+    debug(`server listening on ${command.hostname}:${command.port}`)
     parentPort.postMessage({ type: "ready" })
+    debug("ready message sent")
+
+    // Keep-alive timer to prevent event loop from draining
+    const keepAlive = setInterval(() => {}, 1000)
+    debug("keep-alive timer set")
   } catch (error) {
+    debug(`start error: ${error instanceof Error ? error.stack : String(error)}`)
     parentPort.postMessage({ type: "error", error: serializeError(error) })
     setImmediate(() => process.exit(1))
   }
@@ -91,6 +128,7 @@ async function start(command: StartCommand) {
 
 async function stop() {
   try {
+    debug("stop() called")
     await listener?.stop()
   } finally {
     listener = undefined
