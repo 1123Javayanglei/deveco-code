@@ -12,7 +12,7 @@ import { Link } from '@opencode-ai/tui/ui/link';
 import { devecoAuth, ACCESS_TOKEN_EXPIRES_MS, saveAuthToDisk } from '@/plugin/deveco';
 import { useKV } from '@opencode-ai/tui/context/kv';
 import { resolveAgreementConfig, getPrivacyAcceptedKey, getSignPendingKey, type AgreementConfig } from '@/cli/deveco-legal';
-import * as Log from '@opencode-ai/core/util/log';
+import { logBridge } from '@opencode-ai/core/util/log-bridge';
 import { agreementService, AgreementStatus } from '@/cli/deveco-agreement';
 import type { AgreementCheckResult } from '@/cli/deveco-agreement';
 import { BANNER_HOME_CONTENT_INSET, HOME_CONTENT_MAX_WIDTH, homeContentPadX } from '@opencode-ai/tui/component/banner';
@@ -22,7 +22,7 @@ import type { ProviderAuthAuthorization, ProviderAuthMethod } from '@opencode-ai
 
 type OnboardingStep = 'privacy' | 'entry' | 'auth' | 'providers' | 'key';
 
-const log = Log.create({ service: "deveco-onboarding" })
+const log = logBridge("deveco-onboarding")
 
 const LIST_HELP = 'Use Enter to Select';
 

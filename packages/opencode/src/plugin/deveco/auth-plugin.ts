@@ -4,13 +4,13 @@ import type { Hooks, PluginInput } from "@opencode-ai/plugin"
 import { OAUTH_DUMMY_KEY } from "@/auth"
 import { Global } from "@opencode-ai/core/global"
 import { GlobalBus } from "@/bus/global"
-import * as Log from "@opencode-ai/core/util/log"
+import { logBridge } from "@opencode-ai/core/util/log-bridge"
 import { devecoAuth } from "./auth"
 import { sessionChatIdMap } from "./session"
 import { ensureValidToken } from "./token-refresh"
 import { ACCESS_TOKEN_EXPIRES_MS, PROVIDER_ID } from "./types"
 
-const log = Log.create({ service: "deveco" })
+const log = logBridge("deveco")
 
 export async function DevEcoAuthPlugin(_input: PluginInput): Promise<Hooks> {
   return {

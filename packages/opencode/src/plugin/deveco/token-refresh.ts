@@ -1,11 +1,11 @@
 import fs from "fs"
 import { LocalCrypto } from "@/security/local-crypto"
-import * as Log from "@opencode-ai/core/util/log"
+import { logBridge } from "@opencode-ai/core/util/log-bridge"
 import { devecoAuth } from "./auth"
 import { authFilePath, saveAuthToDisk } from "./storage"
 import { ACCESS_TOKEN_EXPIRES_MS } from "./types"
 
-const log = Log.create({ service: "deveco" })
+const log = logBridge("deveco")
 
 /** Module-level dedup: concurrent callers share a single in-flight refresh. */
 let refreshPromise: Promise<string | null> | null = null

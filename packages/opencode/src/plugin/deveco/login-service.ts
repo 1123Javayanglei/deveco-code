@@ -1,7 +1,7 @@
 import { exec } from "child_process"
 import { promisify } from "util"
 import crypto from "crypto"
-import * as Log from "@opencode-ai/core/util/log"
+import { logBridge } from "@opencode-ai/core/util/log-bridge"
 import { LoginCancelledError, UnsupportedRegionError } from "./errors"
 import { httpClient } from "./http-client"
 import { LocalAuthServer } from "./local-auth-server"
@@ -11,7 +11,7 @@ import type { JwtPayload, LoginConfig, LoginResult, TokenCheckResponse, UserInfo
 import { DEFAULT_CONFIG } from "./types"
 
 const execAsync = promisify(exec)
-const log = Log.create({ service: "deveco" })
+const log = logBridge("deveco")
 
 export class LoginService {
   private config: LoginConfig
