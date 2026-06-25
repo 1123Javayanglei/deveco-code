@@ -12,6 +12,7 @@ import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { sanitizedProcessEnv } from "@opencode-ai/core/util/opencode-process"
 import { which } from "@/util/which"
+import { PS_ENCODING_PREAMBLE } from "@/shell/shell"
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 
 const log = Log.create({ service: "ripgrep" })
@@ -258,7 +259,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
             "-NoProfile",
             "-NonInteractive",
             "-Command",
-            `$global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -LiteralPath '${archive.replaceAll("'", "''")}' -DestinationPath '${dir.replaceAll("'", "''")}' -Force`,
+            `${PS_ENCODING_PREAMBLE}$global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -LiteralPath '${archive.replaceAll("'", "''")}' -DestinationPath '${dir.replaceAll("'", "''")}' -Force`,
           ])
           if (result.code !== 0) {
             return yield* Effect.fail(error(result.stderr || result.stdout, result.code))
