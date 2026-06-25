@@ -22,6 +22,17 @@ import { Log } from "@opencode-ai/core/util/log"
 import { DEVECO_API_URL, getTaskDefaultModelMap } from "@/plugin/deveco-models"
 import { devecoAuth, ACCESS_TOKEN_EXPIRES_MS } from "@/plugin/deveco"
 
+const log = Log.create({ service: "harmony-napi" })
+
+function createStubBridge() {
+  return {
+    init: async (_logDir: string, _projectPath: string, _devecoHome: string, _baseURL?: string | null, _apiKey?: string | null, _modelName?: string | null) => {},
+    listTools: () => "[]",
+    callTool: async (_name: string, _argsJson: string) => JSON.stringify({ error: "mcp-bridge not available on this platform" }),
+    stop: async () => {},
+  }
+}
+
 function addon() {
   const execDir = path.dirname(process.execPath)
   // 1. vendor directory (npm / production mode)
@@ -37,11 +48,14 @@ function addon() {
     return r("./napi_bridge.node") as typeof import("@deveco-codegenie/mcp-bridge")
   }
   // 3. node_modules (dev mode)
-  return createRequire(import.meta.url)("@deveco-codegenie/mcp-bridge")
+  try {
+    return createRequire(import.meta.url)("@deveco-codegenie/mcp-bridge")
+  } catch {
+    return createStubBridge()
+  }
 }
 
 const bridge = addon()
-const log = Log.create({ service: "harmony-napi" })
 
 let gate: Promise<void> = Promise.resolve()
 let bound = ""

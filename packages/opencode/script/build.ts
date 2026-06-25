@@ -204,6 +204,10 @@ const allTargets: {
     arch: "x64",
     avx2: false,
   },
+  {
+    os: "linux",
+    arch: "x64",
+  },
 ]
 
 const targets = singleFlag
@@ -239,6 +243,7 @@ const rgArchiveMap: Record<string, { archive: string; binary: string }> = {
   "darwin-arm64": { archive: `ripgrep-${RG_VERSION}-aarch64-apple-darwin.tar.gz`, binary: "rg" },
   "darwin-x64":   { archive: `ripgrep-${RG_VERSION}-x86_64-apple-darwin.tar.gz`, binary: "rg" },
   "win32-x64":    { archive: `ripgrep-${RG_VERSION}-x86_64-pc-windows-msvc.zip`, binary: "rg.exe" },
+  "linux-x64":   { archive: `ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl.tar.gz`, binary: "rg" },
 }
 
 const binaries: Record<string, string> = {}

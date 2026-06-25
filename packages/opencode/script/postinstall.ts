@@ -35,12 +35,13 @@ const cacheDir = path.join(dir, ".build-cache")
 const rgCacheDir = path.join(cacheDir, "ripgrep")
 const mcpCacheDir = path.join(cacheDir, "mcp-bridge")
 
-const supportedPlatforms = new Set(["darwin-arm64", "darwin-x64", "win32-x64"])
+const supportedPlatforms = new Set(["darwin-arm64", "darwin-x64", "win32-x64", "linux-x64"])
 
 const rgArchiveMap: Record<string, { archive: string; binary: string }> = {
   "darwin-arm64": { archive: `ripgrep-${RG_VERSION}-aarch64-apple-darwin.tar.gz`, binary: "rg" },
   "darwin-x64":   { archive: `ripgrep-${RG_VERSION}-x86_64-apple-darwin.tar.gz`, binary: "rg" },
   "win32-x64":    { archive: `ripgrep-${RG_VERSION}-x86_64-pc-windows-msvc.zip`, binary: "rg.exe" },
+  "linux-x64":   { archive: `ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl.tar.gz`, binary: "rg" },
 }
 
 // --- Download helpers ---
